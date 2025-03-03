@@ -18,7 +18,7 @@ export default function Hero() {
 							<div className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
 								<div className="rounded-md shadow">
 									<Link
-										href="/stores"
+										href="/stores/locations"
 										className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-[#FFA725] hover:bg-[#FF9500] md:py-4 md:text-lg md:px-10"
 									>
 										상점 둘러보기
@@ -26,7 +26,7 @@ export default function Hero() {
 								</div>
 								<div className="mt-3 sm:mt-0 sm:ml-3">
 									<Link
-										href="/register"
+										href="/stores/register"
 										className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-[#6A9C89] bg-[#C1D8C3] hover:bg-[#A1C8A3] md:py-4 md:text-lg md:px-10"
 									>
 										상점 등록하기
