@@ -31,24 +31,27 @@ const features = [
 
 export default function Features() {
 	return (
-		<div className="py-12 bg-white">
+		<div className="py-8 sm:py-12 md:py-16 bg-white w-full">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div className="lg:text-center">
+				<div className="text-center">
 					<h2 className="text-base text-[#FFA725] font-semibold tracking-wide uppercase">
 						주요 기능
 					</h2>
-					<p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+					<p className="mt-2 text-2xl sm:text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
 						더 나은 지역 쇼핑의 시작
 					</p>
-					<p className="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
+					<p className="mt-4 max-w-2xl text-lg sm:text-xl text-gray-500 mx-auto">
 						SGT와 함께 새로운 쇼핑 경험을 시작하고 지역 커뮤니티와 연결하세요.
 					</p>
 				</div>
 
-				<div className="mt-10">
-					<dl className="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10">
+				<div className="mt-8 sm:mt-10">
+					<dl className="space-y-8 sm:space-y-10 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-x-6 md:gap-y-10 lg:gap-x-8">
 						{features.map((feature) => (
-							<div key={feature.name} className="relative">
+							<div
+								key={feature.name}
+								className="relative bg-white p-4 rounded-lg hover:shadow-md transition-shadow duration-300"
+							>
 								<dt>
 									<div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-[#C1D8C3] text-[#6A9C89]">
 										<feature.icon className="h-6 w-6" aria-hidden="true" />
