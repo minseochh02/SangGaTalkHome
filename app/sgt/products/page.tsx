@@ -50,46 +50,50 @@ export default function SGTProducts() {
 	return (
 		<div className="w-full max-w-7xl mx-auto px-4 py-8">
 			{/* Hero Banner */}
-			<div className="relative w-full h-[300px] rounded-2xl overflow-hidden mb-12 bg-gradient-to-r from-[#FFF5E4] to-[#C1D8C3]">
-				<div className="absolute inset-0 flex items-center justify-start p-12">
+			<div className="relative w-full h-[200px] sm:h-[250px] md:h-[300px] rounded-2xl overflow-hidden mb-8 md:mb-12 bg-gradient-to-r from-[#FFF5E4] to-[#C1D8C3]">
+				<div className="absolute inset-0 flex items-center justify-start p-6 md:p-12">
 					<div className="max-w-lg">
-						<h1 className="text-4xl font-bold mb-4">SGT 상품 특별 프로모션</h1>
-						<p className="text-lg mb-6">
+						<h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4">
+							SGT 상품 특별 프로모션
+						</h1>
+						<p className="text-sm md:text-lg mb-4 md:mb-6">
 							SGT 토큰으로 더 저렴하게 구매하세요! 지금 구매하시면 추가 10% SGT
 							적립
 						</p>
-						<button className="px-6 py-3 bg-[#FFA725] text-white rounded-lg hover:bg-[#FF9500] transition-colors">
+						<button className="px-4 py-2 md:px-6 md:py-3 bg-[#FFA725] text-white text-sm md:text-base rounded-lg hover:bg-[#FF9500] transition-colors">
 							프로모션 더보기
 						</button>
 					</div>
 				</div>
 			</div>
 
-			{/* Category Filter */}
-			<div className="flex gap-4 mb-8">
-				{categories.map((category) => (
-					<button
-						key={category}
-						onClick={() => setSelectedCategory(category)}
-						className={`px-4 py-2 rounded-lg transition-colors ${
-							selectedCategory === category
-								? "bg-[#6A9C89] text-white"
-								: "bg-gray-100 hover:bg-gray-200"
-						}`}
-					>
-						{category}
-					</button>
-				))}
+			{/* Category Filter - Scrollable on mobile */}
+			<div className="flex overflow-x-auto pb-2 mb-6 md:mb-8 no-scrollbar">
+				<div className="flex gap-2 md:gap-4">
+					{categories.map((category) => (
+						<button
+							key={category}
+							onClick={() => setSelectedCategory(category)}
+							className={`px-3 py-1 md:px-4 md:py-2 rounded-lg whitespace-nowrap transition-colors ${
+								selectedCategory === category
+									? "bg-[#6A9C89] text-white"
+									: "bg-gray-100 hover:bg-gray-200"
+							}`}
+						>
+							{category}
+						</button>
+					))}
+				</div>
 			</div>
 
 			{/* Products Grid */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
 				{filteredProducts.map((product) => (
 					<div
 						key={product.id}
 						className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
 					>
-						<div className="relative h-48 w-full bg-gray-200">
+						<div className="relative h-40 sm:h-48 w-full bg-gray-200">
 							<Image
 								src={product.imageUrl}
 								alt={product.name}
@@ -97,26 +101,28 @@ export default function SGTProducts() {
 								className="object-cover"
 							/>
 						</div>
-						<div className="p-6">
-							<div className="flex justify-between items-start mb-4">
+						<div className="p-4 md:p-6">
+							<div className="flex justify-between items-start mb-3 md:mb-4">
 								<div>
-									<h3 className="text-xl font-semibold mb-2">{product.name}</h3>
-									<p className="text-gray-600">{product.description}</p>
+									<h3 className="text-lg md:text-xl font-semibold mb-1 md:mb-2">
+										{product.name}
+									</h3>
+									<p className="text-sm text-gray-600">{product.description}</p>
 								</div>
-								<span className="px-3 py-1 bg-[#FFF5E4] text-[#FFA725] rounded-full text-sm">
+								<span className="px-2 py-1 md:px-3 md:py-1 bg-[#FFF5E4] text-[#FFA725] rounded-full text-xs md:text-sm">
 									{product.category}
 								</span>
 							</div>
 							<div className="flex justify-between items-center">
 								<div>
-									<p className="text-gray-500 line-through">
+									<p className="text-gray-500 line-through text-sm">
 										{product.price.toLocaleString()}원
 									</p>
-									<p className="text-lg font-bold text-[#FFA725]">
+									<p className="text-base md:text-lg font-bold text-[#FFA725]">
 										{product.sgtPrice} SGT
 									</p>
 								</div>
-								<button className="px-4 py-2 bg-[#6A9C89] text-white rounded-lg hover:bg-[#5B8B78] transition-colors">
+								<button className="px-3 py-1 md:px-4 md:py-2 bg-[#6A9C89] text-white text-sm rounded-lg hover:bg-[#5B8B78] transition-colors">
 									구매하기
 								</button>
 							</div>

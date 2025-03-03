@@ -84,7 +84,7 @@ function SearchResults({
 				<h2 className="text-xl font-semibold mb-4">
 					검색 결과 ({filteredResults.length}건)
 				</h2>
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
 					{filteredResults.map((result) => (
 						<Link
 							key={`${result.type}-${result.id}`}
@@ -95,33 +95,37 @@ function SearchResults({
 							}
 							className="block bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
 						>
-							<div className="relative h-48 w-full bg-gray-200">
+							<div className="relative h-40 sm:h-48 w-full bg-gray-200">
 								<Image
 									src={result.imageUrl}
 									alt={result.name}
 									fill
 									className="object-cover"
 								/>
-								<div className="absolute top-4 right-4 px-3 py-1 bg-white/90 rounded-full text-sm">
+								<div className="absolute top-2 right-2 md:top-4 md:right-4 px-2 py-1 md:px-3 md:py-1 bg-white/90 rounded-full text-xs md:text-sm">
 									{result.type === "store" ? "매장" : "상품"}
 								</div>
 							</div>
-							<div className="p-6">
-								<div className="flex justify-between items-start mb-2">
-									<h3 className="text-xl font-semibold">{result.name}</h3>
-									<span className="px-3 py-1 bg-[#FFF5E4] text-[#FFA725] rounded-full text-sm">
+							<div className="p-4 md:p-6">
+								<div className="flex justify-between items-start mb-2 md:mb-4">
+									<h3 className="text-lg md:text-xl font-semibold">
+										{result.name}
+									</h3>
+									<span className="px-2 py-1 md:px-3 md:py-1 bg-[#FFF5E4] text-[#FFA725] rounded-full text-xs md:text-sm">
 										{result.category}
 									</span>
 								</div>
-								<p className="text-gray-600 mb-4">{result.description}</p>
+								<p className="text-sm text-gray-600 mb-3 md:mb-4">
+									{result.description}
+								</p>
 								{result.type === "store" ? (
-									<p className="text-gray-500">{result.location}</p>
+									<p className="text-sm text-gray-500">{result.location}</p>
 								) : (
 									<div>
-										<p className="text-gray-500 line-through">
+										<p className="text-sm text-gray-500 line-through">
 											{result.price?.toLocaleString()}원
 										</p>
-										<p className="text-lg font-bold text-[#FFA725]">
+										<p className="text-base md:text-lg font-bold text-[#FFA725]">
 											{result.sgtPrice} SGT
 										</p>
 									</div>
@@ -157,6 +161,7 @@ export function SearchPageContent() {
 	);
 	const [isLoading, setIsLoading] = useState(false);
 	const [results, setResults] = useState<SearchResult[]>([]);
+	const [showFilters, setShowFilters] = useState(false);
 
 	useEffect(() => {
 		const query = searchParams?.get("q");
@@ -191,7 +196,7 @@ export function SearchPageContent() {
 	return (
 		<div className="w-full max-w-7xl mx-auto px-4 py-8">
 			{/* Search Header */}
-			<div className="mb-8">
+			<div className="mb-6 md:mb-8">
 				<form onSubmit={handleSearch} className="max-w-2xl mx-auto">
 					<div className="relative">
 						<input
@@ -224,11 +229,37 @@ export function SearchPageContent() {
 				</form>
 			</div>
 
+			{/* Mobile filter toggle */}
+			<div className="md:hidden mb-4">
+				<button
+					onClick={() => setShowFilters(!showFilters)}
+					className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-lg"
+				>
+					<span>필터 {showFilters ? "닫기" : "열기"}</span>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="20"
+						height="20"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						className={`transition-transform ${showFilters ? "rotate-180" : ""}`}
+					>
+						<polyline points="6 9 12 15 18 9"></polyline>
+					</svg>
+				</button>
+			</div>
+
 			{/* Filters */}
-			<div className="mb-8 space-y-4">
-				<div className="flex items-center gap-4 pb-4 border-b">
+			<div
+				className={`${showFilters ? "block" : "hidden"} md:block mb-8 space-y-4`}
+			>
+				<div className="flex flex-col md:flex-row md:items-center gap-4 pb-4 border-b">
 					<span className="text-gray-600">검색 유형:</span>
-					<div className="flex gap-2">
+					<div className="flex flex-wrap gap-2">
 						{[
 							{ value: "all", label: "전체" },
 							{ value: "store", label: "매장" },
@@ -237,7 +268,7 @@ export function SearchPageContent() {
 							<button
 								key={type.value}
 								onClick={() => setSearchType(type.value as any)}
-								className={`px-4 py-2 rounded-lg transition-colors ${
+								className={`px-3 py-1 md:px-4 md:py-2 rounded-lg transition-colors ${
 									searchType === type.value
 										? "bg-[#6A9C89] text-white"
 										: "bg-gray-100 hover:bg-gray-200"
@@ -249,56 +280,51 @@ export function SearchPageContent() {
 					</div>
 				</div>
 
-				<div className="flex flex-wrap gap-4">
-					<div className="flex items-center gap-4">
-						<span className="text-gray-600">카테고리:</span>
-						<select
-							value={selectedCategory}
-							onChange={(e) => setSelectedCategory(e.target.value)}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
-						>
-							{categories.map((category) => (
-								<option key={category} value={category}>
-									{category}
-								</option>
-							))}
-						</select>
+				<div className="flex flex-col md:flex-row md:items-center gap-4 pb-4 border-b">
+					<span className="text-gray-600">카테고리:</span>
+					<div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+						{categories.map((category) => (
+							<button
+								key={category}
+								onClick={() => setSelectedCategory(category)}
+								className={`px-3 py-1 md:px-4 md:py-2 rounded-lg whitespace-nowrap transition-colors ${
+									selectedCategory === category
+										? "bg-[#6A9C89] text-white"
+										: "bg-gray-100 hover:bg-gray-200"
+								}`}
+							>
+								{category}
+							</button>
+						))}
 					</div>
+				</div>
 
-					<div className="flex items-center gap-4">
-						<span className="text-gray-600">정렬:</span>
-						<select
-							value={selectedSort}
-							onChange={(e) => setSelectedSort(e.target.value)}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
-						>
-							{sortOptions.map((option) => (
-								<option key={option} value={option}>
-									{option}
-								</option>
-							))}
-						</select>
+				<div className="flex flex-col md:flex-row md:items-center gap-4 pb-4 border-b">
+					<span className="text-gray-600">정렬:</span>
+					<div className="flex flex-wrap gap-2">
+						{sortOptions.map((option) => (
+							<button
+								key={option}
+								onClick={() => setSelectedSort(option)}
+								className={`px-3 py-1 md:px-4 md:py-2 rounded-lg whitespace-nowrap transition-colors ${
+									selectedSort === option
+										? "bg-[#6A9C89] text-white"
+										: "bg-gray-100 hover:bg-gray-200"
+								}`}
+							>
+								{option}
+							</button>
+						))}
 					</div>
 				</div>
 			</div>
 
 			{/* Search Results */}
-			<div className="space-y-6">
-				<Suspense
-					fallback={
-						<div className="text-center py-12">
-							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA725] mx-auto"></div>
-							<p className="mt-4 text-gray-600">검색 결과 로딩 중...</p>
-						</div>
-					}
-				>
-					<SearchResults
-						isLoading={isLoading}
-						filteredResults={filteredResults}
-						searchTerm={searchTerm}
-					/>
-				</Suspense>
-			</div>
+			<SearchResults
+				isLoading={isLoading}
+				filteredResults={filteredResults}
+				searchTerm={searchTerm}
+			/>
 		</div>
 	);
 }

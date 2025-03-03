@@ -6,8 +6,8 @@ export default function Hero() {
 			<div className="max-w-7xl mx-auto">
 				<div className="relative z-10 pb-8 sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
 					<main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-						<div className="sm:text-center lg:text-left">
-							<h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+						<div className="text-center lg:text-left">
+							<h1 className="text-3xl tracking-tight font-extrabold text-gray-900 sm:text-4xl md:text-5xl lg:text-6xl">
 								<span className="block">내 주변 상점 찾기</span>
 								<span className="block text-[#FFA725]">SGT 토큰 적립하기</span>
 							</h1>
@@ -15,7 +15,7 @@ export default function Hero() {
 								지역 상점과 연결하고, 리워드를 받으며, SGT 토큰과 함께하는
 								차세대 쇼핑 경험을 만나보세요.
 							</p>
-							<div className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
+							<div className="mt-5 sm:mt-8 flex flex-col sm:flex-row sm:justify-center lg:justify-start gap-3 sm:gap-0">
 								<div className="rounded-md shadow">
 									<Link
 										href="/stores/locations"
@@ -24,7 +24,7 @@ export default function Hero() {
 										상점 둘러보기
 									</Link>
 								</div>
-								<div className="mt-3 sm:mt-0 sm:ml-3">
+								<div className="sm:mt-0 sm:ml-3">
 									<Link
 										href="/stores/register"
 										className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-[#6A9C89] bg-[#C1D8C3] hover:bg-[#A1C8A3] md:py-4 md:text-lg md:px-10"

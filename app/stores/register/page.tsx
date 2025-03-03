@@ -68,9 +68,9 @@ export default function StoreRegistration() {
 	return (
 		<div className="w-full max-w-7xl mx-auto px-4 py-8">
 			{/* Header Section */}
-			<div className="text-center mb-12">
-				<h1 className="text-4xl font-bold mb-4">입점 신청</h1>
-				<p className="text-xl text-gray-600 max-w-2xl mx-auto">
+			<div className="text-center mb-8 md:mb-12">
+				<h1 className="text-3xl md:text-4xl font-bold mb-4">입점 신청</h1>
+				<p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
 					상가톡과 함께 성장할 파트너를 찾습니다. 아래 양식을 작성하시면 검토 후
 					연락드리겠습니다.
 				</p>
@@ -78,15 +78,15 @@ export default function StoreRegistration() {
 
 			{/* Registration Form */}
 			<div className="max-w-3xl mx-auto">
-				<div className="bg-white rounded-2xl p-8 shadow-lg">
+				<div className="bg-white rounded-2xl p-4 md:p-8 shadow-lg">
 					<form onSubmit={handleSubmit} className="space-y-6">
 						{/* Business Information Section */}
 						<div className="space-y-6">
-							<h2 className="text-2xl font-semibold text-[#6A9C89] mb-4">
+							<h2 className="text-xl md:text-2xl font-semibold text-[#6A9C89] mb-4">
 								사업자 정보
 							</h2>
 
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-2">
 										상호명 <span className="text-red-500">*</span>
@@ -115,7 +115,7 @@ export default function StoreRegistration() {
 								</div>
 							</div>
 
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-2">
 										사업자등록번호 <span className="text-red-500">*</span>
@@ -149,7 +149,7 @@ export default function StoreRegistration() {
 
 						{/* Store Information Section */}
 						<div className="space-y-6 pt-6 border-t">
-							<h2 className="text-2xl font-semibold text-[#6A9C89] mb-4">
+							<h2 className="text-xl md:text-2xl font-semibold text-[#6A9C89] mb-4">
 								매장 정보
 							</h2>
 
@@ -181,7 +181,7 @@ export default function StoreRegistration() {
 								/>
 							</div>
 
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-2">
 										업종 카테고리 <span className="text-red-500">*</span>
@@ -249,30 +249,35 @@ export default function StoreRegistration() {
 
 						{/* Terms and Submit */}
 						<div className="pt-6 border-t">
-							<div className="mb-6">
-								<label className="flex items-center">
+							<div className="flex items-start mb-6">
+								<div className="flex items-center h-5">
 									<input
+										id="terms"
 										type="checkbox"
 										required
-										className="w-4 h-4 text-[#FFA725] border-gray-300 rounded focus:ring-[#FFA725]"
+										className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-[#FFA725]"
 									/>
-									<span className="ml-2 text-sm text-gray-600">
-										개인정보 수집 및 이용에 동의합니다.{" "}
-										<span className="text-red-500">*</span>
-									</span>
+								</div>
+								<label
+									htmlFor="terms"
+									className="ml-2 text-sm font-medium text-gray-700"
+								>
+									<span className="text-red-500">*</span> 개인정보 수집 및
+									이용에 동의합니다.{" "}
+									<a href="#" className="text-[#FFA725] hover:underline">
+										약관 보기
+									</a>
 								</label>
 							</div>
 
 							<button
 								type="submit"
 								disabled={isSubmitting}
-								className={`w-full py-3 px-6 text-white rounded-lg text-lg font-semibold transition-colors ${
-									isSubmitting
-										? "bg-gray-400 cursor-not-allowed"
-										: "bg-[#FFA725] hover:bg-[#FF9500]"
+								className={`w-full px-6 py-3 text-white bg-[#FFA725] rounded-lg hover:bg-[#FF9500] focus:outline-none focus:ring-2 focus:ring-[#FFA725] focus:ring-opacity-50 ${
+									isSubmitting ? "opacity-70 cursor-not-allowed" : ""
 								}`}
 							>
-								{isSubmitting ? "처리중..." : "입점 신청하기"}
+								{isSubmitting ? "제출 중..." : "입점 신청하기"}
 							</button>
 						</div>
 					</form>

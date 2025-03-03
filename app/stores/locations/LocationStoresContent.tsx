@@ -11,6 +11,7 @@ declare global {
 
 export function LocationStoresContent() {
 	const [map, setMap] = useState<any>(null);
+	const [showStoreList, setShowStoreList] = useState(false);
 	const [stores, setStores] = useState([
 		{
 			id: 1,
@@ -72,9 +73,34 @@ export function LocationStoresContent() {
 		<div className="container mx-auto px-4 py-8">
 			<h1 className="text-3xl font-bold mb-8">지역별 매장</h1>
 
+			{/* Mobile toggle for store list */}
+			<div className="lg:hidden mb-4">
+				<button
+					onClick={() => setShowStoreList(!showStoreList)}
+					className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-lg"
+				>
+					<span>{showStoreList ? "지도 보기" : "매장 목록 보기"}</span>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="20"
+						height="20"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<polyline points="6 9 12 15 18 9"></polyline>
+					</svg>
+				</button>
+			</div>
+
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 				{/* Map Container */}
-				<div className="lg:col-span-2 h-[600px] rounded-lg overflow-hidden">
+				<div
+					className={`${showStoreList ? "hidden" : "block"} lg:block lg:col-span-2 h-[400px] lg:h-[600px] rounded-lg overflow-hidden`}
+				>
 					<Script
 						strategy="beforeInteractive"
 						src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_MAPS_API_KEY&autoload=false`}
@@ -83,7 +109,9 @@ export function LocationStoresContent() {
 				</div>
 
 				{/* Store List */}
-				<div className="bg-card rounded-lg p-4">
+				<div
+					className={`${showStoreList ? "block" : "hidden"} lg:block bg-card rounded-lg p-4`}
+				>
 					<div className="mb-4">
 						<input
 							type="text"
