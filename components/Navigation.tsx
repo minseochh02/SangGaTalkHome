@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Navigation() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const { user, userProfile, signOut } = useAuth();
+	const isLoggedIn = !!user;
 
 	return (
 		<>
@@ -52,15 +55,31 @@ export default function Navigation() {
 								<line x1="21" y1="21" x2="16.65" y2="16.65" />
 							</svg>
 						</Link>
-						<Link href="/login" className="hover:text-primary">
-							로그인
-						</Link>
-						<Link
-							href="/signup"
-							className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-						>
-							회원가입
-						</Link>
+						{!isLoggedIn ? (
+							<>
+								<Link href="/login" className="hover:text-primary">
+									로그인
+								</Link>
+								<Link
+									href="/signup"
+									className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+								>
+									회원가입
+								</Link>
+							</>
+						) : (
+							<>
+								<Link href="/profile" className="hover:text-primary">
+									{userProfile?.username || "프로필"}
+								</Link>
+								<button
+									onClick={() => signOut()}
+									className="hover:text-primary"
+								>
+									로그아웃
+								</button>
+							</>
+						)}
 					</div>
 
 					{/* Mobile menu button */}
@@ -160,20 +179,43 @@ export default function Navigation() {
 							>
 								검색
 							</Link>
-							<Link
-								href="/login"
-								className="hover:text-primary"
-								onClick={() => setMobileMenuOpen(false)}
-							>
-								로그인
-							</Link>
-							<Link
-								href="/signup"
-								className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-								onClick={() => setMobileMenuOpen(false)}
-							>
-								회원가입
-							</Link>
+							{!isLoggedIn ? (
+								<>
+									<Link
+										href="/login"
+										className="hover:text-primary"
+										onClick={() => setMobileMenuOpen(false)}
+									>
+										로그인
+									</Link>
+									<Link
+										href="/signup"
+										className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+										onClick={() => setMobileMenuOpen(false)}
+									>
+										회원가입
+									</Link>
+								</>
+							) : (
+								<>
+									<Link
+										href="/profile"
+										className="hover:text-primary"
+										onClick={() => setMobileMenuOpen(false)}
+									>
+										프로필
+									</Link>
+									<button
+										onClick={() => {
+											signOut();
+											setMobileMenuOpen(false);
+										}}
+										className="hover:text-primary"
+									>
+										로그아웃
+									</button>
+								</>
+							)}
 						</div>
 					</div>
 				</div>
