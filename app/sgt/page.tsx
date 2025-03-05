@@ -10,8 +10,7 @@ export default function SGTPage() {
 			<div className="text-center mb-16">
 				<h1 className="text-5xl font-bold mb-6">SGT 토큰 이코노미</h1>
 				<p className="text-xl text-gray-600 max-w-2xl mx-auto">
-					상가톡(SanggaTalk)의 자체 토큰 SGT로 더 스마트한 지역 상권 생태계를
-					만나보세요
+					QUUS의 자체 토큰 SGT로 더 스마트한 지역 상권 생태계를 만나보세요
 				</p>
 			</div>
 
@@ -82,7 +81,7 @@ export default function SGTPage() {
 					</div>
 					<h3 className="text-xl font-semibold mb-3">리워드</h3>
 					<p className="text-gray-600">
-						상가톡 활동과 거래를 통해 SGT 토큰을 보상으로 받으세요
+						SGT 활동과 거래를 통해 SGT 토큰을 보상으로 받으세요
 					</p>
 				</div>
 			</div>
@@ -101,7 +100,7 @@ export default function SGTPage() {
 							<div>
 								<h3 className="text-xl font-semibold mb-2">토큰 획득</h3>
 								<p className="text-gray-600">
-									상가톡 앱에서 리뷰 작성, 매장 방문 인증, 친구 초대 등 다양한
+									SGT 앱에서 리뷰 작성, 매장 방문 인증, 친구 초대 등 다양한
 									활동을 통해 SGT 토큰을 획득하세요.
 								</p>
 							</div>
@@ -213,8 +212,8 @@ export default function SGTPage() {
 					지금 바로 SGT 토큰을 경험해보세요
 				</h2>
 				<p className="text-lg mb-8 max-w-2xl mx-auto">
-					상가톡 앱을 다운로드하고 SGT 토큰으로 더 스마트한 소비 생활을
-					시작하세요. 새로운 회원에게 웰컴 보너스 10 SGT 증정!
+					SGT 앱을 다운로드하고 SGT 토큰으로 더 스마트한 소비 생활을 시작하세요.
+					새로운 회원에게 웰컴 보너스 10 SGT 증정!
 				</p>
 				<div className="flex gap-4 justify-center">
 					<Link

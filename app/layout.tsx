@@ -9,7 +9,7 @@ const geistSans = Geist({
 });
 
 export const metadata = {
-	title: "SanggaTalk - Your Local Business Platform",
+	title: "SGT - Your Local Business Platform",
 	description: "Connect with local businesses and earn SGT tokens",
 };
 

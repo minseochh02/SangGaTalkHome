@@ -12,7 +12,7 @@ export default function Navigation() {
 				<div className="w-full max-w-7xl flex justify-between items-center p-3 px-5 text-sm">
 					<div className="flex gap-8 items-center">
 						<Link href="/" className="font-bold text-lg">
-							SangGaTalk
+							SGT
 						</Link>
 						<div className="hidden md:flex items-center gap-6">
 							<Link href="/stores/categories" className="hover:text-primary">
@@ -22,7 +22,7 @@ export default function Navigation() {
 								지역별 매장
 							</Link>
 							<Link href="/sgt/products" className="hover:text-primary">
-								상가톡 상품
+								SGT 상품
 							</Link>
 							<Link href="/stores/register" className="hover:text-primary">
 								입점 신청
@@ -129,7 +129,7 @@ export default function Navigation() {
 							className="hover:text-primary py-2"
 							onClick={() => setMobileMenuOpen(false)}
 						>
-							상가톡 상품
+							SGT 상품
 						</Link>
 						<Link
 							href="/stores/register"

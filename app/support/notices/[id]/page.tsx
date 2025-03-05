@@ -1,8 +1,8 @@
 import { NoticeDetailContent } from "./NoticeDetailContent";
 
 export const metadata = {
-	title: "공지사항 상세 - SanggaTalk",
-	description: "SanggaTalk의 공지사항을 확인하세요.",
+	title: "공지사항 상세 - SGT",
+	description: "SGT의 공지사항을 확인하세요.",
 };
 
 type Params = Promise<{ id: string }>;

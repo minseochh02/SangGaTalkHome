@@ -17,8 +17,8 @@ type Notice = {
 const SAMPLE_NOTICES: Notice[] = [
 	{
 		id: 1,
-		title: "[공지] SanggaTalk 서비스 업데이트 안내",
-		content: `안녕하세요, SanggaTalk 운영팀입니다.
+		title: "[공지] SGT 서비스 업데이트 안내",
+		content: `안녕하세요, SGT 운영팀입니다.
 
 서비스 품질 향상을 위한 업데이트를 진행할 예정입니다.
 

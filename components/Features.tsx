@@ -18,8 +18,8 @@ const features = [
 		icon: CurrencyDollarIcon,
 	},
 	{
-		name: "상가톡 연동",
-		description: "상가톡을 통해 상점 주인과 다른 쇼핑객들과 직접 소통하세요.",
+		name: "SGT 연동",
+		description: "SGT을 통해 상점 주인과 다른 쇼핑객들과 직접 소통하세요.",
 		icon: ChatBubbleLeftRightIcon,
 	},
 	{

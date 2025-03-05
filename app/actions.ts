@@ -53,7 +53,26 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  return redirect("/protected");
+  return redirect("/protected/mypage");
+};
+
+export const signInWithGoogleAction = async () => {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    console.error(error.code + " " + error.message);
+    return encodedRedirect("error", "/", error.message);
+  }
+
+  redirect(data.url);
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {
@@ -97,7 +116,7 @@ export const resetPasswordAction = async (formData: FormData) => {
   const confirmPassword = formData.get("confirmPassword") as string;
 
   if (!password || !confirmPassword) {
-    encodedRedirect(
+    return encodedRedirect(
       "error",
       "/protected/reset-password",
       "Password and confirm password are required",
@@ -105,7 +124,7 @@ export const resetPasswordAction = async (formData: FormData) => {
   }
 
   if (password !== confirmPassword) {
-    encodedRedirect(
+    return encodedRedirect(
       "error",
       "/protected/reset-password",
       "Passwords do not match",
@@ -117,18 +136,26 @@ export const resetPasswordAction = async (formData: FormData) => {
   });
 
   if (error) {
-    encodedRedirect(
+    return encodedRedirect(
       "error",
       "/protected/reset-password",
       "Password update failed",
     );
   }
 
-  encodedRedirect("success", "/protected/reset-password", "Password updated");
+  return encodedRedirect("success", "/protected/reset-password", "Password updated");
 };
 
 export const signOutAction = async () => {
   const supabase = await createClient();
-  await supabase.auth.signOut();
-  return redirect("/sign-in");
+  const { error } = await supabase.auth.signOut();
+  
+  if (error) {
+    console.error("Error signing out:", error.message);
+  }
+  
+  // Add a small delay to ensure cookies are cleared
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  return redirect("/");
 };

@@ -71,7 +71,7 @@ export default function StoreRegistration() {
 			<div className="text-center mb-8 md:mb-12">
 				<h1 className="text-3xl md:text-4xl font-bold mb-4">입점 신청</h1>
 				<p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-					상가톡과 함께 성장할 파트너를 찾습니다. 아래 양식을 작성하시면 검토 후
+					SGT과 함께 성장할 파트너를 찾습니다. 아래 양식을 작성하시면 검토 후
 					연락드리겠습니다.
 				</p>
 			</div>
