@@ -1,12 +1,5 @@
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogFooter,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -93,66 +86,49 @@ export default function ReviewModal({
 	};
 
 	return (
-		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="sm:max-w-[500px]">
-				<DialogHeader>
-					<DialogTitle className="text-xl font-bold">리뷰 작성하기</DialogTitle>
-				</DialogHeader>
-
-				<div className="py-4">
-					<div className="mb-6">
-						<label className="block text-sm font-medium mb-2">평점</label>
-						<div className="flex items-center space-x-1">
-							{[1, 2, 3, 4, 5].map((star) => (
-								<button
-									key={star}
-									type="button"
-									onClick={() => setRating(star)}
-									className="focus:outline-none"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="24"
-										height="24"
-										viewBox="0 0 24 24"
-										fill={star <= rating ? "currentColor" : "none"}
-										stroke="currentColor"
-										strokeWidth="2"
-										className={`${
-											star <= rating ? "text-yellow-400" : "text-gray-300"
-										} transition-colors`}
-									>
-										<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-									</svg>
-								</button>
-							))}
-							<span className="ml-2 text-sm text-gray-500">{rating}/5</span>
-						</div>
-					</div>
-
-					<div className="mb-4">
-						<label className="block text-sm font-medium mb-2">리뷰 내용</label>
-						<Textarea
-							value={reviewText}
-							onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-								setReviewText(e.target.value)
-							}
-							placeholder="매장에 대한 솔직한 리뷰를 작성해주세요."
-							rows={5}
-							className="resize-none"
-						/>
-					</div>
+		<div className="py-4">
+			<div className="mb-6">
+				<label className="block text-sm font-medium mb-2">평점</label>
+				<div className="flex items-center space-x-1">
+					{[1, 2, 3, 4, 5].map((star) => (
+						<button
+							key={star}
+							type="button"
+							onClick={() => setRating(star)}
+							className="focus:outline-none"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								fill={star <= rating ? "currentColor" : "none"}
+								stroke="currentColor"
+								strokeWidth="2"
+								className={`${
+									star <= rating ? "text-yellow-400" : "text-gray-300"
+								} transition-colors`}
+							>
+								<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+							</svg>
+						</button>
+					))}
+					<span className="ml-2 text-sm text-gray-500">{rating}/5</span>
 				</div>
+			</div>
 
-				<DialogFooter>
-					<Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-						취소
-					</Button>
-					<Button onClick={handleSubmit} disabled={isSubmitting}>
-						{isSubmitting ? "제출 중..." : "리뷰 등록"}
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+			<div className="mb-4">
+				<label className="block text-sm font-medium mb-2">리뷰 내용</label>
+				<Textarea
+					value={reviewText}
+					onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+						setReviewText(e.target.value)
+					}
+					placeholder="매장에 대한 솔직한 리뷰를 작성해주세요."
+					rows={5}
+					className="resize-none"
+				/>
+			</div>
+		</div>
 	);
 }
