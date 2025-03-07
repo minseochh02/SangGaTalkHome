@@ -1,59 +1,114 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { Category } from "@/utils/type";
 
 interface FormData {
-	businessName: string;
-	ownerName: string;
-	businessNumber: string;
-	phoneNumber: string;
+	business_name: string;
+	owner_name: string;
+	business_number: string;
+	phone_number: string;
 	email: string;
 	address: string;
 	category: string;
 	description: string;
-	operatingHours: string;
+	operating_hours: string;
 	website?: string;
 }
-
-const categories = [
-	"음식점",
-	"카페",
-	"쇼핑",
-	"뷰티/미용",
-	"문화/예술",
-	"교육",
-	"생활/서비스",
-	"기타",
-];
 
 export default function StoreRegistration() {
 	const router = useRouter();
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [categories, setCategories] = useState<Category[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [formData, setFormData] = useState<FormData>({
-		businessName: "",
-		ownerName: "",
-		businessNumber: "",
-		phoneNumber: "",
+		business_name: "",
+		owner_name: "",
+		business_number: "",
+		phone_number: "",
 		email: "",
 		address: "",
 		category: "",
 		description: "",
-		operatingHours: "",
+		operating_hours: "",
 		website: "",
 	});
+
+	useEffect(() => {
+		const fetchCategories = async () => {
+			try {
+				setLoading(true);
+				const supabase = createClient();
+				const { data, error } = await supabase
+					.from("categories")
+					.select("category_id, category_name, description")
+					.order("category_name");
+
+				if (error) {
+					throw error;
+				}
+
+				setCategories(data || []);
+			} catch (err) {
+				console.error("Error fetching categories:", err);
+				setError("카테고리를 불러오는 중 오류가 발생했습니다.");
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchCategories();
+	}, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsSubmitting(true);
 
-		// Here you would typically make an API call to submit the form
-		// For now, we'll just simulate a submission
-		await new Promise((resolve) => setTimeout(resolve, 1500));
+		try {
+			const supabase = createClient();
 
-		alert("입점 신청이 성공적으로 접수되었습니다. 검토 후 연락드리겠습니다.");
-		setIsSubmitting(false);
-		router.push("/");
+			// Get the current user
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
+
+			if (!user) {
+				alert("로그인이 필요합니다.");
+				router.push("/login");
+				return;
+			}
+
+			// Submit the application to the store_applications table
+			const { data, error } = await supabase.from("store_applications").insert({
+				user_id: user.id,
+				business_name: formData.business_name,
+				owner_name: formData.owner_name,
+				business_number: formData.business_number,
+				phone_number: formData.phone_number,
+				email: formData.email,
+				address: formData.address,
+				category: formData.category,
+				description: formData.description,
+				operating_hours: formData.operating_hours,
+				website: formData.website || null,
+				status: 0, // 0: pending
+			});
+
+			if (error) {
+				throw error;
+			}
+
+			alert("입점 신청이 성공적으로 접수되었습니다. 검토 후 연락드리겠습니다.");
+			router.push("/profile");
+		} catch (error) {
+			console.error("Error submitting application:", error);
+			alert("입점 신청 중 오류가 발생했습니다. 다시 시도해주세요.");
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 
 	const handleChange = (
@@ -93,9 +148,9 @@ export default function StoreRegistration() {
 									</label>
 									<input
 										type="text"
-										name="businessName"
+										name="business_name"
 										required
-										value={formData.businessName}
+										value={formData.business_name}
 										onChange={handleChange}
 										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 									/>
@@ -106,9 +161,9 @@ export default function StoreRegistration() {
 									</label>
 									<input
 										type="text"
-										name="ownerName"
+										name="owner_name"
 										required
-										value={formData.ownerName}
+										value={formData.owner_name}
 										onChange={handleChange}
 										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 									/>
@@ -122,10 +177,10 @@ export default function StoreRegistration() {
 									</label>
 									<input
 										type="text"
-										name="businessNumber"
+										name="business_number"
 										required
 										placeholder="000-00-00000"
-										value={formData.businessNumber}
+										value={formData.business_number}
 										onChange={handleChange}
 										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 									/>
@@ -136,10 +191,10 @@ export default function StoreRegistration() {
 									</label>
 									<input
 										type="tel"
-										name="phoneNumber"
+										name="phone_number"
 										required
 										placeholder="010-0000-0000"
-										value={formData.phoneNumber}
+										value={formData.phone_number}
 										onChange={handleChange}
 										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 									/>
@@ -192,14 +247,31 @@ export default function StoreRegistration() {
 										value={formData.category}
 										onChange={handleChange}
 										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
+										disabled={loading}
 									>
 										<option value="">선택해주세요</option>
-										{categories.map((category) => (
-											<option key={category} value={category}>
-												{category}
+										{loading ? (
+											<option value="" disabled>
+												로딩 중...
 											</option>
-										))}
+										) : error ? (
+											<option value="" disabled>
+												카테고리 로딩 실패
+											</option>
+										) : (
+											categories.map((category) => (
+												<option
+													key={category.category_id}
+													value={category.category_name}
+												>
+													{category.category_name}
+												</option>
+											))
+										)}
 									</select>
+									{error && (
+										<p className="text-red-500 text-sm mt-1">{error}</p>
+									)}
 								</div>
 								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-2">
@@ -207,10 +279,10 @@ export default function StoreRegistration() {
 									</label>
 									<input
 										type="text"
-										name="operatingHours"
+										name="operating_hours"
 										required
 										placeholder="예: 09:00-18:00"
-										value={formData.operatingHours}
+										value={formData.operating_hours}
 										onChange={handleChange}
 										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 									/>

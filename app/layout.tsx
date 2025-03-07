@@ -3,6 +3,7 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
 	display: "swap",
@@ -30,6 +31,7 @@ export default function RootLayout({
 							<Footer />
 						</div>
 					</main>
+					<Toaster position="top-center" />
 				</AuthProvider>
 			</body>
 		</html>

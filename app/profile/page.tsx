@@ -7,6 +7,10 @@
 // if user data is found, show profile page
 
 import UserProfileCard from "@/components/UserProfileCard";
+import StoreApplicationsList from "@/components/StoreApplicationsList";
+import ApprovedStoresList from "@/components/ApprovedStoresList";
+import UserFavoritesList from "@/components/UserFavoritesList";
+import UserReviewsList from "@/components/UserReviewsList";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -17,6 +21,12 @@ export default function ProfilePage() {
 	const router = useRouter();
 	const [localLoading, setLocalLoading] = useState(true);
 	const [redirecting, setRedirecting] = useState(false);
+	const [activeTab, setActiveTab] = useState<"applications" | "stores">(
+		"applications"
+	);
+	const [activeFavoritesReviewsTab, setActiveFavoritesReviewsTab] = useState<
+		"favorites" | "reviews"
+	>("favorites");
 
 	console.log("ProfilePage render:", {
 		isLoading,
@@ -100,8 +110,8 @@ export default function ProfilePage() {
 		<div className="flex min-h-screen bg-background">
 			<div className="flex-1 flex flex-col">
 				<div className="container mx-auto py-10">
-					<div className="max-w-4xl mx-auto">
-						<main className="space-y-6">
+					<div className="max-w-6xl mx-auto">
+						<main className="space-y-8">
 							<h1 className="text-3xl font-bold">프로필</h1>
 
 							<UserProfileCard
@@ -115,6 +125,103 @@ export default function ProfilePage() {
 								<Button asChild>
 									<Link href="/account-setting">Edit Profile</Link>
 								</Button>
+							</div>
+
+							{/* Favorites and Reviews Section */}
+							<div className="mt-12">
+								<h2 className="text-2xl font-bold mb-6">즐겨찾기 및 리뷰</h2>
+
+								<div className="flex justify-between items-center mb-6">
+									<div className="flex space-x-4">
+										<button
+											onClick={() => setActiveFavoritesReviewsTab("favorites")}
+											className={`px-4 py-2 rounded-lg ${
+												activeFavoritesReviewsTab === "favorites"
+													? "bg-primary text-white"
+													: "bg-gray-100 hover:bg-gray-200"
+											}`}
+										>
+											즐겨찾기 매장
+										</button>
+										<button
+											onClick={() => setActiveFavoritesReviewsTab("reviews")}
+											className={`px-4 py-2 rounded-lg ${
+												activeFavoritesReviewsTab === "reviews"
+													? "bg-primary text-white"
+													: "bg-gray-100 hover:bg-gray-200"
+											}`}
+										>
+											내 리뷰
+										</button>
+									</div>
+								</div>
+
+								<div className="bg-white rounded-lg shadow-md p-6">
+									{activeFavoritesReviewsTab === "favorites" ? (
+										<div>
+											<h3 className="text-lg font-semibold mb-4">
+												즐겨찾기 매장
+											</h3>
+											<UserFavoritesList userId={user.id} />
+										</div>
+									) : (
+										<div>
+											<h3 className="text-lg font-semibold mb-4">내 리뷰</h3>
+											<UserReviewsList userId={user.id} />
+										</div>
+									)}
+								</div>
+							</div>
+
+							{/* SGT Stores Section */}
+							<div className="mt-12">
+								<h2 className="text-2xl font-bold mb-6">SGT 매장</h2>
+
+								<div className="flex justify-between items-center mb-6">
+									<div className="flex space-x-4">
+										<button
+											onClick={() => setActiveTab("applications")}
+											className={`px-4 py-2 rounded-lg ${
+												activeTab === "applications"
+													? "bg-primary text-white"
+													: "bg-gray-100 hover:bg-gray-200"
+											}`}
+										>
+											매장 신청 현황
+										</button>
+										<button
+											onClick={() => setActiveTab("stores")}
+											className={`px-4 py-2 rounded-lg ${
+												activeTab === "stores"
+													? "bg-primary text-white"
+													: "bg-gray-100 hover:bg-gray-200"
+											}`}
+										>
+											승인된 매장
+										</button>
+									</div>
+									<Button asChild>
+										<Link href="/stores/register">새 매장 신청</Link>
+									</Button>
+								</div>
+
+								<div className="bg-white rounded-lg shadow-md p-6">
+									{activeTab === "applications" ? (
+										<div>
+											<h3 className="text-lg font-semibold mb-4">
+												매장 신청 현황
+											</h3>
+											<StoreApplicationsList userId={user.id} />
+										</div>
+									) : (
+										<div>
+											<h3 className="text-lg font-semibold mb-4">
+												승인된 매장
+											</h3>
+											<ApprovedStoresList userId={user.id} />
+										</div>
+									)}
+								</div>
 							</div>
 						</main>
 					</div>
