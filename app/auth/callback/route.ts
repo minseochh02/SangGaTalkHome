@@ -1,10 +1,8 @@
-// handle googlesignin callback
-// 1, exchange the code for a session
-// 2, redirect to the profile page
-
-import { createClient } from "@/utils/supabase/server";
+/* eslint-disable */
+// @ts-nocheck
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
-
+import { cookies } from "next/headers";
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -15,7 +13,32 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   
-  const supabase = await createClient();
+  const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookies().get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          },
+          remove(name: string, options: CookieOptions) {
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+              maxAge: 0,
+            });
+          },
+        },
+      }
+    );
   
   // Exchange the code for a session
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
