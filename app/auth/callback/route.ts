@@ -3,6 +3,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -12,6 +13,9 @@ export async function GET(request: Request) {
     console.error("No code provided in callback");
     return NextResponse.redirect(new URL("/login", request.url));
   }
+  
+  // Create a response object to set cookies on
+  const response = NextResponse.redirect(new URL("/profile", request.url));
   
   const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,6 +52,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   
-  // Successfully authenticated, redirect to profile page
-  return NextResponse.redirect(new URL("/profile", request.url));
+  // Successfully authenticated, return the response with cookies set
+  return response;
 }
