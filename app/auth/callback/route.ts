@@ -18,27 +18,15 @@ export async function GET(request: Request) {
   // Create a response object to set cookies on
   const response = NextResponse.redirect(new URL("/profile", request.url));
   
-  const cookieStore = cookies();
-  
-  // Log all cookies for debugging
-  const allCookies = cookieStore.getAll();
-  console.log("Available cookies:", allCookies.map(c => c.name));
-  
-  // Log all request headers for debugging
-  console.log("Request headers:", Object.fromEntries([...request.headers.entries()]));
-  
   const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
-            const cookie = cookieStore.get(name);
-            console.log(`Getting cookie ${name}:`, cookie?.value ? "exists" : "not found");
-            return cookie?.value;
+            return cookies().get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
-            console.log(`Setting cookie ${name}`);
             response.cookies.set({
               name,
               value,
@@ -46,7 +34,6 @@ export async function GET(request: Request) {
             });
           },
           remove(name: string, options: CookieOptions) {
-            console.log(`Removing cookie ${name}`);
             response.cookies.set({
               name,
               value: '',
@@ -58,26 +45,15 @@ export async function GET(request: Request) {
       }
     );
   
-  try {
-    // Exchange the code for a session
-    console.log("Exchanging code for session...");
-    console.log("Code:", code);
-    
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    
-    if (error) {
-      console.error("Auth error in callback:", error.message, error);
-      console.log("code", code);
-      return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent(error.message), request.url));
-    }
-    
-    console.log("Session exchange successful");
-    console.log("Session data:", data);
-    
-    // Successfully authenticated, return the response with cookies set
-    return response;
-  } catch (err) {
-    console.error("Exception in auth callback:", err);
-    return NextResponse.redirect(new URL("/login?error=server_error", request.url));
+  // Exchange the code for a session
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  
+  if (error) {
+    console.error("Auth error in callback:", error.message);
+    console.log("code", code);
+    return NextResponse.redirect(new URL("/", request.url));
   }
+  
+  // Successfully authenticated, return the response with cookies set
+  return response;
 }
