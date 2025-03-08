@@ -18,13 +18,15 @@ export async function GET(request: Request) {
   // Create a response object to set cookies on
   const response = NextResponse.redirect(new URL("/profile", request.url));
   
+  const cookieStore = cookies();
+  
   const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
-            return cookies().get(name)?.value;
+            return cookieStore.get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
             response.cookies.set({
@@ -45,15 +47,20 @@ export async function GET(request: Request) {
       }
     );
   
-  // Exchange the code for a session
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-  
-  if (error) {
-    console.error("Auth error in callback:", error.message);
-    console.log("code", code);
-    return NextResponse.redirect(new URL("/login", request.url));
+  try {
+    // Exchange the code for a session
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    
+    if (error) {
+      console.error("Auth error in callback:", error.message);
+      console.log("code", code);
+      return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent(error.message), request.url));
+    }
+    
+    // Successfully authenticated, return the response with cookies set
+    return response;
+  } catch (err) {
+    console.error("Exception in auth callback:", err);
+    return NextResponse.redirect(new URL("/login?error=server_error", request.url));
   }
-  
-  // Successfully authenticated, return the response with cookies set
-  return response;
 }
