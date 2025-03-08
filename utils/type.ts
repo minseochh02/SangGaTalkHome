@@ -39,7 +39,7 @@ export interface StoreApplication {
 	phone_number: string;
 	email: string;
 	address: string;
-	category: string;
+	category: string; // This is actually storing the category_id
 	description: string;
 	operating_hours: string;
 	website: string;

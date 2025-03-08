@@ -12,7 +12,7 @@ interface FormData {
 	phone_number: string;
 	email: string;
 	address: string;
-	category: string;
+	category_id: string;
 	description: string;
 	operating_hours: string;
 	website?: string;
@@ -32,7 +32,7 @@ export default function StoreRegistration() {
 		phone_number: "",
 		email: "",
 		address: "",
-		category: "",
+		category_id: "",
 		description: "",
 		operating_hours: "",
 		website: "",
@@ -92,7 +92,7 @@ export default function StoreRegistration() {
 				phone_number: formData.phone_number,
 				email: formData.email,
 				address: formData.address,
-				category: formData.category,
+				category: formData.category_id,
 				description: formData.description,
 				operating_hours: formData.operating_hours,
 				website: formData.website || null,
@@ -245,36 +245,22 @@ export default function StoreRegistration() {
 										업종 카테고리 <span className="text-red-500">*</span>
 									</label>
 									<select
-										name="category"
+										name="category_id"
 										required
-										value={formData.category}
+										value={formData.category_id}
 										onChange={handleChange}
 										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
-										disabled={loading}
 									>
-										<option value="">선택해주세요</option>
-										{loading ? (
-											<option value="" disabled>
-												로딩 중...
+										<option value="">카테고리 선택</option>
+										{categories.map((category) => (
+											<option
+												key={category.category_id}
+												value={category.category_id}
+											>
+												{category.category_name}
 											</option>
-										) : error ? (
-											<option value="" disabled>
-												카테고리 로딩 실패
-											</option>
-										) : (
-											categories.map((category) => (
-												<option
-													key={category.category_id}
-													value={category.category_name}
-												>
-													{category.category_name}
-												</option>
-											))
-										)}
+										))}
 									</select>
-									{error && (
-										<p className="text-red-500 text-sm mt-1">{error}</p>
-									)}
 								</div>
 								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-2">

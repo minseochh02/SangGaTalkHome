@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { StoreApplication } from "@/utils/type";
+import { StoreApplication, Category } from "@/utils/type";
 
 export default function AdminStoreApplicationsList() {
 	const [applications, setApplications] = useState<StoreApplication[]>([]);
@@ -12,9 +12,11 @@ export default function AdminStoreApplicationsList() {
 	const [expandedApplicationId, setExpandedApplicationId] = useState<
 		string | null
 	>(null);
+	const [categories, setCategories] = useState<Category[]>([]);
 
 	useEffect(() => {
 		fetchApplications();
+		fetchCategories();
 	}, []);
 
 	const fetchApplications = async () => {
@@ -38,6 +40,28 @@ export default function AdminStoreApplicationsList() {
 		}
 	};
 
+	const fetchCategories = async () => {
+		try {
+			const supabase = createClient();
+			const { data, error } = await supabase
+				.from("categories")
+				.select("category_id, category_name");
+
+			if (error) throw error;
+			setCategories(data || []);
+		} catch (err) {
+			console.error("Error fetching categories:", err);
+		}
+	};
+
+	// Function to get category name from category_id
+	const getCategoryName = (categoryId: string) => {
+		const category = categories.find(
+			(c) => c.category_id.toString() === categoryId
+		);
+		return category ? category.category_name : "Unknown Category";
+	};
+
 	const handleApprove = async (application: StoreApplication) => {
 		if (processingId) return; // Prevent multiple simultaneous operations
 		setProcessingId(application.application_id);
@@ -54,24 +78,27 @@ export default function AdminStoreApplicationsList() {
 			if (updateError) throw updateError;
 
 			// 2. Create a new store entry in the stores table
-			const { error: insertError } = await supabase.from("stores").insert({
-				user_id: application.user_id,
-				store_name: application.business_name,
-				store_type: 1, // Default to physical store
-				category_id: null, // This would need to be mapped from the category string
-				description: application.description,
-				address: application.address,
-				phone_number: application.phone_number,
-				website_url: application.website || null,
-				image_url: null, // No image in application
-				business_number: application.business_number,
-				owner_name: application.owner_name,
-				email: application.email,
-				operating_hours: application.operating_hours,
-				referrer_phone_number: application.referrer_phone_number || null,
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-			});
+			const { data: storeData, error: insertError } = await supabase
+				.from("stores")
+				.insert({
+					user_id: application.user_id,
+					store_name: application.business_name,
+					store_type: 1, // Default to physical store
+					category_id: application.category, // Now directly using the category field as category_id
+					description: application.description,
+					address: application.address,
+					phone_number: application.phone_number,
+					website_url: application.website || null,
+					image_url: null, // No image in application
+					business_number: application.business_number,
+					owner_name: application.owner_name,
+					email: application.email,
+					operating_hours: application.operating_hours,
+					referrer_phone_number: application.referrer_phone_number || null,
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+				})
+				.select();
 
 			if (insertError) throw insertError;
 
@@ -261,7 +288,9 @@ export default function AdminStoreApplicationsList() {
 									<div className="text-sm text-gray-500">{app.owner_name}</div>
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap">
-									<div className="text-sm text-gray-500">{app.category}</div>
+									<div className="text-sm text-gray-900">
+										{getCategoryName(app.category)}
+									</div>
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap">
 									{getStatusBadge(app.status)}
@@ -327,7 +356,7 @@ export default function AdminStoreApplicationsList() {
 														<span className="text-gray-500 w-32">
 															카테고리:
 														</span>
-														<span>{app.category}</span>
+														<span>{getCategoryName(app.category)}</span>
 													</div>
 													{app.description && (
 														<div className="flex">
