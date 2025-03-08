@@ -11,11 +11,14 @@ import StoreApplicationsList from "@/components/StoreApplicationsList";
 import ApprovedStoresList from "@/components/ApprovedStoresList";
 import UserFavoritesList from "@/components/UserFavoritesList";
 import UserReviewsList from "@/components/UserReviewsList";
+import AdminStoreApplicationsList from "@/components/AdminStoreApplicationsList";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ToastContainer } from "@/components/ui/use-toast";
+
 export default function ProfilePage() {
 	const { user, userProfile, isLoading } = useAuth();
 	const router = useRouter();
@@ -27,6 +30,9 @@ export default function ProfilePage() {
 	const [activeFavoritesReviewsTab, setActiveFavoritesReviewsTab] = useState<
 		"favorites" | "reviews"
 	>("favorites");
+	const [activeAdminTab, setActiveAdminTab] = useState<"pending" | "all">(
+		"pending"
+	);
 
 	console.log("ProfilePage render:", {
 		isLoading,
@@ -105,6 +111,9 @@ export default function ProfilePage() {
 		);
 	}
 
+	// Check if user is admin
+	const isAdmin = userProfile.role === "admin";
+
 	// Show profile if everything is loaded and user has a profile
 	return (
 		<div className="flex min-h-screen bg-background">
@@ -126,6 +135,20 @@ export default function ProfilePage() {
 									<Link href="/account-setting">Edit Profile</Link>
 								</Button>
 							</div>
+
+							{/* Admin Section - Only visible to admins */}
+							{isAdmin && (
+								<div className="mt-12">
+									<h2 className="text-2xl font-bold mb-6">관리자 기능</h2>
+
+									<div className="bg-white rounded-lg shadow-md p-6">
+										<h3 className="text-lg font-semibold mb-4">
+											매장 신청 관리
+										</h3>
+										<AdminStoreApplicationsList />
+									</div>
+								</div>
+							)}
 
 							{/* Favorites and Reviews Section */}
 							<div className="mt-12">
@@ -227,6 +250,7 @@ export default function ProfilePage() {
 					</div>
 				</div>
 			</div>
+			<ToastContainer />
 		</div>
 	);
 }
