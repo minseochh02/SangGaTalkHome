@@ -16,6 +16,7 @@ interface FormData {
 	description: string;
 	operating_hours: string;
 	website?: string;
+	referrer_phone_number?: string;
 }
 
 export default function StoreRegistration() {
@@ -35,6 +36,7 @@ export default function StoreRegistration() {
 		description: "",
 		operating_hours: "",
 		website: "",
+		referrer_phone_number: "",
 	});
 
 	useEffect(() => {
@@ -94,6 +96,7 @@ export default function StoreRegistration() {
 				description: formData.description,
 				operating_hours: formData.operating_hours,
 				website: formData.website || null,
+				referrer_phone_number: formData.referrer_phone_number || null,
 				status: 0, // 0: pending
 			});
 
@@ -315,6 +318,20 @@ export default function StoreRegistration() {
 									onChange={handleChange}
 									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 									placeholder="https://"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-2">
+									추천인 전화번호 (선택사항)
+								</label>
+								<input
+									type="tel"
+									name="referrer_phone_number"
+									value={formData.referrer_phone_number}
+									onChange={handleChange}
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
+									placeholder="010-0000-0000"
 								/>
 							</div>
 						</div>
