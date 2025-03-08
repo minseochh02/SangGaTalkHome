@@ -12,6 +12,7 @@ import ApprovedStoresList from "@/components/ApprovedStoresList";
 import UserFavoritesList from "@/components/UserFavoritesList";
 import UserReviewsList from "@/components/UserReviewsList";
 import AdminStoreApplicationsList from "@/components/AdminStoreApplicationsList";
+import AdminApprovedStoresList from "@/components/AdminApprovedStoresList";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -30,9 +31,9 @@ export default function ProfilePage() {
 	const [activeFavoritesReviewsTab, setActiveFavoritesReviewsTab] = useState<
 		"favorites" | "reviews"
 	>("favorites");
-	const [activeAdminTab, setActiveAdminTab] = useState<"pending" | "all">(
-		"pending"
-	);
+	const [activeAdminTab, setActiveAdminTab] = useState<
+		"applications" | "stores"
+	>("applications");
 
 	console.log("ProfilePage render:", {
 		isLoading,
@@ -141,11 +142,47 @@ export default function ProfilePage() {
 								<div className="mt-12">
 									<h2 className="text-2xl font-bold mb-6">관리자 기능</h2>
 
+									<div className="flex justify-between items-center mb-6">
+										<div className="flex space-x-4">
+											<button
+												onClick={() => setActiveAdminTab("applications")}
+												className={`px-4 py-2 rounded-lg ${
+													activeAdminTab === "applications"
+														? "bg-primary text-white"
+														: "bg-gray-100 hover:bg-gray-200"
+												}`}
+											>
+												매장 신청 관리
+											</button>
+											<button
+												onClick={() => setActiveAdminTab("stores")}
+												className={`px-4 py-2 rounded-lg ${
+													activeAdminTab === "stores"
+														? "bg-primary text-white"
+														: "bg-gray-100 hover:bg-gray-200"
+												}`}
+											>
+												등록된 매장 관리
+											</button>
+										</div>
+									</div>
+
 									<div className="bg-white rounded-lg shadow-md p-6">
-										<h3 className="text-lg font-semibold mb-4">
-											매장 신청 관리
-										</h3>
-										<AdminStoreApplicationsList />
+										{activeAdminTab === "applications" ? (
+											<div>
+												<h3 className="text-lg font-semibold mb-4">
+													매장 신청 관리
+												</h3>
+												<AdminStoreApplicationsList />
+											</div>
+										) : (
+											<div>
+												<h3 className="text-lg font-semibold mb-4">
+													등록된 매장 관리
+												</h3>
+												<AdminApprovedStoresList />
+											</div>
+										)}
 									</div>
 								</div>
 							)}
