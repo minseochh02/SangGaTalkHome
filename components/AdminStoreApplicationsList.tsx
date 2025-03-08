@@ -2,24 +2,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-
-interface StoreApplication {
-	application_id: string;
-	user_id: string;
-	business_name: string;
-	owner_name: string;
-	business_number: string;
-	phone_number: string;
-	email: string;
-	address: string;
-	category: string;
-	description: string;
-	operating_hours: string;
-	website: string;
-	status: number;
-	created_at: string;
-	updated_at: string;
-}
+import { StoreApplication } from "@/utils/type";
 
 export default function AdminStoreApplicationsList() {
 	const [applications, setApplications] = useState<StoreApplication[]>([]);
@@ -85,6 +68,7 @@ export default function AdminStoreApplicationsList() {
 				owner_name: application.owner_name,
 				email: application.email,
 				operating_hours: application.operating_hours,
+				referrer_phone_number: application.referrer_phone_number || null,
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
 			});
@@ -402,6 +386,14 @@ export default function AdminStoreApplicationsList() {
 															>
 																{app.website}
 															</a>
+														</div>
+													)}
+													{app.referrer_phone_number && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																추천인 전화번호:
+															</span>
+															<span>{app.referrer_phone_number}</span>
 														</div>
 													)}
 												</div>

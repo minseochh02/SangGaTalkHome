@@ -23,8 +23,28 @@ export interface Store {
 	longitude: number;
 	created_at: string;
 	updated_at: string;
+	referrer_phone_number?: string;
 	categories?: {
 		category_id: number;
 		category_name: string;
 	};
+}
+
+export interface StoreApplication {
+	application_id: string;
+	user_id: string;
+	business_name: string;
+	owner_name: string;
+	business_number: string;
+	phone_number: string;
+	email: string;
+	address: string;
+	category: string;
+	description: string;
+	operating_hours: string;
+	website: string;
+	status: number;
+	created_at: string;
+	updated_at: string;
+	referrer_phone_number: string;
 }

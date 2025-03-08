@@ -3,29 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import Link from "next/link";
-
-interface Store {
-	store_id: string;
-	user_id: string;
-	store_name: string;
-	store_type: number;
-	category_id: string | null;
-	description: string | null;
-	address: string | null;
-	phone_number: string | null;
-	website_url: string | null;
-	image_url: string | null;
-	business_number: string;
-	owner_name: string;
-	email: string | null;
-	operating_hours: string | null;
-	created_at: string;
-	updated_at: string;
-	categories?: {
-		category_id: string;
-		category_name: string;
-	};
-}
+import { Store } from "@/utils/type";
 
 export default function AdminApprovedStoresList() {
 	const [stores, setStores] = useState<Store[]>([]);
@@ -62,6 +40,7 @@ export default function AdminApprovedStoresList() {
           owner_name,
           email,
           operating_hours,
+          referrer_phone_number,
           created_at,
           updated_at,
           categories:category_id(category_id, category_name)
@@ -361,6 +340,14 @@ export default function AdminApprovedStoresList() {
 															>
 																{store.website_url}
 															</a>
+														</div>
+													)}
+													{store.referrer_phone_number && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																추천인 전화번호:
+															</span>
+															<span>{store.referrer_phone_number}</span>
 														</div>
 													)}
 												</div>
