@@ -11,7 +11,8 @@ export async function GET(request: Request) {
   // If there's no code, something went wrong with the OAuth flow
   if (!code) {
     console.error("No code provided in callback");
-    return NextResponse.redirect(new URL("/login", request.url));
+    console.log(request.url);
+    return NextResponse.redirect(new URL("/", request.url));
   }
   
   // Create a response object to set cookies on
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
   
   if (error) {
     console.error("Auth error in callback:", error.message);
+    console.log("code", code);
     return NextResponse.redirect(new URL("/login", request.url));
   }
   
