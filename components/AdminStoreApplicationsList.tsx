@@ -26,6 +26,9 @@ export default function AdminStoreApplicationsList() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [processingId, setProcessingId] = useState<string | null>(null);
+	const [expandedApplicationId, setExpandedApplicationId] = useState<
+		string | null
+	>(null);
 
 	useEffect(() => {
 		fetchApplications();
@@ -141,6 +144,14 @@ export default function AdminStoreApplicationsList() {
 		}
 	};
 
+	const toggleExpand = (applicationId: string) => {
+		if (expandedApplicationId === applicationId) {
+			setExpandedApplicationId(null);
+		} else {
+			setExpandedApplicationId(applicationId);
+		}
+	};
+
 	const getStatusBadge = (status: number) => {
 		switch (status) {
 			case 0:
@@ -239,51 +250,191 @@ export default function AdminStoreApplicationsList() {
 				</thead>
 				<tbody className="bg-white divide-y divide-gray-200">
 					{applications.map((app) => (
-						<tr key={app.application_id} className="hover:bg-gray-50">
-							<td className="px-6 py-4 whitespace-nowrap">
-								<div className="text-sm font-medium text-gray-900">
-									{app.business_name}
-								</div>
-							</td>
-							<td className="px-6 py-4 whitespace-nowrap">
-								<div className="text-sm text-gray-500">{app.owner_name}</div>
-							</td>
-							<td className="px-6 py-4 whitespace-nowrap">
-								<div className="text-sm text-gray-500">{app.category}</div>
-							</td>
-							<td className="px-6 py-4 whitespace-nowrap">
-								{getStatusBadge(app.status)}
-							</td>
-							<td className="px-6 py-4 whitespace-nowrap">
-								<div className="text-sm text-gray-500">
-									{formatDate(app.created_at)}
-								</div>
-							</td>
-							<td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-								{app.status === 0 && (
-									<div className="flex space-x-2">
-										<Button
-											variant="outline"
-											size="sm"
-											className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
-											onClick={() => handleApprove(app)}
-											disabled={processingId === app.application_id}
+						<>
+							<tr
+								key={app.application_id}
+								className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === app.application_id ? "bg-gray-50" : ""}`}
+								onClick={() => toggleExpand(app.application_id)}
+							>
+								<td className="px-6 py-4 whitespace-nowrap">
+									<div className="text-sm font-medium text-gray-900 flex items-center">
+										{app.business_name}
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											className={`ml-2 transition-transform ${expandedApplicationId === app.application_id ? "rotate-180" : ""}`}
 										>
-											승인
-										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
-											onClick={() => handleReject(app)}
-											disabled={processingId === app.application_id}
-										>
-											거절
-										</Button>
+											<polyline points="6 9 12 15 18 9"></polyline>
+										</svg>
 									</div>
-								)}
-							</td>
-						</tr>
+								</td>
+								<td className="px-6 py-4 whitespace-nowrap">
+									<div className="text-sm text-gray-500">{app.owner_name}</div>
+								</td>
+								<td className="px-6 py-4 whitespace-nowrap">
+									<div className="text-sm text-gray-500">{app.category}</div>
+								</td>
+								<td className="px-6 py-4 whitespace-nowrap">
+									{getStatusBadge(app.status)}
+								</td>
+								<td className="px-6 py-4 whitespace-nowrap">
+									<div className="text-sm text-gray-500">
+										{formatDate(app.created_at)}
+									</div>
+								</td>
+								<td
+									className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+									onClick={(e) => e.stopPropagation()}
+								>
+									{app.status === 0 && (
+										<div className="flex space-x-2">
+											<Button
+												variant="outline"
+												size="sm"
+												className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+												onClick={() => handleApprove(app)}
+												disabled={processingId === app.application_id}
+											>
+												승인
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+												onClick={() => handleReject(app)}
+												disabled={processingId === app.application_id}
+											>
+												거절
+											</Button>
+										</div>
+									)}
+								</td>
+							</tr>
+							{expandedApplicationId === app.application_id && (
+								<tr>
+									<td
+										colSpan={6}
+										className="px-6 py-4 bg-gray-50 border-t border-gray-100"
+									>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+											<div>
+												<h4 className="font-semibold text-gray-700 mb-3">
+													사업자 정보
+												</h4>
+												<div className="space-y-2">
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															사업자명:
+														</span>
+														<span>{app.owner_name}</span>
+													</div>
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															사업자 등록번호:
+														</span>
+														<span>{app.business_number}</span>
+													</div>
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															카테고리:
+														</span>
+														<span>{app.category}</span>
+													</div>
+													{app.description && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">설명:</span>
+															<span>{app.description}</span>
+														</div>
+													)}
+													{app.operating_hours && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																영업 시간:
+															</span>
+															<span>{app.operating_hours}</span>
+														</div>
+													)}
+												</div>
+											</div>
+
+											<div>
+												<h4 className="font-semibold text-gray-700 mb-3">
+													연락처 정보
+												</h4>
+												<div className="space-y-2">
+													{app.address && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">주소:</span>
+															<span>{app.address}</span>
+														</div>
+													)}
+													{app.phone_number && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																전화번호:
+															</span>
+															<span>{app.phone_number}</span>
+														</div>
+													)}
+													{app.email && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																이메일:
+															</span>
+															<span>{app.email}</span>
+														</div>
+													)}
+													{app.website && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																웹사이트:
+															</span>
+															<a
+																href={app.website}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="text-primary hover:underline"
+															>
+																{app.website}
+															</a>
+														</div>
+													)}
+												</div>
+											</div>
+
+											<div className="col-span-1 md:col-span-2">
+												<h4 className="font-semibold text-gray-700 mb-3">
+													신청 상태
+												</h4>
+												<div className="space-y-2">
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															현재 상태:
+														</span>
+														<span>{getStatusBadge(app.status)}</span>
+													</div>
+													<div className="flex">
+														<span className="text-gray-500 w-32">신청일:</span>
+														<span>{formatDate(app.created_at)}</span>
+													</div>
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															최종 업데이트:
+														</span>
+														<span>{formatDate(app.updated_at)}</span>
+													</div>
+												</div>
+											</div>
+										</div>
+									</td>
+								</tr>
+							)}
+						</>
 					))}
 				</tbody>
 			</table>
