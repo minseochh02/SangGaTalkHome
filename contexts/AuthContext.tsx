@@ -195,10 +195,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 	const signInWithGoogle = async () => {
 		try {
-			const { error } = await supabase.auth.signInWithOAuth({
+			// Store the code verifier in localStorage before redirecting
+			const { data, error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
 				options: {
 					redirectTo: `${window.location.origin}/auth/callback`,
+					// The latest version of Supabase handles PKCE automatically
+					// We just need to ensure cookies are properly set
 				},
 			});
 

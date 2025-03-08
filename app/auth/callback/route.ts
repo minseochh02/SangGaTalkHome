@@ -21,7 +21,11 @@ export async function GET(request: Request) {
   const cookieStore = cookies();
   
   // Log all cookies for debugging
-  console.log("Available cookies:", cookieStore.getAll().map(c => c.name));
+  const allCookies = cookieStore.getAll();
+  console.log("Available cookies:", allCookies.map(c => c.name));
+  
+  // Log all request headers for debugging
+  console.log("Request headers:", Object.fromEntries([...request.headers.entries()]));
   
   const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,6 +61,8 @@ export async function GET(request: Request) {
   try {
     // Exchange the code for a session
     console.log("Exchanging code for session...");
+    console.log("Code:", code);
+    
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
@@ -66,6 +72,8 @@ export async function GET(request: Request) {
     }
     
     console.log("Session exchange successful");
+    console.log("Session data:", data);
+    
     // Successfully authenticated, return the response with cookies set
     return response;
   } catch (err) {
