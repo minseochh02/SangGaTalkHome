@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 
 export default function CategoriesStoresContent() {
-	const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+	const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 	const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [stores, setStores] = useState<Store[]>([]);

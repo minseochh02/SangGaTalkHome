@@ -56,9 +56,7 @@ export default function AdminStoreApplicationsList() {
 
 	// Function to get category name from category_id
 	const getCategoryName = (categoryId: string) => {
-		const category = categories.find(
-			(c) => c.category_id.toString() === categoryId
-		);
+		const category = categories.find((c) => c.category_id === categoryId);
 		return category ? category.category_name : "Unknown Category";
 	};
 
@@ -84,7 +82,7 @@ export default function AdminStoreApplicationsList() {
 					user_id: application.user_id,
 					store_name: application.business_name,
 					store_type: 1, // Default to physical store
-					category_id: application.category_id, // Updated to use category_id
+					category_id: application.category_id, // This is the UUID of the category
 					description: application.description,
 					address: application.address,
 					phone_number: application.phone_number,

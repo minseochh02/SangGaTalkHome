@@ -1,5 +1,5 @@
 export interface Category {
-	category_id: number;
+	category_id: string;
 	category_name: string;
 	description?: string;
 }
@@ -25,7 +25,7 @@ export interface Store {
 	updated_at: string;
 	referrer_phone_number?: string;
 	categories?: {
-		category_id: number;
+		category_id: string;
 		category_name: string;
 	};
 }
