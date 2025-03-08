@@ -92,7 +92,7 @@ export default function StoreRegistration() {
 				phone_number: formData.phone_number,
 				email: formData.email,
 				address: formData.address,
-				category: formData.category_id,
+				category_id: formData.category_id,
 				description: formData.description,
 				operating_hours: formData.operating_hours,
 				website: formData.website || null,

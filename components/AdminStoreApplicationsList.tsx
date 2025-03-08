@@ -84,7 +84,7 @@ export default function AdminStoreApplicationsList() {
 					user_id: application.user_id,
 					store_name: application.business_name,
 					store_type: 1, // Default to physical store
-					category_id: application.category, // Now directly using the category field as category_id
+					category_id: application.category_id, // Updated to use category_id
 					description: application.description,
 					address: application.address,
 					phone_number: application.phone_number,
@@ -289,7 +289,7 @@ export default function AdminStoreApplicationsList() {
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap">
 									<div className="text-sm text-gray-900">
-										{getCategoryName(app.category)}
+										{getCategoryName(app.category_id)}
 									</div>
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap">
@@ -356,7 +356,7 @@ export default function AdminStoreApplicationsList() {
 														<span className="text-gray-500 w-32">
 															카테고리:
 														</span>
-														<span>{getCategoryName(app.category)}</span>
+														<span>{getCategoryName(app.category_id)}</span>
 													</div>
 													{app.description && (
 														<div className="flex">
