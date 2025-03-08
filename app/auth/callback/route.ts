@@ -20,15 +20,21 @@ export async function GET(request: Request) {
   
   const cookieStore = cookies();
   
+  // Log all cookies for debugging
+  console.log("Available cookies:", cookieStore.getAll().map(c => c.name));
+  
   const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
-            return cookieStore.get(name)?.value;
+            const cookie = cookieStore.get(name);
+            console.log(`Getting cookie ${name}:`, cookie?.value ? "exists" : "not found");
+            return cookie?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
+            console.log(`Setting cookie ${name}`);
             response.cookies.set({
               name,
               value,
@@ -36,6 +42,7 @@ export async function GET(request: Request) {
             });
           },
           remove(name: string, options: CookieOptions) {
+            console.log(`Removing cookie ${name}`);
             response.cookies.set({
               name,
               value: '',
@@ -49,14 +56,16 @@ export async function GET(request: Request) {
   
   try {
     // Exchange the code for a session
+    console.log("Exchanging code for session...");
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
-      console.error("Auth error in callback:", error.message);
+      console.error("Auth error in callback:", error.message, error);
       console.log("code", code);
       return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent(error.message), request.url));
     }
     
+    console.log("Session exchange successful");
     // Successfully authenticated, return the response with cookies set
     return response;
   } catch (err) {
