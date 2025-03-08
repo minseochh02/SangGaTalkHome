@@ -60,12 +60,6 @@ export default function Navigation() {
 								<Link href="/login" className="hover:text-primary">
 									로그인
 								</Link>
-								<Link
-									href="/signup"
-									className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-								>
-									회원가입
-								</Link>
 							</>
 						) : (
 							<>
