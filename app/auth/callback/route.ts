@@ -15,6 +15,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  // IMPORTANT: Create a cookies container first
+  const cookieStore = cookies();
+  
   // Create the response object that will be returned after successful authentication
   const response = NextResponse.redirect(new URL('/profile', requestUrl), {
     status: 302,
@@ -26,10 +29,16 @@ export async function GET(request: Request) {
     {
       cookies: {
         get(name: string) {
-          return cookies().get(name)?.value;
+          return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          // Set cookies on the response object
+          // Set cookies both on the response object AND in the cookie store
+          cookieStore.set({
+            name,
+            value,
+            ...options,
+          });
+          
           response.cookies.set({
             name,
             value,
@@ -37,6 +46,13 @@ export async function GET(request: Request) {
           });
         },
         remove(name: string, options: CookieOptions) {
+          cookieStore.set({
+            name,
+            value: '',
+            ...options,
+            maxAge: 0,
+          });
+          
           response.cookies.set({
             name,
             value: '',
@@ -54,33 +70,44 @@ export async function GET(request: Request) {
     
     if (error) {
       console.error("Auth error in callback:", error.message);
-      // Instead of redirecting to home, let's try again with a refresh
-      if (error.message.includes("expired") || error.message.includes("invalid")) {
-        console.log("Auth token expired or invalid, redirecting to login");
-        return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent(error.message), request.url));
+    }
+    
+    if (!data?.session) {
+      console.error("No session data returned after code exchange");
+      return NextResponse.redirect(new URL("/login?error=no_session", request.url));
+    }
+    
+    // Explicitly set the session cookie to ensure it's available
+    const sessionCookie = cookieStore.get('sb-auth-token');
+    if (sessionCookie) {
+      response.cookies.set({
+        name: 'sb-auth-token',
+        value: sessionCookie.value,
+        ...sessionCookie.options,
+      });
+    }
+    
+    // Get all Supabase-related cookies and ensure they're on the response
+    for (const name of ['sb-access-token', 'sb-refresh-token']) {
+      const cookie = cookieStore.get(name);
+      if (cookie) {
+        response.cookies.set({
+          name,
+          value: cookie.value,
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7, // 1 week
+          sameSite: 'lax',
+        });
       }
-      
-      return NextResponse.redirect(new URL("/", request.url));
     }
     
-    // Verify the session was established
-    const { data: sessionData } = await supabase.auth.getSession();
-    
-    if (!sessionData?.session) {
-      console.log("Session not established after code exchange, redirecting to login");
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-    
-    console.log("Authentication successful, session established");
-    
-    // Add a small delay to ensure cookies are properly set
-    // This can help with race conditions in serverless environments like Vercel
-    await new Promise(resolve => setTimeout(resolve, 100));
+    console.log("Authentication successful, redirecting to /profile");
     
     // Successfully authenticated, return the response with cookies set
     return response;
   } catch (e) {
     console.error("Unexpected error during authentication:", e);
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/login?error=unexpected", request.url));
   }
 }
