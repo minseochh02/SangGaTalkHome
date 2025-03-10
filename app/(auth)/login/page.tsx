@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
 
 export default function LoginPage() {
 	const { user, signInWithGoogle, isLoading } = useAuth();
 	const router = useRouter();
+	const supabase = createClient();
 
 	useEffect(() => {
 		// If user is already logged in, redirect to profile
@@ -18,7 +20,16 @@ export default function LoginPage() {
 
 	const handleGoogleSignIn = async () => {
 		try {
-			await signInWithGoogle();
+			await supabase.auth.signInWithOAuth({
+				provider: "google",
+				options: {
+					redirectTo: `${window.location.origin}/auth/callback`,
+					queryParams: {
+						access_type: "offline",
+						prompt: "consent",
+					},
+				},
+			});
 		} catch (error) {
 			console.error("Error signing in with Google:", error);
 		}
