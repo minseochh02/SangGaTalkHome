@@ -71,6 +71,7 @@ export default function StoreRegistration() {
 	}, []);
 
 	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		console.log("handleImageChange");
 		const file = e.target.files?.[0] || null;
 
 		if (file) {
@@ -90,6 +91,7 @@ export default function StoreRegistration() {
 		file: File,
 		userId: string
 	): Promise<string | null> => {
+		console.log("uploadImage");
 		try {
 			const supabase = createClient();
 
