@@ -67,22 +67,29 @@ export default function ProfilePage() {
 			);
 			setLocalLoading(false);
 
-			// Handle redirects only after loading is complete
+			// Handle redirects only after loading is complete and only if not already redirecting
+			// Also, only redirect if we don't have both user and userProfile
 			if (!user) {
 				console.log("ProfilePage: Not authenticated, redirecting to login");
 				setRedirecting(true);
 				router.push("/login");
-			} else if (!userProfile) {
+			} else if (!userProfile && !redirecting) {
 				console.log(
 					"ProfilePage: Authenticated but no profile, redirecting to account setting"
 				);
 				setRedirecting(true);
 				router.push("/account-setting");
+			} else if (user && userProfile && redirecting) {
+				// If we have both user and userProfile but redirecting is true, reset it
+				console.log(
+					"ProfilePage: User and profile found, canceling any pending redirects"
+				);
+				setRedirecting(false);
 			}
 		}
 
 		return () => clearTimeout(timeoutId);
-	}, [user, userProfile, isLoading, router, localLoading]);
+	}, [user, userProfile, isLoading, router]);
 
 	// Show loading state
 	if (isLoading || localLoading) {
@@ -98,8 +105,17 @@ export default function ProfilePage() {
 		);
 	}
 
+	// Debug log for redirecting condition
+	console.log("ProfilePage before redirect check:", {
+		redirecting,
+		hasUser: !!user,
+		hasProfile: !!userProfile,
+		showRedirectingState:
+			(redirecting || !user || !userProfile) && !(user && userProfile),
+	});
+
 	// Show redirecting state
-	if (redirecting || !user || !userProfile) {
+	if ((redirecting || !user || !userProfile) && !(user && userProfile)) {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
 				<div className="text-center">
