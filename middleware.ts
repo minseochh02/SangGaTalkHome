@@ -4,12 +4,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const requestUrl = new URL(request.url)
-  
-  // Skip auth for callback route to avoid cookie conflicts
-  if (requestUrl.pathname.startsWith('/auth/callback')) {
-    console.log('Middleware: Bypassing auth callback route');
-    return NextResponse.next();
-  }
 
   let response = NextResponse.next({
     request: {
@@ -44,12 +38,7 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  try {
-    await supabase.auth.getSession()
-  } catch (e) {
-    console.error('Middleware session error:', e)
-  }
-  
+  await supabase.auth.getSession()
   return response
 }
 
@@ -61,8 +50,7 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
-     * - auth/callback (auth callback route)
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 } 
