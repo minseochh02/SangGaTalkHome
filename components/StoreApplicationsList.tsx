@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { StoreApplication } from "@/utils/type";
+import Image from "next/image";
 
 // Extend the StoreApplication type to include categories
 interface StoreApplicationWithCategory extends StoreApplication {
@@ -8,6 +9,7 @@ interface StoreApplicationWithCategory extends StoreApplication {
 		category_id: string;
 		category_name: string;
 	};
+	image_url?: string;
 }
 
 export default function StoreApplicationsList({ userId }: { userId: string }) {
@@ -52,6 +54,7 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 					created_at,
 					updated_at,
 					referrer_phone_number,
+					image_url,
 					categories:category_id(category_id, category_name)
 					`
 				)
@@ -307,6 +310,24 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 													)}
 												</div>
 											</div>
+
+											{/* Add image section if image_url exists */}
+											{app.image_url && (
+												<div className="col-span-1 md:col-span-2 mt-4">
+													<h4 className="font-semibold text-gray-700 mb-3">
+														매장 이미지
+													</h4>
+													<div className="relative w-full max-w-md h-48 border border-gray-200 rounded-lg overflow-hidden">
+														<Image
+															src={app.image_url}
+															alt={app.business_name}
+															fill
+															style={{ objectFit: "contain" }}
+															unoptimized
+														/>
+													</div>
+												</div>
+											)}
 										</div>
 									</td>
 								</tr>

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { StoreApplication, Category } from "@/utils/type";
+import Image from "next/image";
 
 export default function AdminStoreApplicationsList() {
 	const [applications, setApplications] = useState<StoreApplication[]>([]);
@@ -87,7 +88,7 @@ export default function AdminStoreApplicationsList() {
 					address: application.address,
 					phone_number: application.phone_number,
 					website_url: application.website || null,
-					image_url: null, // No image in application
+					image_url: application.image_url || null, // Pass the image URL from application
 					business_number: application.business_number,
 					owner_name: application.owner_name,
 					email: application.email,
@@ -449,6 +450,24 @@ export default function AdminStoreApplicationsList() {
 													</div>
 												</div>
 											</div>
+
+											{/* Add image section if image_url exists */}
+											{app.image_url && (
+												<div className="col-span-1 md:col-span-2 mt-4">
+													<h4 className="font-semibold text-gray-700 mb-3">
+														매장 이미지
+													</h4>
+													<div className="relative w-full max-w-md h-48 border border-gray-200 rounded-lg overflow-hidden">
+														<Image
+															src={app.image_url}
+															alt={app.business_name}
+															fill
+															style={{ objectFit: "contain" }}
+															unoptimized
+														/>
+													</div>
+												</div>
+											)}
 										</div>
 									</td>
 								</tr>
