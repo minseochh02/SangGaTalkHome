@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   }
 
   if (code) {
-    const response = NextResponse.redirect(new URL('/profile', requestUrl), {
+    const response = NextResponse.redirect(new URL('/mypage', requestUrl), {
       status: 302,
     });
 
@@ -53,12 +53,12 @@ export async function GET(request: Request) {
 
     try {
       const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-       
+      
       if (sessionError) throw sessionError;
 
       // If this is email confirmation, show a success message
       if (type === 'email_confirmation') {
-        return NextResponse.redirect(new URL('/profile?verified=true', requestUrl), {
+        return NextResponse.redirect(new URL('/mypage?verified=true', requestUrl), {
           status: 302,
         });
       }
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       return response;
     } catch (error) {
       console.error('Session error:', error);
-      return NextResponse.redirect(new URL('/session-error?error=' + encodeURIComponent(error.message), requestUrl), {
+      return NextResponse.redirect(new URL('/auth-error', requestUrl), {
         status: 302,
       });
     }
