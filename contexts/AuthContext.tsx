@@ -117,6 +117,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	// Separate effect for auth state changes
 	useEffect(() => {
 		console.log("AuthContext: Setting up auth state listener");
+		// Get initial session
+		supabase.auth.getSession().then(({ data: { session } }) => {
+			// console.log("[Auth] Initial session:", session?.user?.email || "No user");
+			setUser(session?.user ?? null);
+			setIsLoading(false);
+		});
 
 		// Set up auth state listener
 		const {
