@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Category } from "@/utils/type";
+import Image from "next/image";
 
 interface FormData {
 	business_name: string;
@@ -17,6 +18,7 @@ interface FormData {
 	operating_hours: string;
 	website?: string;
 	referrer_phone_number?: string;
+	store_image?: File | null;
 }
 
 export default function StoreRegistration() {
@@ -25,6 +27,8 @@ export default function StoreRegistration() {
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [imagePreview, setImagePreview] = useState<string | null>(null);
+	const [uploadProgress, setUploadProgress] = useState(0);
 	const [formData, setFormData] = useState<FormData>({
 		business_name: "",
 		owner_name: "",
@@ -37,6 +41,7 @@ export default function StoreRegistration() {
 		operating_hours: "",
 		website: "",
 		referrer_phone_number: "",
+		store_image: null,
 	});
 
 	useEffect(() => {
@@ -65,6 +70,61 @@ export default function StoreRegistration() {
 		fetchCategories();
 	}, []);
 
+	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0] || null;
+
+		if (file) {
+			// Update form data with the selected file
+			setFormData((prev) => ({ ...prev, store_image: file }));
+
+			// Create a preview URL for the image
+			const previewUrl = URL.createObjectURL(file);
+			setImagePreview(previewUrl);
+		} else {
+			setFormData((prev) => ({ ...prev, store_image: null }));
+			setImagePreview(null);
+		}
+	};
+
+	const uploadImage = async (
+		file: File,
+		userId: string
+	): Promise<string | null> => {
+		try {
+			const supabase = createClient();
+
+			// Create a unique file name using timestamp and original file name
+			const fileExt = file.name.split(".").pop();
+			const fileName = `${userId}-${Date.now()}.${fileExt}`;
+			const filePath = `${fileName}`;
+
+			// Upload the file to the store-thumbnail bucket
+			const { data, error } = await supabase.storage
+				.from("store-thumbnail")
+				.upload(filePath, file, {
+					cacheControl: "3600",
+					upsert: false,
+				});
+
+			if (error) {
+				throw error;
+			}
+
+			// Set upload progress to 100% when complete
+			setUploadProgress(100);
+
+			// Get the public URL for the uploaded file
+			const {
+				data: { publicUrl },
+			} = supabase.storage.from("store-thumbnail").getPublicUrl(filePath);
+
+			return publicUrl;
+		} catch (error) {
+			console.error("Error uploading image:", error);
+			return null;
+		}
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsSubmitting(true);
@@ -83,6 +143,15 @@ export default function StoreRegistration() {
 				return;
 			}
 
+			// Upload image if provided
+			let imageUrl = null;
+			if (formData.store_image) {
+				imageUrl = await uploadImage(formData.store_image, user.id);
+				if (!imageUrl) {
+					throw new Error("이미지 업로드에 실패했습니다.");
+				}
+			}
+
 			// Submit the application to the store_applications table
 			const { data, error } = await supabase.from("store_applications").insert({
 				user_id: user.id,
@@ -98,6 +167,7 @@ export default function StoreRegistration() {
 				website: formData.website || null,
 				referrer_phone_number: formData.referrer_phone_number || null,
 				status: 0, // 0: pending
+				image_url: imageUrl, // Add the image URL to the application
 			});
 
 			if (error) {
@@ -111,6 +181,7 @@ export default function StoreRegistration() {
 			alert("입점 신청 중 오류가 발생했습니다. 다시 시도해주세요.");
 		} finally {
 			setIsSubmitting(false);
+			setUploadProgress(0);
 		}
 	};
 
@@ -237,6 +308,70 @@ export default function StoreRegistration() {
 									onChange={handleChange}
 									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-2">
+									매장 대표 이미지
+								</label>
+								<div className="mt-1 flex items-center space-x-4">
+									<label className="relative cursor-pointer bg-white rounded-md font-medium text-[#FFA725] hover:text-[#FF9500] focus-within:outline-none">
+										<span className="px-4 py-2 border border-[#FFA725] rounded-lg">
+											이미지 선택
+										</span>
+										<input
+											type="file"
+											className="sr-only"
+											accept="image/*"
+											onChange={handleImageChange}
+										/>
+									</label>
+									<span className="text-sm text-gray-500">
+										{formData.store_image
+											? formData.store_image.name
+											: "선택된 파일 없음"}
+									</span>
+								</div>
+
+								{/* Image Preview */}
+								{imagePreview && (
+									<div className="mt-4">
+										<div className="relative w-full h-48 overflow-hidden rounded-lg">
+											<Image
+												src={imagePreview}
+												alt="Store thumbnail preview"
+												fill
+												style={{ objectFit: "cover" }}
+												className="rounded-lg"
+											/>
+										</div>
+										<button
+											type="button"
+											onClick={() => {
+												setImagePreview(null);
+												setFormData((prev) => ({ ...prev, store_image: null }));
+											}}
+											className="mt-2 text-sm text-red-600 hover:text-red-800"
+										>
+											이미지 삭제
+										</button>
+									</div>
+								)}
+
+								{/* Upload Progress */}
+								{isSubmitting && uploadProgress > 0 && uploadProgress < 100 && (
+									<div className="mt-2">
+										<div className="w-full bg-gray-200 rounded-full h-2.5">
+											<div
+												className="bg-[#FFA725] h-2.5 rounded-full"
+												style={{ width: `${uploadProgress}%` }}
+											></div>
+										</div>
+										<p className="text-xs text-gray-500 mt-1">
+											이미지 업로드 중... {uploadProgress}%
+										</p>
+									</div>
+								)}
 							</div>
 
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
