@@ -66,9 +66,9 @@ export async function GET(request: Request) {
       return response;
     } catch (error) {
       console.error('Session error:', error);
-      return NextResponse.redirect(new URL('/auth-error', requestUrl), {
-        status: 302,
-      });
+      // return NextResponse.redirect(new URL('/auth-error', requestUrl), {
+      //   status: 302,
+      // });
     }
   }
 
