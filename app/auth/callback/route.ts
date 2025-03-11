@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 
     try {
       const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-      
+       
       if (sessionError) throw sessionError;
 
       // If this is email confirmation, show a success message
