@@ -20,7 +20,6 @@ interface FormData {
 	operating_hours: string;
 	website?: string;
 	referrer_phone_number?: string;
-	image_url?: string;
 }
 
 export default function StoreRegistration() {
@@ -33,7 +32,6 @@ export default function StoreRegistration() {
 	// Image upload states
 	const [selectedImage, setSelectedImage] = useState<File | null>(null);
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-	const [uploading, setUploading] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const [formData, setFormData] = useState<FormData>({
@@ -48,7 +46,6 @@ export default function StoreRegistration() {
 		operating_hours: "",
 		website: "",
 		referrer_phone_number: "",
-		image_url: "",
 	});
 
 	// Clean up the preview URL when component unmounts or when a new image is selected
@@ -96,63 +93,6 @@ export default function StoreRegistration() {
 			const file = e.target.files[0];
 			setSelectedImage(file);
 			setPreviewUrl(URL.createObjectURL(file));
-
-			// Reset the image_url in formData when a new image is selected
-			setFormData((prev) => ({ ...prev, image_url: "" }));
-		}
-	};
-
-	const handleImageUpload = async () => {
-		if (!selectedImage) {
-			toast.error("이미지를 선택해주세요.");
-			return;
-		}
-
-		setUploading(true);
-
-		try {
-			const supabase = createClient();
-
-			// Get the current user
-			const {
-				data: { user },
-			} = await supabase.auth.getUser();
-
-			if (!user) {
-				toast.error("로그인이 필요합니다.");
-				return;
-			}
-
-			// Generate a unique filename
-			const fileExt = selectedImage.name.split(".").pop();
-			const fileName = `${uuidv4()}.${fileExt}`;
-			const filePath = `${user.id}/${fileName}`;
-
-			// Upload the image to the store-thumbnail bucket
-			const { data, error } = await supabase.storage
-				.from("store-thumbnail")
-				.upload(filePath, selectedImage, {
-					cacheControl: "3600",
-					upsert: false,
-				});
-
-			if (error) {
-				throw error;
-			}
-
-			// Get the public URL for the uploaded image
-			const {
-				data: { publicUrl },
-			} = supabase.storage.from("store-thumbnail").getPublicUrl(filePath);
-
-			// Update formData with the image URL
-			setFormData((prev) => ({ ...prev, image_url: publicUrl }));
-			toast.success("이미지가 성공적으로 업로드되었습니다.");
-		} catch (error) {
-			console.error("Error uploading image:", error);
-			toast.error("이미지 업로드 중 오류가 발생했습니다.");
-		} finally {
-			setUploading(false);
 		}
 	};
 
@@ -165,7 +105,38 @@ export default function StoreRegistration() {
 		}
 		setSelectedImage(null);
 		setPreviewUrl(null);
-		setFormData((prev) => ({ ...prev, image_url: "" }));
+	};
+
+	const uploadImage = async (userId: string) => {
+		if (!selectedImage) {
+			throw new Error("이미지를 선택해주세요.");
+		}
+
+		const supabase = createClient();
+
+		// Generate a unique filename
+		const fileExt = selectedImage.name.split(".").pop();
+		const fileName = `${uuidv4()}.${fileExt}`;
+		const filePath = `${userId}/${fileName}`;
+
+		// Upload the image to the store-thumbnail bucket
+		const { data, error } = await supabase.storage
+			.from("store-thumbnail")
+			.upload(filePath, selectedImage, {
+				cacheControl: "3600",
+				upsert: false,
+			});
+
+		if (error) {
+			throw error;
+		}
+
+		// Get the public URL for the uploaded image
+		const {
+			data: { publicUrl },
+		} = supabase.storage.from("store-thumbnail").getPublicUrl(filePath);
+
+		return publicUrl;
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -186,6 +157,26 @@ export default function StoreRegistration() {
 				return;
 			}
 
+			// Check if image is selected
+			if (!selectedImage) {
+				toast.error("매장 이미지를 선택해주세요.");
+				setIsSubmitting(false);
+				return;
+			}
+
+			// Upload the image first
+			let imageUrl;
+			try {
+				toast.info("이미지 업로드 중...");
+				imageUrl = await uploadImage(user.id);
+				toast.success("이미지가 성공적으로 업로드되었습니다.");
+			} catch (error) {
+				console.error("Error uploading image:", error);
+				toast.error("이미지 업로드 중 오류가 발생했습니다.");
+				setIsSubmitting(false);
+				return;
+			}
+
 			// Submit the application to the store_applications table
 			const { data, error } = await supabase.from("store_applications").insert({
 				user_id: user.id,
@@ -201,7 +192,7 @@ export default function StoreRegistration() {
 				website: formData.website || null,
 				referrer_phone_number: formData.referrer_phone_number || null,
 				status: 0, // 0: pending
-				image_url: formData.image_url || null, // Add the image URL
+				image_url: imageUrl, // Add the image URL
 			});
 
 			if (error) {
@@ -325,6 +316,7 @@ export default function StoreRegistration() {
 									accept="image/*"
 									onChange={handleImageChange}
 									ref={fileInputRef}
+									required
 									className="block w-full text-sm text-gray-500
 									file:mr-4 file:py-2 file:px-4
 									file:rounded-md file:border-0
@@ -348,52 +340,17 @@ export default function StoreRegistration() {
 												unoptimized
 											/>
 										</div>
-									</div>
-								)}
-
-								{formData.image_url && (
-									<div className="mt-4">
-										<p className="text-sm font-medium text-gray-700 mb-2">
-											업로드된 이미지
-										</p>
-										<div className="relative w-full h-48 border border-gray-200 rounded-lg overflow-hidden">
-											<Image
-												src={formData.image_url}
-												alt="Uploaded"
-												fill
-												style={{ objectFit: "contain" }}
-												unoptimized
-											/>
+										<div className="flex justify-end mt-2">
+											<button
+												type="button"
+												onClick={handleResetImage}
+												className="text-sm text-[#6A9C89] hover:text-[#5A8C79]"
+											>
+												이미지 초기화
+											</button>
 										</div>
-										<p className="mt-2 text-xs text-gray-500 break-all">
-											이미지가 성공적으로 업로드되었습니다.
-										</p>
 									</div>
 								)}
-
-								<div className="flex flex-wrap gap-4 mt-4">
-									<button
-										type="button"
-										onClick={handleImageUpload}
-										disabled={
-											!selectedImage || uploading || !!formData.image_url
-										}
-										className={`px-4 py-2 text-white bg-[#6A9C89] rounded-lg hover:bg-[#5A8C79] focus:outline-none focus:ring-2 focus:ring-[#6A9C89] focus:ring-opacity-50 ${
-											!selectedImage || uploading || !!formData.image_url
-												? "opacity-70 cursor-not-allowed"
-												: ""
-										}`}
-									>
-										{uploading ? "업로드 중..." : "이미지 업로드"}
-									</button>
-									<button
-										type="button"
-										onClick={handleResetImage}
-										className="px-4 py-2 text-[#6A9C89] border border-[#6A9C89] rounded-lg hover:bg-[#6A9C89] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#6A9C89] focus:ring-opacity-50"
-									>
-										초기화
-									</button>
-								</div>
 							</div>
 
 							<div>
@@ -532,18 +489,18 @@ export default function StoreRegistration() {
 
 							<button
 								type="submit"
-								disabled={isSubmitting || !formData.image_url}
+								disabled={isSubmitting || !selectedImage}
 								className={`w-full px-6 py-3 text-white bg-[#FFA725] rounded-lg hover:bg-[#FF9500] focus:outline-none focus:ring-2 focus:ring-[#FFA725] focus:ring-opacity-50 ${
-									isSubmitting || !formData.image_url
+									isSubmitting || !selectedImage
 										? "opacity-70 cursor-not-allowed"
 										: ""
 								}`}
 							>
 								{isSubmitting ? "제출 중..." : "입점 신청하기"}
 							</button>
-							{!formData.image_url && (
+							{!selectedImage && (
 								<p className="mt-2 text-sm text-red-500 text-center">
-									매장 이미지를 업로드해야 신청할 수 있습니다.
+									매장 이미지를 선택해야 신청할 수 있습니다.
 								</p>
 							)}
 						</div>
