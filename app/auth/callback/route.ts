@@ -66,7 +66,8 @@ export async function GET(request: Request) {
       return response;
     } catch (error) {
       // console.error('Session error:', error);
-      return NextResponse.redirect(new URL('/auth-error', requestUrl), {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return NextResponse.redirect(new URL('/profile', requestUrl), {
         status: 302,
       });
     }
