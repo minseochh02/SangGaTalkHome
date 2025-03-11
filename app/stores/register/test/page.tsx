@@ -140,6 +140,7 @@ export default function ImageUploadTest() {
 								alt="Preview"
 								fill
 								style={{ objectFit: "contain" }}
+								unoptimized
 							/>
 						</div>
 					</div>
@@ -156,6 +157,7 @@ export default function ImageUploadTest() {
 								alt="Uploaded"
 								fill
 								style={{ objectFit: "contain" }}
+								unoptimized
 							/>
 						</div>
 						<p className="mt-2 text-sm text-gray-500 break-all">
