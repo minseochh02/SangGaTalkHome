@@ -3,7 +3,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -21,26 +20,27 @@ export async function GET(request: Request) {
   }
 
   if (code) {
-    // Create a response object that we'll only use for cookie management
-    const cookieStore = cookies();
-    
+    const response = NextResponse.redirect(new URL('/profile', requestUrl), {
+      status: 302,
+    });
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
-            return cookieStore.get(name)?.value;
+            return cookies().get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
-            cookieStore.set({
+            response.cookies.set({
               name,
               value,
               ...options,
             });
           },
           remove(name: string, options: CookieOptions) {
-            cookieStore.set({
+            response.cookies.set({
               name,
               value: '',
               ...options,
@@ -56,7 +56,6 @@ export async function GET(request: Request) {
       
       if (sessionError) throw sessionError;
 
-      // Only create the response AFTER successful authentication
       // If this is email confirmation, show a success message
       if (type === 'email_confirmation') {
         return NextResponse.redirect(new URL('/profile?verified=true', requestUrl), {
@@ -64,10 +63,7 @@ export async function GET(request: Request) {
         });
       }
 
-      // Create and return the response AFTER authentication is successful
-      return NextResponse.redirect(new URL('/profile', requestUrl), {
-        status: 302,
-      });
+      return response;
     } catch (error) {
       // console.error('Session error:', error);
       await new Promise(resolve => setTimeout(resolve, 1000));
