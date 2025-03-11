@@ -58,22 +58,25 @@ export async function GET(request: Request) {
       // Force cookies to be read again before exchanging code for session
       cookies().getAll();
       
-      const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-      
-      // Force cookies to be read after exchanging code for session
-      cookies().getAll();
-      
-      if (sessionError) throw sessionError;
+      const response  = await supabase.auth.exchangeCodeForSession(code)
+    cookies().getAll()
+    // RangeError [ERR_HTTP_INVALID_STATUS_CODE]: Invalid status code: 0
+    
+    if (response.error) {
+      console.error('Error logging in:', response.error.message)
+      return NextResponse.json({ error: response.error.message }, { status: 400 });
+    }
+  }
 
-      // If this is email confirmation, show a success message
-      if (type === 'email_confirmation') {
-        return NextResponse.redirect(new URL('/profile?verified=true', requestUrl), {
-          status: 302,
-        });
-      }
+    //   // If this is email confirmation, show a success message
+    //   if (type === 'email_confirmation') {
+    //     return NextResponse.redirect(new URL('/profile?verified=true', requestUrl), {
+    //       status: 302,
+    //     });
+    //   }
 
-      return response;
-    } catch (error) {
+    //   return response;
+    catch (error) {
       console.error('Session error:', error);
       return NextResponse.redirect(new URL('/auth-error', requestUrl), {
         status: 302,
