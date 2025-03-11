@@ -132,6 +132,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				return;
 			}
 
+			// Skip processing for INITIAL_SESSION event if there's no session
+			// This avoids the "No session user" message during the initial loading phase
+			if (event === "INITIAL_SESSION" && !session) {
+				console.log(
+					"AuthContext: Skipping INITIAL_SESSION event with no session"
+				);
+				return;
+			}
+
 			// Set loading to true for auth state changes after initial fetch
 			setIsLoading(true);
 

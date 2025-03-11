@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   }
 
   if (code) {
-    const response = NextResponse.redirect(new URL('/mypage', requestUrl), {
+    const response = NextResponse.redirect(new URL('/profile', requestUrl), {
       status: 302,
     });
 
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
 
       // If this is email confirmation, show a success message
       if (type === 'email_confirmation') {
-        return NextResponse.redirect(new URL('/mypage?verified=true', requestUrl), {
+        return NextResponse.redirect(new URL('/profile?verified=true', requestUrl), {
           status: 302,
         });
       }
