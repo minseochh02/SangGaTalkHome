@@ -73,7 +73,7 @@ export async function GET(request: Request) {
   }
 
   // Return the user to an error page with some instructions
-  return NextResponse.redirect(new URL('/profile', requestUrl), {
+  return NextResponse.redirect(new URL('/auth-error', requestUrl), {
     status: 302,
   });
 } 
