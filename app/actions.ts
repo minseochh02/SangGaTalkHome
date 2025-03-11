@@ -4,12 +4,10 @@ import { encodedRedirect } from "@/utils/utils";
 import { createClient } from "@/utils/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { cookies } from 'next/headers'
 
 
 export const signInWithGoogleAction = async () => {
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
+  const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -28,8 +26,7 @@ export const signInWithGoogleAction = async () => {
 };
 
 export const signOutAction = async () => {
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
+  const supabase = await createClient();
   const { error } = await supabase.auth.signOut();
   
   if (error) {
@@ -43,8 +40,7 @@ export const signOutAction = async () => {
 };
 
 export const updateUserProfileAction = async (formData: FormData) => {
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
+  const supabase = await createClient();
   
   const userId = formData.get("user_id") as string;
   const username = formData.get("username") as string;

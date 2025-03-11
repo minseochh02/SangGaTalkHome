@@ -117,12 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	// Separate effect for auth state changes
 	useEffect(() => {
 		console.log("AuthContext: Setting up auth state listener");
-		// Get initial session
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			// console.log("[Auth] Initial session:", session?.user?.email || "No user");
-			setUser(session?.user ?? null);
-			setIsLoading(false);
-		});
 
 		// Set up auth state listener
 		const {
@@ -134,15 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			if (!initialFetchCompleted.current) {
 				console.log(
 					"AuthContext: Initial fetch not completed yet, auth state change will be handled by initial fetch"
-				);
-				return;
-			}
-
-			// Skip processing for INITIAL_SESSION event if there's no session
-			// This avoids the "No session user" message during the initial loading phase
-			if (event === "INITIAL_SESSION" && !session) {
-				console.log(
-					"AuthContext: Skipping INITIAL_SESSION event with no session"
 				);
 				return;
 			}
@@ -210,18 +195,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 	const signInWithGoogle = async () => {
 		try {
-			await supabase.auth.signInWithOAuth({
+			const { error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
 				options: {
 					redirectTo: `${window.location.origin}/auth/callback`,
-					queryParams: {
-						access_type: "offline",
-						prompt: "consent",
-					},
 				},
 			});
+
+			if (error) throw error;
 		} catch (error) {
-			console.error("Error:", error);
+			console.error("Error signing in with Google:", error);
+			throw error;
 		}
 	};
 
@@ -229,9 +213,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		try {
 			const { error } = await supabase.auth.signOut();
 			if (error) throw error;
+
+			setUser(null);
+			setUserProfile(null);
 			router.push("/");
 		} catch (error) {
 			console.error("Error signing out:", error);
+			throw error;
 		}
 	};
 

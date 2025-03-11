@@ -1,11 +1,14 @@
-import { GeistSans } from "geist/font/sans";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "sonner";
 
-const geistSans = GeistSans;
+const geistSans = Geist({
+	display: "swap",
+	subsets: ["latin"],
+});
 
 export const metadata = {
 	title: "SGT - Your Local Business Platform",

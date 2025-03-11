@@ -2,23 +2,22 @@
 
 import { Button } from "@/components/ui/button";
 import { type ComponentProps } from "react";
-// @ts-ignore - Types and implementations do not match
-import { experimental_useFormStatus as useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 
 type Props = ComponentProps<typeof Button> & {
-	pendingText?: string;
+  pendingText?: string;
 };
 
 export function SubmitButton({
-	children,
-	pendingText = "Submitting...",
-	...props
+  children,
+  pendingText = "Submitting...",
+  ...props
 }: Props) {
-	const { pending } = useFormStatus();
+  const { pending } = useFormStatus();
 
-	return (
-		<Button type="submit" aria-disabled={pending} {...props}>
-			{pending ? pendingText : children}
-		</Button>
-	);
+  return (
+    <Button type="submit" aria-disabled={pending} {...props}>
+      {pending ? pendingText : children}
+    </Button>
+  );
 }

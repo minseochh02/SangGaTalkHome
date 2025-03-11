@@ -47,5 +47,4 @@ export interface StoreApplication {
 	created_at: string;
 	updated_at: string;
 	referrer_phone_number: string;
-	image_url?: string;
 }

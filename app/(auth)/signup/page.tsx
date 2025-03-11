@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Link from "next/link";
 
-export default function LoginPage() {
+export default function SignupPage() {
 	const { user, signInWithGoogle, isLoading } = useAuth();
 	const router = useRouter();
 
@@ -16,11 +17,11 @@ export default function LoginPage() {
 		}
 	}, [user, isLoading, router]);
 
-	const handleGoogleSignIn = async () => {
+	const handleGoogleSignUp = async () => {
 		try {
 			await signInWithGoogle();
 		} catch (error) {
-			console.error("Error signing in with Google:", error);
+			console.error("Error signing up with Google:", error);
 		}
 	};
 
@@ -35,10 +36,13 @@ export default function LoginPage() {
 	return (
 		<div className="flex min-h-screen items-center justify-center bg-background">
 			<div className="w-full max-w-md p-8 space-y-4 rounded-lg shadow-lg bg-card">
-				<h2 className="text-2xl font-bold text-center">로그인</h2>
+				<h2 className="text-2xl font-bold text-center">회원가입</h2>
+				<p className="text-center text-muted-foreground">
+					SangGaTalk에 오신 것을 환영합니다. 계정을 만들어 시작하세요.
+				</p>
 				<div className="space-y-4">
 					<Button
-						onClick={handleGoogleSignIn}
+						onClick={handleGoogleSignUp}
 						className="w-full flex items-center justify-center gap-2"
 					>
 						<svg
@@ -66,8 +70,16 @@ export default function LoginPage() {
 							/>
 							<path fill="none" d="M1 1h22v22H1z" />
 						</svg>
-						구글 로그인
+						구글로 회원가입
 					</Button>
+				</div>
+				<div className="text-center text-sm">
+					<p className="text-muted-foreground">
+						이미 계정이 있으신가요?{" "}
+						<Link href="/login" className="text-primary hover:underline">
+							로그인
+						</Link>
+					</p>
 				</div>
 			</div>
 		</div>

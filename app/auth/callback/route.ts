@@ -1,81 +1,30 @@
-/* eslint-disable */
-// @ts-nocheck
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+// handle googlesignin callback
+// 1, exchange the code for a session
+// 2, redirect to the profile page
+
+import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const type = requestUrl.searchParams.get("type");
-  const error = requestUrl.searchParams.get("error");
-  const error_description = requestUrl.searchParams.get("error_description");
-
+  
+  // If there's no code, something went wrong with the OAuth flow
+  if (!code) {
+    console.error("No code provided in callback");
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+  
+  const supabase = await createClient();
+  
+  // Exchange the code for a session
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  
   if (error) {
-    console.error('Auth error:', error, error_description);
-    return NextResponse.redirect(
-      new URL(`/auth-error?error=${encodeURIComponent(error_description || error)}`, requestUrl),
-      { status: 302 }
-    );
+    console.error("Auth error in callback:", error.message);
+    return NextResponse.redirect(new URL("/login", request.url));
   }
-
-  if (code) {
-    const response = NextResponse.redirect(new URL('/profile', requestUrl), {
-      status: 302,
-    });
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookies().get(name)?.value;
-          },
-          set(name: string, value: string, options: CookieOptions) {
-            response.cookies.set({
-              name,
-              value,
-              ...options,
-            });
-          },
-          remove(name: string, options: CookieOptions) {
-            response.cookies.set({
-              name,
-              value: '',
-              ...options,
-              maxAge: 0,
-            });
-          },
-        },
-      }
-    );
-
-    try {
-      const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-      
-      if (sessionError) throw sessionError;
-
-      // If this is email confirmation, show a success message
-      if (type === 'email_confirmation') {
-        return NextResponse.redirect(new URL('/profile?verified=true', requestUrl), {
-          status: 302,
-        });
-      }
-
-      return response;
-    } catch (error) {
-      // console.error('Session error:', error);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return NextResponse.redirect(new URL('/profile', requestUrl), {
-        status: 302,
-      });
-    }
-  }
-  // wait a second here 
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  // Return the user to an error page with some instructions
-  return NextResponse.redirect(new URL('/profile', requestUrl), {
-    status: 302,
-  });
-} 
+  
+  // Successfully authenticated, redirect to profile page
+  return NextResponse.redirect(new URL("/profile", request.url));
+}

@@ -87,7 +87,7 @@ export default function AdminStoreApplicationsList() {
 					address: application.address,
 					phone_number: application.phone_number,
 					website_url: application.website || null,
-					image_url: application.image_url, // Pass the image URL from the application
+					image_url: null, // No image in application
 					business_number: application.business_number,
 					owner_name: application.owner_name,
 					email: application.email,
@@ -253,27 +253,21 @@ export default function AdminStoreApplicationsList() {
 							scope="col"
 							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
 						>
-							이미지
-						</th>
-						<th
-							scope="col"
-							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-						>
 							액션
 						</th>
 					</tr>
 				</thead>
 				<tbody className="bg-white divide-y divide-gray-200">
-					{applications.map((application) => (
+					{applications.map((app) => (
 						<>
 							<tr
-								key={application.application_id}
-								className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === application.application_id ? "bg-gray-50" : ""}`}
-								onClick={() => toggleExpand(application.application_id)}
+								key={app.application_id}
+								className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === app.application_id ? "bg-gray-50" : ""}`}
+								onClick={() => toggleExpand(app.application_id)}
 							>
 								<td className="px-6 py-4 whitespace-nowrap">
 									<div className="text-sm font-medium text-gray-900 flex items-center">
-										{application.business_name}
+										{app.business_name}
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											width="16"
@@ -282,55 +276,40 @@ export default function AdminStoreApplicationsList() {
 											fill="none"
 											stroke="currentColor"
 											strokeWidth="2"
-											className={`ml-2 transition-transform ${expandedApplicationId === application.application_id ? "rotate-180" : ""}`}
+											className={`ml-2 transition-transform ${expandedApplicationId === app.application_id ? "rotate-180" : ""}`}
 										>
 											<polyline points="6 9 12 15 18 9"></polyline>
 										</svg>
 									</div>
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap">
-									<div className="text-sm text-gray-500">
-										{application.owner_name}
-									</div>
+									<div className="text-sm text-gray-500">{app.owner_name}</div>
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap">
 									<div className="text-sm text-gray-900">
-										{getCategoryName(application.category_id)}
+										{getCategoryName(app.category_id)}
 									</div>
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap">
-									{getStatusBadge(application.status)}
+									{getStatusBadge(app.status)}
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap">
 									<div className="text-sm text-gray-500">
-										{formatDate(application.created_at)}
+										{formatDate(app.created_at)}
 									</div>
-								</td>
-								<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-									{application.image_url ? (
-										<div className="h-10 w-10 rounded-full overflow-hidden">
-											<img
-												src={application.image_url}
-												alt={application.business_name}
-												className="h-full w-full object-cover"
-											/>
-										</div>
-									) : (
-										<span className="text-gray-400">없음</span>
-									)}
 								</td>
 								<td
 									className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
 									onClick={(e) => e.stopPropagation()}
 								>
-									{application.status === 0 && (
+									{app.status === 0 && (
 										<div className="flex space-x-2">
 											<Button
 												variant="outline"
 												size="sm"
 												className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
-												onClick={() => handleApprove(application)}
-												disabled={processingId === application.application_id}
+												onClick={() => handleApprove(app)}
+												disabled={processingId === app.application_id}
 											>
 												승인
 											</Button>
@@ -338,8 +317,8 @@ export default function AdminStoreApplicationsList() {
 												variant="outline"
 												size="sm"
 												className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
-												onClick={() => handleReject(application)}
-												disabled={processingId === application.application_id}
+												onClick={() => handleReject(app)}
+												disabled={processingId === app.application_id}
 											>
 												거절
 											</Button>
@@ -347,93 +326,128 @@ export default function AdminStoreApplicationsList() {
 									)}
 								</td>
 							</tr>
-							{expandedApplicationId === application.application_id && (
+							{expandedApplicationId === app.application_id && (
 								<tr>
 									<td
-										colSpan={7}
+										colSpan={6}
 										className="px-6 py-4 bg-gray-50 border-t border-gray-100"
 									>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div>
-												<h3 className="text-lg font-medium mb-2">매장 정보</h3>
-												<dl className="space-y-2">
-													<div>
-														<dt className="text-sm font-medium text-gray-500">
-															사업자등록번호
-														</dt>
-														<dd>{application.business_number}</dd>
+												<h4 className="font-semibold text-gray-700 mb-3">
+													사업자 정보
+												</h4>
+												<div className="space-y-2">
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															사업자명:
+														</span>
+														<span>{app.owner_name}</span>
 													</div>
-													<div>
-														<dt className="text-sm font-medium text-gray-500">
-															연락처
-														</dt>
-														<dd>{application.phone_number}</dd>
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															사업자 등록번호:
+														</span>
+														<span>{app.business_number}</span>
 													</div>
-													<div>
-														<dt className="text-sm font-medium text-gray-500">
-															이메일
-														</dt>
-														<dd>{application.email}</dd>
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															카테고리:
+														</span>
+														<span>{getCategoryName(app.category_id)}</span>
 													</div>
-													<div>
-														<dt className="text-sm font-medium text-gray-500">
-															주소
-														</dt>
-														<dd>{application.address}</dd>
-													</div>
-													<div>
-														<dt className="text-sm font-medium text-gray-500">
-															운영시간
-														</dt>
-														<dd>{application.operating_hours}</dd>
-													</div>
-													{application.website && (
-														<div>
-															<dt className="text-sm font-medium text-gray-500">
-																웹사이트
-															</dt>
-															<dd>
-																<a
-																	href={application.website}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	className="text-blue-500 hover:underline"
-																>
-																	{application.website}
-																</a>
-															</dd>
+													{app.description && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">설명:</span>
+															<span>{app.description}</span>
 														</div>
 													)}
-													{application.referrer_phone_number && (
-														<div>
-															<dt className="text-sm font-medium text-gray-500">
-																추천인 연락처
-															</dt>
-															<dd>{application.referrer_phone_number}</dd>
+													{app.operating_hours && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																영업 시간:
+															</span>
+															<span>{app.operating_hours}</span>
 														</div>
 													)}
-												</dl>
+												</div>
 											</div>
-											<div>
-												<h3 className="text-lg font-medium mb-2">매장 설명</h3>
-												<p className="text-sm text-gray-700 whitespace-pre-wrap">
-													{application.description}
-												</p>
 
-												{application.image_url && (
-													<div className="mt-4">
-														<h3 className="text-lg font-medium mb-2">
-															매장 이미지
-														</h3>
-														<div className="w-full h-48 rounded-lg overflow-hidden">
-															<img
-																src={application.image_url}
-																alt={application.business_name}
-																className="w-full h-full object-cover"
-															/>
+											<div>
+												<h4 className="font-semibold text-gray-700 mb-3">
+													연락처 정보
+												</h4>
+												<div className="space-y-2">
+													{app.address && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">주소:</span>
+															<span>{app.address}</span>
 														</div>
+													)}
+													{app.phone_number && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																전화번호:
+															</span>
+															<span>{app.phone_number}</span>
+														</div>
+													)}
+													{app.email && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																이메일:
+															</span>
+															<span>{app.email}</span>
+														</div>
+													)}
+													{app.website && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																웹사이트:
+															</span>
+															<a
+																href={app.website}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="text-primary hover:underline"
+															>
+																{app.website}
+															</a>
+														</div>
+													)}
+													{app.referrer_phone_number && (
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																추천인 전화번호:
+															</span>
+															<span>{app.referrer_phone_number}</span>
+														</div>
+													)}
+												</div>
+											</div>
+
+											<div className="col-span-1 md:col-span-2">
+												<h4 className="font-semibold text-gray-700 mb-3">
+													신청 상태
+												</h4>
+												<div className="space-y-2">
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															현재 상태:
+														</span>
+														<span>{getStatusBadge(app.status)}</span>
 													</div>
-												)}
+													<div className="flex">
+														<span className="text-gray-500 w-32">신청일:</span>
+														<span>{formatDate(app.created_at)}</span>
+													</div>
+													<div className="flex">
+														<span className="text-gray-500 w-32">
+															최종 업데이트:
+														</span>
+														<span>{formatDate(app.updated_at)}</span>
+													</div>
+												</div>
 											</div>
 										</div>
 									</td>

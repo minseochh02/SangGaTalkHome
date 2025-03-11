@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Category } from "@/utils/type";
-import Image from "next/image";
 
 interface FormData {
 	business_name: string;
@@ -26,9 +25,6 @@ export default function StoreRegistration() {
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [imageFile, setImageFile] = useState<File | null>(null);
-	const [imagePreview, setImagePreview] = useState<string | null>(null);
-	const [uploadError, setUploadError] = useState<string | null>(null);
 	const [formData, setFormData] = useState<FormData>({
 		business_name: "",
 		owner_name: "",
@@ -69,34 +65,6 @@ export default function StoreRegistration() {
 		fetchCategories();
 	}, []);
 
-	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (!file) return;
-
-		// Validate file type
-		const validTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-		if (!validTypes.includes(file.type)) {
-			setUploadError("이미지 파일만 업로드 가능합니다 (JPEG, PNG, WebP)");
-			return;
-		}
-
-		// Validate file size (max 5MB)
-		if (file.size > 5 * 1024 * 1024) {
-			setUploadError("이미지 크기는 5MB 이하여야 합니다");
-			return;
-		}
-
-		setImageFile(file);
-		setUploadError(null);
-
-		// Create preview
-		const reader = new FileReader();
-		reader.onloadend = () => {
-			setImagePreview(reader.result as string);
-		};
-		reader.readAsDataURL(file);
-	};
-
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsSubmitting(true);
@@ -115,28 +83,6 @@ export default function StoreRegistration() {
 				return;
 			}
 
-			// Upload image if provided
-			let imageUrl = null;
-			if (imageFile) {
-				const fileExt = imageFile.name.split(".").pop();
-				const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-
-				const { data: uploadData, error: uploadError } = await supabase.storage
-					.from("store-thumbnail")
-					.upload(fileName, imageFile);
-
-				if (uploadError) {
-					throw uploadError;
-				}
-
-				// Get the public URL
-				const {
-					data: { publicUrl },
-				} = supabase.storage.from("store-thumbnail").getPublicUrl(fileName);
-
-				imageUrl = publicUrl;
-			}
-
 			// Submit the application to the store_applications table
 			const { data, error } = await supabase.from("store_applications").insert({
 				user_id: user.id,
@@ -152,7 +98,6 @@ export default function StoreRegistration() {
 				website: formData.website || null,
 				referrer_phone_number: formData.referrer_phone_number || null,
 				status: 0, // 0: pending
-				image_url: imageUrl,
 			});
 
 			if (error) {
@@ -346,88 +291,6 @@ export default function StoreRegistration() {
 									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 									placeholder="매장 소개와 주요 상품/서비스에 대해 설명해주세요."
 								/>
-							</div>
-
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">
-									매장 대표 이미지
-								</label>
-								<div className="mt-1 flex flex-col space-y-4">
-									{imagePreview ? (
-										<div className="relative w-full h-48 overflow-hidden rounded-lg border border-gray-300">
-											<img
-												src={imagePreview}
-												alt="매장 이미지 미리보기"
-												className="w-full h-full object-cover"
-											/>
-											<button
-												type="button"
-												onClick={() => {
-													setImageFile(null);
-													setImagePreview(null);
-												}}
-												className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="20"
-													height="20"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													strokeWidth="2"
-													strokeLinecap="round"
-													strokeLinejoin="round"
-												>
-													<line x1="18" y1="6" x2="6" y2="18"></line>
-													<line x1="6" y1="6" x2="18" y2="18"></line>
-												</svg>
-											</button>
-										</div>
-									) : (
-										<div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
-											<div className="space-y-1 text-center">
-												<svg
-													className="mx-auto h-12 w-12 text-gray-400"
-													stroke="currentColor"
-													fill="none"
-													viewBox="0 0 48 48"
-													aria-hidden="true"
-												>
-													<path
-														d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-														strokeWidth={2}
-														strokeLinecap="round"
-														strokeLinejoin="round"
-													/>
-												</svg>
-												<div className="flex text-sm text-gray-600">
-													<label
-														htmlFor="file-upload"
-														className="relative cursor-pointer bg-white rounded-md font-medium text-[#FFA725] hover:text-[#FF9500] focus-within:outline-none"
-													>
-														<span>이미지 업로드</span>
-														<input
-															id="file-upload"
-															name="file-upload"
-															type="file"
-															className="sr-only"
-															accept="image/*"
-															onChange={handleImageChange}
-														/>
-													</label>
-													<p className="pl-1">또는 드래그 앤 드롭</p>
-												</div>
-												<p className="text-xs text-gray-500">
-													PNG, JPG, WEBP 최대 5MB
-												</p>
-											</div>
-										</div>
-									)}
-									{uploadError && (
-										<p className="text-sm text-red-500">{uploadError}</p>
-									)}
-								</div>
 							</div>
 
 							<div>
