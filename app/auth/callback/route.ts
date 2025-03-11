@@ -24,9 +24,6 @@ export async function GET(request: Request) {
       status: 302,
     });
 
-    // Force cookies to be read before creating the Supabase client
-    cookies().getAll();
-
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -55,32 +52,23 @@ export async function GET(request: Request) {
     );
 
     try {
-      // Force cookies to be read again before exchanging code for session
-      cookies().getAll();
+      const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
       
-      const response  = await supabase.auth.exchangeCodeForSession(code)
-    cookies().getAll()
-    // RangeError [ERR_HTTP_INVALID_STATUS_CODE]: Invalid status code: 0
-    
-    if (response.error) {
-      console.error('Error logging in:', response.error.message)
-      return NextResponse.json({ error: response.error.message }, { status: 400 });
-    }
-  }
+      if (sessionError) throw sessionError;
 
-    //   // If this is email confirmation, show a success message
-    //   if (type === 'email_confirmation') {
-    //     return NextResponse.redirect(new URL('/profile?verified=true', requestUrl), {
-    //       status: 302,
-    //     });
-    //   }
+      // If this is email confirmation, show a success message
+      if (type === 'email_confirmation') {
+        return NextResponse.redirect(new URL('/profile?verified=true', requestUrl), {
+          status: 302,
+        });
+      }
 
-    //   return response;
-    catch (error) {
-      console.error('Session error:', error);
-      return NextResponse.redirect(new URL('/auth-error', requestUrl), {
-        status: 302,
-      });
+      return response;
+    } catch (error) {
+      // console.error('Session error:', error);
+      // return NextResponse.redirect(new URL('/auth-error', requestUrl), {
+      //   status: 302,
+      // });
     }
   }
 
