@@ -19,12 +19,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 
-export default function EditStorePage({
-	params,
-}: {
-	params: { storeId: string };
-}) {
-	const { storeId } = params;
+interface EditStoreFormProps {
+	storeId: string;
+}
+
+function EditStoreForm({ storeId }: EditStoreFormProps) {
 	const router = useRouter();
 	const { user, userProfile, isLoading } = useAuth();
 	const [categories, setCategories] = useState<Category[]>([]);
@@ -422,4 +421,15 @@ export default function EditStorePage({
 			</div>
 		</div>
 	);
+}
+
+// This is the actual page component that Next.js will use
+export default async function EditStorePage({
+	params,
+}: {
+	params: Promise<{ storeId: string }>;
+}) {
+	const resolvedParams = await params;
+	const { storeId } = resolvedParams;
+	return <EditStoreForm storeId={storeId} />;
 }
