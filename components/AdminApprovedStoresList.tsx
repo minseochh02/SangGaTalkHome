@@ -238,23 +238,27 @@ export default function AdminApprovedStoresList() {
 									className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
 									onClick={(e) => e.stopPropagation()}
 								>
-									<div className="flex space-x-2">
-										<Button
-											variant="outline"
-											size="sm"
-											className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
-											asChild
+									<div className="flex space-x-2 mt-4">
+										<Link
+											href={`/stores/${store.store_id}`}
+											className="px-3 py-1 bg-primary/10 text-primary rounded-md text-sm hover:bg-primary hover:text-white transition-colors"
 										>
-											<Link href={`/stores/${store.store_id}`}>보기</Link>
-										</Button>
+											보기
+										</Link>
+										<Link
+											href={`/stores/edit/${store.store_id}`}
+											className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 transition-colors"
+										>
+											수정
+										</Link>
 										<Button
-											variant="outline"
+											variant="destructive"
 											size="sm"
-											className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
 											onClick={() => handleRemoveStore(store)}
 											disabled={processingId === store.store_id}
+											className="px-3 py-1 text-sm"
 										>
-											삭제
+											{processingId === store.store_id ? "처리 중..." : "삭제"}
 										</Button>
 									</div>
 								</td>

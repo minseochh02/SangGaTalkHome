@@ -198,13 +198,21 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 						</div>
 
 						<div className="mt-auto">
-							<Link
-								href={`/stores/${store.store_id}`}
-								className="w-full px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors duration-200 text-base font-medium flex items-center justify-center gap-2"
-							>
-								자세히 보기
-								<span className="text-lg">→</span>
-							</Link>
+							<div className="flex gap-2">
+								<Link
+									href={`/stores/${store.store_id}`}
+									className="flex-1 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors duration-200 text-base font-medium flex items-center justify-center gap-2"
+								>
+									자세히 보기
+									<span className="text-lg">→</span>
+								</Link>
+								<Link
+									href={`/stores/edit/${store.store_id}`}
+									className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 text-base font-medium flex items-center justify-center"
+								>
+									수정
+								</Link>
+							</div>
 						</div>
 					</div>
 				</div>
