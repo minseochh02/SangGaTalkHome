@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Store } from "@/utils/type";
+import { Store, Product } from "@/utils/type";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,8 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [isOwner, setIsOwner] = useState(false);
+	const [products, setProducts] = useState<Product[]>([]);
+	const [loadingProducts, setLoadingProducts] = useState(true);
 	const { user } = useAuth();
 
 	useEffect(() => {
@@ -65,8 +67,35 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 			}
 		};
 
+		const fetchStoreProducts = async () => {
+			try {
+				setLoadingProducts(true);
+				const supabase = createClient();
+
+				// Fetch only active products (status = 1)
+				const { data, error } = await supabase
+					.from("products")
+					.select("*")
+					.eq("store_id", storeId)
+					.eq("status", 1)
+					.order("created_at", { ascending: false });
+
+				if (error) {
+					throw error;
+				}
+
+				setProducts(data as Product[]);
+			} catch (err) {
+				console.error("Error fetching store products:", err);
+				// We don't set the main error state here to avoid blocking the whole page
+			} finally {
+				setLoadingProducts(false);
+			}
+		};
+
 		if (storeId) {
 			fetchStoreDetails();
+			fetchStoreProducts();
 		}
 	}, [storeId, user]);
 
@@ -219,6 +248,91 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 						<p className="text-gray-700 whitespace-pre-line">
 							{store.description || "매장 소개 정보가 없습니다."}
 						</p>
+					</div>
+
+					{/* Products Section */}
+					<div
+						id="products-section"
+						className="bg-white rounded-xl shadow-md p-6"
+					>
+						<h2 className="text-xl font-bold mb-4 flex items-center">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="20"
+								height="20"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="2"
+								className="mr-2 text-primary"
+							>
+								<path d="M20.91 8.84 8.56 21.18a4.18 4.18 0 0 1-5.91 0 4.18 4.18 0 0 1 0-5.91L14.99 2.92a2.79 2.79 0 0 1 3.94 0 2.79 2.79 0 0 1 0 3.94L7.67 18.12a1.4 1.4 0 0 1-1.97 0 1.4 1.4 0 0 1 0-1.97L16.23 5.6"></path>
+							</svg>
+							상품 목록
+						</h2>
+
+						{loadingProducts ? (
+							<div className="flex justify-center items-center py-8">
+								<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+							</div>
+						) : products.length === 0 ? (
+							<div className="text-center py-8">
+								<p className="text-muted-foreground">등록된 상품이 없습니다.</p>
+							</div>
+						) : (
+							<>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+									{products.slice(0, 4).map((product) => (
+										<div
+											key={product.product_id}
+											className="border rounded-lg overflow-hidden flex flex-col"
+										>
+											<div className="aspect-video w-full overflow-hidden bg-gray-100">
+												{product.image_url ? (
+													<img
+														src={product.image_url}
+														alt={product.product_name}
+														className="w-full h-full object-cover"
+													/>
+												) : (
+													<div className="w-full h-full flex items-center justify-center">
+														<p className="text-muted-foreground">이미지 없음</p>
+													</div>
+												)}
+											</div>
+											<div className="p-4 flex-1 flex flex-col">
+												<h3 className="font-semibold text-lg line-clamp-1">
+													{product.product_name}
+												</h3>
+												<p className="text-sm text-muted-foreground line-clamp-2 mt-1 flex-1">
+													{product.description || "상품 설명이 없습니다."}
+												</p>
+												<div className="mt-2">
+													<p className="font-semibold">
+														{product.price.toLocaleString()}원
+													</p>
+													{product.sgt_price && (
+														<p className="text-xs text-primary">
+															SGT: {product.sgt_price.toLocaleString()} 토큰
+														</p>
+													)}
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
+
+								{products.length > 4 && (
+									<div className="mt-6 text-center">
+										<Link href={`/stores/${storeId}/products/list`}>
+											<button className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors">
+												더 많은 상품 보기 ({products.length - 4}개 더)
+											</button>
+										</Link>
+									</div>
+								)}
+							</>
+						)}
 					</div>
 
 					{/* Location */}
