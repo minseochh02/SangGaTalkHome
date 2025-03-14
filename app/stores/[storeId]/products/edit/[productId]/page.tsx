@@ -181,18 +181,19 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 			// Upload new image if selected
 			if (imageFile) {
 				const fileExt = imageFile.name.split(".").pop();
-				const fileName = `${storeId}-${productId}-${Date.now()}.${fileExt}`;
+				// Create a path with user_id as the folder name
+				const filePath = `${user.id}/${storeId}-${productId}-${Date.now()}.${fileExt}`;
 
 				const { data: uploadData, error: uploadError } = await supabase.storage
 					.from("product-images")
-					.upload(fileName, imageFile);
+					.upload(filePath, imageFile);
 
 				if (uploadError) throw uploadError;
 
 				// Get public URL
 				const { data: urlData } = supabase.storage
 					.from("product-images")
-					.getPublicUrl(fileName);
+					.getPublicUrl(filePath);
 
 				updatedImageUrl = urlData.publicUrl;
 			}

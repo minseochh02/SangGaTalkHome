@@ -98,15 +98,27 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 
 			// Delete the image from storage if it exists
 			if (productToDelete?.image_url) {
-				// Extract the filename from the URL
-				// The URL format is typically like: https://xxx.supabase.co/storage/v1/object/public/product-images/filename
+				// Extract the path from the URL
+				// The URL format is typically like: https://xxx.supabase.co/storage/v1/object/public/product-images/user_id/filename
 				const urlParts = productToDelete.image_url.split("/");
-				const fileName = urlParts[urlParts.length - 1];
 
-				if (fileName) {
+				// Get the last two parts which should be user_id/filename
+				// This handles both old format (just filename) and new format (user_id/filename)
+				const pathParts = urlParts.slice(-2);
+				let filePath;
+
+				if (pathParts.length === 2 && pathParts[0].length > 0) {
+					// New format with user_id folder
+					filePath = `${pathParts[0]}/${pathParts[1]}`;
+				} else {
+					// Old format without user_id folder
+					filePath = pathParts[pathParts.length - 1];
+				}
+
+				if (filePath) {
 					const { error: storageError } = await supabase.storage
 						.from("product-images")
-						.remove([fileName]);
+						.remove([filePath]);
 
 					if (storageError) {
 						console.error("Error deleting image from storage:", storageError);
