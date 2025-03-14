@@ -49,3 +49,18 @@ export interface StoreApplication {
 	referrer_phone_number: string;
 	image_url?: string;
 }
+
+export interface Product {
+	product_id: string;
+	product_name: string;
+	description: string;
+	price: number;
+	sgt_price: number | null;
+	category: string;
+	image_url: string;
+	store_id: string;
+	is_sgt_product: boolean;
+	status: number;
+	created_at: string;
+	updated_at: string;
+}

@@ -4,11 +4,14 @@ import { useState, useEffect } from "react";
 import { Store } from "@/utils/type";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const [store, setStore] = useState<Store | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [isOwner, setIsOwner] = useState(false);
+	const { user } = useAuth();
 
 	useEffect(() => {
 		const fetchStoreDetails = async () => {
@@ -49,6 +52,11 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 				}
 
 				setStore(data as unknown as Store);
+
+				// Check if current user is the owner
+				if (user && data.user_id === user.id) {
+					setIsOwner(true);
+				}
 			} catch (err) {
 				console.error("Error fetching store details:", err);
 				setError("매장 정보를 불러오는 중 오류가 발생했습니다.");
@@ -60,7 +68,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 		if (storeId) {
 			fetchStoreDetails();
 		}
-	}, [storeId]);
+	}, [storeId, user]);
 
 	// Helper function to get store type text
 	const getStoreTypeText = (type: number) => {
@@ -443,6 +451,66 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							)}
 						</ul>
 					</div>
+
+					{/* Owner Actions - Only visible to store owner */}
+					{isOwner && (
+						<div className="bg-white rounded-xl shadow-md p-6">
+							<h2 className="text-xl font-bold mb-4 flex items-center">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="20"
+									height="20"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									className="mr-2 text-primary"
+								>
+									<path d="M12 20h9"></path>
+									<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+								</svg>
+								매장 관리
+							</h2>
+							<div className="space-y-3">
+								<Link href={`/stores/edit/${storeId}`} className="w-full">
+									<button className="w-full px-4 py-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors duration-200 text-base font-medium flex items-center justify-center gap-2">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="18"
+											height="18"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											className="shrink-0"
+										>
+											<path d="M12 20h9"></path>
+											<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+										</svg>
+										매장 정보 수정
+									</button>
+								</Link>
+
+								<Link href={`/stores/${storeId}/products`} className="w-full">
+									<button className="w-full px-4 py-3 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200 text-base font-medium flex items-center justify-center gap-2">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="18"
+											height="18"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											className="shrink-0"
+										>
+											<path d="M20.91 8.84 8.56 21.18a4.18 4.18 0 0 1-5.91 0 4.18 4.18 0 0 1 0-5.91L14.99 2.92a2.79 2.79 0 0 1 3.94 0 2.79 2.79 0 0 1 0 3.94L7.67 18.12a1.4 1.4 0 0 1-1.97 0 1.4 1.4 0 0 1 0-1.97L16.23 5.6"></path>
+										</svg>
+										상품 관리
+									</button>
+								</Link>
+							</div>
+						</div>
+					)}
 
 					{/* Action Buttons */}
 					<div className="space-y-3">
