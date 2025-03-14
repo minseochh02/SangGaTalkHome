@@ -93,15 +93,29 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 		try {
 			const supabase = createClient();
 
-			// Delete product images first (if you have a separate table for them)
-			const { error: imagesError } = await supabase
-				.from("product_images")
-				.delete()
-				.eq("product_id", productId);
+			// Find the product to get its image URL
+			const productToDelete = products.find((p) => p.product_id === productId);
 
-			if (imagesError) throw imagesError;
+			// Delete the image from storage if it exists
+			if (productToDelete?.image_url) {
+				// Extract the filename from the URL
+				// The URL format is typically like: https://xxx.supabase.co/storage/v1/object/public/product-images/filename
+				const urlParts = productToDelete.image_url.split("/");
+				const fileName = urlParts[urlParts.length - 1];
 
-			// Delete the product
+				if (fileName) {
+					const { error: storageError } = await supabase.storage
+						.from("product-images")
+						.remove([fileName]);
+
+					if (storageError) {
+						console.error("Error deleting image from storage:", storageError);
+						// Continue with product deletion even if image deletion fails
+					}
+				}
+			}
+
+			// Delete the product from the database
 			const { error } = await supabase
 				.from("products")
 				.delete()
