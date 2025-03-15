@@ -48,6 +48,8 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 	});
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
+	const [displayPrice, setDisplayPrice] = useState("");
+	const [displaySgtPrice, setDisplaySgtPrice] = useState("");
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -99,6 +101,8 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				}
 
 				setProduct(productData as Product);
+
+				// Set form data with raw values
 				setFormData({
 					product_name: productData.product_name || "",
 					description: productData.description || "",
@@ -107,6 +111,21 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 					category: productData.category || "",
 					status: productData.status?.toString() || "1",
 				});
+
+				// Set display values with formatted values
+				if (productData.price) {
+					setDisplayPrice(productData.price.toLocaleString("ko-KR"));
+				}
+
+				if (productData.sgt_price) {
+					// Format SGT price with proper decimal handling
+					const sgtPriceStr = productData.sgt_price.toString();
+					const parts = sgtPriceStr.split(".");
+					const integerPart = parseInt(parts[0]).toLocaleString("ko-KR");
+					const formattedValue =
+						parts.length > 1 ? `${integerPart}.${parts[1]}` : integerPart;
+					setDisplaySgtPrice(formattedValue);
+				}
 
 				if (productData.image_url) {
 					setImagePreview(productData.image_url);
@@ -131,7 +150,84 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
 	) => {
 		const { name, value } = e.target;
+
+		// Handle special cases for price fields
+		if (name === "price" || name === "sgt_price") {
+			// Skip processing if the field is being cleared
+			if (!value) {
+				if (name === "price") {
+					setDisplayPrice("");
+				} else {
+					setDisplaySgtPrice("");
+				}
+				setFormData((prev) => ({ ...prev, [name]: "" }));
+				return;
+			}
+		}
+
 		setFormData((prev) => ({ ...prev, [name]: value }));
+	};
+
+	// Format KRW price with commas
+	const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+
+		// Remove all non-digit characters
+		const numericValue = value.replace(/[^\d]/g, "");
+
+		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
+		if (numericValue.length > 10) return;
+
+		// Format with commas
+		const formattedValue = numericValue
+			? parseInt(numericValue).toLocaleString("ko-KR")
+			: "";
+		setDisplayPrice(formattedValue);
+
+		// Store the numeric value in formData
+		setFormData((prev) => ({ ...prev, price: numericValue }));
+	};
+
+	// Format SGT price with commas and decimal places
+	const handleSgtPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+
+		// Allow only digits, commas, and a single decimal point
+		if (!/^[\d,]*\.?\d*$/.test(value) && value !== "") return;
+
+		// Split by decimal point
+		const parts = value.split(".");
+		const integerPart = parts[0].replace(/[^\d]/g, "");
+		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : "";
+
+		// Limit integer part to 10 digits and decimal part to 10 digits
+		if (integerPart.length > 10) return;
+		if (decimalPart.length > 10) {
+			decimalPart = decimalPart.substring(0, 10);
+		}
+
+		// Format integer part with commas
+		const formattedIntegerPart = integerPart
+			? parseInt(integerPart).toLocaleString("ko-KR")
+			: "0";
+
+		// Combine parts
+		const formattedValue = decimalPart
+			? `${formattedIntegerPart}.${decimalPart}`
+			: value.includes(".")
+				? `${formattedIntegerPart}.`
+				: formattedIntegerPart;
+
+		setDisplaySgtPrice(formattedValue);
+
+		// Store the numeric value in formData
+		const numericValue = decimalPart
+			? `${integerPart}.${decimalPart}`
+			: value.includes(".")
+				? `${integerPart}.`
+				: integerPart;
+
+		setFormData((prev) => ({ ...prev, sgt_price: numericValue }));
 	};
 
 	// Handle image upload
@@ -276,13 +372,16 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 						<Input
 							id="price"
 							name="price"
-							type="number"
-							min="0"
-							step="100"
-							value={formData.price}
-							onChange={handleChange}
+							type="text"
+							inputMode="numeric"
+							value={displayPrice}
+							onChange={handlePriceChange}
+							placeholder="0"
 							required
 						/>
+						<p className="text-sm text-muted-foreground">
+							최대 9,999,999,999원까지 입력 가능합니다.
+						</p>
 					</div>
 
 					{/* SGT Price */}
@@ -291,14 +390,15 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 						<Input
 							id="sgt_price"
 							name="sgt_price"
-							type="number"
-							min="0"
-							step="1"
-							value={formData.sgt_price}
-							onChange={handleChange}
+							type="text"
+							inputMode="decimal"
+							value={displaySgtPrice}
+							onChange={handleSgtPriceChange}
+							placeholder="0"
 						/>
 						<p className="text-sm text-muted-foreground">
-							SGT 토큰으로 결제 가능한 경우 입력하세요.
+							SGT 토큰으로 결제 가능한 경우 입력하세요. 최대
+							9,999,999,999.9999999999까지 입력 가능합니다.
 						</p>
 					</div>
 
