@@ -58,7 +58,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 						const rawSgtPrice =
 							typeof product.sgt_price === "string"
 								? product.sgt_price
-								: product.sgt_price.toFixed(10); // Adjust the number of decimal places as needed
+								: product.sgt_price.toFixed(50); // Adjust the number of decimal places as needed
 
 						return {
 							...product,
