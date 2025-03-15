@@ -226,7 +226,7 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 								</p>
 								{product.sgt_price && (
 									<p className="text-sm text-muted-foreground">
-										SGT: {product.sgt_price.toLocaleString()} 토큰
+										SGT: {product.sgt_price.toString()} 토큰
 									</p>
 								)}
 								<p className="line-clamp-2 text-sm text-muted-foreground mt-2">

@@ -183,7 +183,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 									</p>
 									{product.sgt_price && (
 										<p className="text-xs text-primary">
-											SGT: {product.sgt_price.toLocaleString()} 토큰
+											SGT: {product.sgt_price.toString()} 토큰
 										</p>
 									)}
 								</div>
