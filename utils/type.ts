@@ -55,7 +55,7 @@ export interface Product {
 	product_name: string;
 	description: string;
 	price: number;
-	sgt_price: number | null;
+	sgt_price: number | string | null;
 	category: string;
 	image_url: string;
 	store_id: string;
@@ -63,4 +63,5 @@ export interface Product {
 	status: number;
 	created_at: string;
 	updated_at: string;
+	_original_sgt_price?: number;
 }

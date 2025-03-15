@@ -49,7 +49,25 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 					.order("created_at", { ascending: false });
 
 				if (productsError) throw productsError;
-				setProducts(productsData as Product[]);
+
+				// Process the products to ensure SGT prices maintain their precision
+				const processedProducts = productsData.map((product) => {
+					// If sgt_price exists, ensure it's treated as a string to preserve all decimal places
+					if (product.sgt_price !== null) {
+						// Get the raw value from the database as a string
+						const rawSgtPrice = product.sgt_price.toString();
+						return {
+							...product,
+							// Store the original numeric value for other operations
+							_original_sgt_price: product.sgt_price,
+							// Override the sgt_price with the string representation
+							sgt_price: rawSgtPrice,
+						};
+					}
+					return product;
+				});
+
+				setProducts(processedProducts as Product[]);
 			} catch (error) {
 				console.error("Error fetching data:", error);
 				setError("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -183,7 +201,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 									</p>
 									{product.sgt_price && (
 										<p className="text-xs text-primary">
-											SGT: {product.sgt_price.toString()} 토큰
+											SGT: {product.sgt_price} 토큰
 										</p>
 									)}
 								</div>
