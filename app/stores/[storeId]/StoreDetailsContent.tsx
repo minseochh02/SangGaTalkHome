@@ -1,10 +1,27 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Store, Product } from "@/utils/type";
+import { Store } from "@/utils/type";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Extend the Product type to include the sgt_price_text field
+interface Product {
+	product_id: string;
+	product_name: string;
+	description: string | null;
+	price: number;
+	sgt_price: number | null;
+	sgt_price_text?: string; // Add the new field
+	category: string | null;
+	image_url: string | null;
+	store_id: string;
+	is_sgt_product: boolean;
+	created_at: string;
+	updated_at: string;
+	status: number;
+}
 
 export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const [store, setStore] = useState<Store | null>(null);
@@ -18,19 +35,28 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	// Helper function to format SGT price
 	const formatSGTPrice = (price: number | string | null): string => {
 		if (price === null) return "0";
-		console.log(price);
-		// If it's already a string, return it
-		if (typeof price === "string") return price;
 
-		// For numbers, format with fixed decimal places to avoid scientific notation
-		// and trim trailing zeros
-		const formattedPrice = price.toFixed(4).replace(/\.?0+$/, "");
-		console.log(formattedPrice);
-		// Add commas for thousands
-		const parts = formattedPrice.split(".");
+		// Convert to string if it's not already
+		const priceStr = typeof price === "string" ? price : price.toString();
+
+		// Split by decimal point
+		const parts = priceStr.split(".");
+
+		// Add commas for thousands in the integer part
 		parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-		return parts.join(".");
+		// If there's a decimal part, limit to 4 places and remove trailing zeros
+		if (parts.length > 1) {
+			// Limit to 4 decimal places
+			parts[1] = parts[1].substring(0, 4);
+			// Remove trailing zeros
+			parts[1] = parts[1].replace(/0+$/, "");
+
+			// If decimal part is empty after removing zeros, return just the integer part
+			return parts[1].length > 0 ? parts.join(".") : parts[0];
+		}
+
+		return parts[0];
 	};
 
 	useEffect(() => {
@@ -91,9 +117,15 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 				const supabase = createClient();
 
 				// Fetch only active products (status = 1)
+				// Cast sgt_price to text to preserve exact numeric representation
 				const { data, error } = await supabase
 					.from("products")
-					.select("*")
+					.select(
+						`
+						*,
+						sgt_price_text:sgt_price::text
+					`
+					)
 					.eq("store_id", storeId)
 					.eq("status", 1)
 					.order("created_at", { ascending: false });
@@ -329,9 +361,13 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 													<p className="font-semibold">
 														{product.price.toLocaleString()}원
 													</p>
-													{product.sgt_price && (
+													{(product.sgt_price || product.sgt_price_text) && (
 														<p className="text-xs text-primary">
-															SGT: {formatSGTPrice(product.sgt_price)} 토큰
+															SGT:{" "}
+															{formatSGTPrice(
+																product.sgt_price_text || product.sgt_price
+															)}{" "}
+															토큰
 														</p>
 													)}
 												</div>
