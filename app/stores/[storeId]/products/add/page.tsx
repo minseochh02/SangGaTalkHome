@@ -113,10 +113,15 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
 		if (numericValue.length > 10) return;
 
-		// Format with commas
-		const formattedValue = numericValue
-			? parseInt(numericValue).toLocaleString("ko-KR")
-			: "";
+		// Format with commas - avoid parseInt for large numbers
+		let formattedValue;
+		if (!numericValue) {
+			formattedValue = "";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
 		setDisplayPrice(formattedValue);
 
 		// Store the numeric value in formData
@@ -141,10 +146,14 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 			decimalPart = decimalPart.substring(0, 10);
 		}
 
-		// Format integer part with commas
-		const formattedIntegerPart = integerPart
-			? parseInt(integerPart).toLocaleString("ko-KR")
-			: "0";
+		// Format integer part with commas - avoid parseInt for large numbers
+		let formattedIntegerPart;
+		if (!integerPart) {
+			formattedIntegerPart = "0";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedIntegerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
 
 		// Combine parts
 		const formattedValue = decimalPart

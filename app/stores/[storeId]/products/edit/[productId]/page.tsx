@@ -114,16 +114,27 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 
 				// Set display values with formatted values
 				if (productData.price) {
-					setDisplayPrice(productData.price.toLocaleString("ko-KR"));
+					// Use a safer approach to add commas without parsing to integer
+					setDisplayPrice(
+						productData.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+					);
 				}
 
 				if (productData.sgt_price) {
 					// Format SGT price with proper decimal handling
 					const sgtPriceStr = productData.sgt_price.toString();
 					const parts = sgtPriceStr.split(".");
-					const integerPart = parseInt(parts[0]).toLocaleString("ko-KR");
+
+					// Use a safer approach to add commas without parsing to integer
+					const formattedIntegerPart = parts[0].replace(
+						/\B(?=(\d{3})+(?!\d))/g,
+						","
+					);
+
 					const formattedValue =
-						parts.length > 1 ? `${integerPart}.${parts[1]}` : integerPart;
+						parts.length > 1
+							? `${formattedIntegerPart}.${parts[1]}`
+							: formattedIntegerPart;
 					setDisplaySgtPrice(formattedValue);
 				}
 
@@ -178,10 +189,15 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
 		if (numericValue.length > 10) return;
 
-		// Format with commas
-		const formattedValue = numericValue
-			? parseInt(numericValue).toLocaleString("ko-KR")
-			: "";
+		// Format with commas - avoid parseInt for large numbers
+		let formattedValue;
+		if (!numericValue) {
+			formattedValue = "";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
 		setDisplayPrice(formattedValue);
 
 		// Store the numeric value in formData
@@ -206,10 +222,14 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 			decimalPart = decimalPart.substring(0, 10);
 		}
 
-		// Format integer part with commas
-		const formattedIntegerPart = integerPart
-			? parseInt(integerPart).toLocaleString("ko-KR")
-			: "0";
+		// Format integer part with commas - avoid parseInt for large numbers
+		let formattedIntegerPart;
+		if (!integerPart) {
+			formattedIntegerPart = "0";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedIntegerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
 
 		// Combine parts
 		const formattedValue = decimalPart
