@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from "uuid";
 interface FormData {
 	business_name: string;
 	owner_name: string;
-	business_number: string;
+	business_number?: string;
 	phone_number: string;
 	email: string;
 	address: string;
@@ -182,7 +182,7 @@ export default function StoreRegistration() {
 				user_id: user.id,
 				business_name: formData.business_name,
 				owner_name: formData.owner_name,
-				business_number: formData.business_number,
+				business_number: formData.business_number || null,
 				phone_number: formData.phone_number,
 				email: formData.email,
 				address: formData.address,
@@ -271,12 +271,11 @@ export default function StoreRegistration() {
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-2">
-										사업자등록번호 <span className="text-red-500">*</span>
+										사업자등록번호 (선택사항)
 									</label>
 									<input
 										type="text"
 										name="business_number"
-										required
 										placeholder="000-00-00000"
 										value={formData.business_number}
 										onChange={handleChange}
