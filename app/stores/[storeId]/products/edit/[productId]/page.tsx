@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { formatSGTPrice } from "@/utils/formatters";
 
 interface Product {
 	product_id: string;
@@ -85,7 +86,12 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				// Fetch product data
 				const { data: productData, error: productError } = await supabase
 					.from("products")
-					.select("*")
+					.select(
+						`
+						*,
+						sgt_price_text:sgt_price::text
+					`
+					)
 					.eq("product_id", productId)
 					.eq("store_id", storeId)
 					.single();
@@ -107,7 +113,10 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 					product_name: productData.product_name || "",
 					description: productData.description || "",
 					price: productData.price?.toString() || "",
-					sgt_price: productData.sgt_price?.toString() || "",
+					sgt_price:
+						productData.sgt_price_text ||
+						productData.sgt_price?.toString() ||
+						"",
 					category: productData.category || "",
 					status: productData.status?.toString() || "1",
 				});
@@ -120,22 +129,11 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 					);
 				}
 
-				if (productData.sgt_price) {
-					// Format SGT price with proper decimal handling
-					const sgtPriceStr = productData.sgt_price.toString();
-					const parts = sgtPriceStr.split(".");
-
-					// Use a safer approach to add commas without parsing to integer
-					const formattedIntegerPart = parts[0].replace(
-						/\B(?=(\d{3})+(?!\d))/g,
-						","
-					);
-
-					const formattedValue =
-						parts.length > 1
-							? `${formattedIntegerPart}.${parts[1]}`
-							: formattedIntegerPart;
-					setDisplaySgtPrice(formattedValue);
+				if (productData.sgt_price_text || productData.sgt_price) {
+					// Use the text representation if available, otherwise use the numeric value
+					const sgtPriceStr =
+						productData.sgt_price_text || productData.sgt_price.toString();
+					setDisplaySgtPrice(formatSGTPrice(sgtPriceStr));
 				}
 
 				if (productData.image_url) {
@@ -272,7 +270,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		if (!user || !store || !product) {
 			toast({
 				title: "오류 발생",
-				description: "로그인이 필요하거나 매장/상품 정보가 없습니다.",
+				description: "로그인이 필요하거나 매장 정보가 없습니다.",
 				variant: "destructive",
 			});
 			return;
@@ -292,13 +290,45 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 
 		try {
 			const supabase = createClient();
-			let updatedImageUrl = product.image_url;
+			let imageUrl = product.image_url;
 
 			// Upload new image if selected
 			if (imageFile) {
+				// Delete old image if it exists
+				if (product.image_url) {
+					// Extract the path from the URL
+					// The URL format is typically like: https://xxx.supabase.co/storage/v1/object/public/product-images/user_id/filename
+					const urlParts = product.image_url.split("/");
+
+					// Get the last two parts which should be user_id/filename
+					// This handles both old format (just filename) and new format (user_id/filename)
+					const pathParts = urlParts.slice(-2);
+					let filePath;
+
+					if (pathParts.length === 2 && pathParts[0].length > 0) {
+						// New format with user_id folder
+						filePath = `${pathParts[0]}/${pathParts[1]}`;
+					} else {
+						// Old format without user_id folder
+						filePath = pathParts[pathParts.length - 1];
+					}
+
+					if (filePath) {
+						const { error: deleteError } = await supabase.storage
+							.from("product-images")
+							.remove([filePath]);
+
+						if (deleteError) {
+							console.error("Error deleting old image:", deleteError);
+							// Continue with upload even if delete fails
+						}
+					}
+				}
+
+				// Upload new image
 				const fileExt = imageFile.name.split(".").pop();
 				// Create a path with user_id as the folder name
-				const filePath = `${user.id}/${storeId}-${productId}-${Date.now()}.${fileExt}`;
+				const filePath = `${user.id}/${storeId}-${product.product_id}-${Date.now()}.${fileExt}`;
 
 				const { data: uploadData, error: uploadError } = await supabase.storage
 					.from("product-images")
@@ -311,7 +341,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 					.from("product-images")
 					.getPublicUrl(filePath);
 
-				updatedImageUrl = urlData.publicUrl;
+				imageUrl = urlData.publicUrl;
 			}
 
 			// Process price values with exact precision
@@ -325,8 +355,8 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				sgtPriceValue = formData.sgt_price;
 			}
 
-			// Update product
-			const { error: updateError } = await supabase
+			// Update product with sgt_price as text to preserve exact numeric representation
+			const { data, error } = await supabase
 				.from("products")
 				.update({
 					product_name: formData.product_name,
@@ -334,26 +364,26 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 					price: priceValue,
 					sgt_price: sgtPriceValue,
 					category: formData.category,
-					image_url: updatedImageUrl,
+					image_url: imageUrl,
 					status: parseInt(formData.status),
 					updated_at: new Date().toISOString(),
 				})
 				.eq("product_id", productId)
-				.eq("store_id", storeId);
+				.select();
 
-			if (updateError) throw updateError;
+			if (error) throw error;
 
 			toast({
-				title: "수정 완료",
+				title: "상품 수정 완료",
 				description: "상품이 성공적으로 수정되었습니다.",
 			});
 
-			// Redirect to products page
+			// Redirect to product list
 			router.push(`/stores/${storeId}/products`);
-		} catch (error) {
-			console.error("Error updating product:", error);
+		} catch (err) {
+			console.error("Error updating product:", err);
 			toast({
-				title: "수정 실패",
+				title: "상품 수정 실패",
 				description: "상품 수정 중 오류가 발생했습니다.",
 				variant: "destructive",
 			});

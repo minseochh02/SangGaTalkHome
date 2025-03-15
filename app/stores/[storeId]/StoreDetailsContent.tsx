@@ -1,27 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Store } from "@/utils/type";
+import { Store, Product } from "@/utils/type";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-
-// Extend the Product type to include the sgt_price_text field
-interface Product {
-	product_id: string;
-	product_name: string;
-	description: string | null;
-	price: number;
-	sgt_price: number | null;
-	sgt_price_text?: string; // Add the new field
-	category: string | null;
-	image_url: string | null;
-	store_id: string;
-	is_sgt_product: boolean;
-	created_at: string;
-	updated_at: string;
-	status: number;
-}
 
 export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const [store, setStore] = useState<Store | null>(null);

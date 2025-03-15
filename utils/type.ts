@@ -50,18 +50,19 @@ export interface StoreApplication {
 	image_url?: string;
 }
 
+// Extend the Product type to include the sgt_price_text field
 export interface Product {
 	product_id: string;
 	product_name: string;
-	description: string;
+	description: string | null;
 	price: number;
-	sgt_price: number | string | null;
-	category: string;
-	image_url: string;
+	sgt_price: number | null;
+	sgt_price_text?: string; // Add the new field
+	category: string | null;
+	image_url: string | null;
 	store_id: string;
 	is_sgt_product: boolean;
-	status: number;
 	created_at: string;
 	updated_at: string;
-	_original_sgt_price?: number;
+	status: number;
 }

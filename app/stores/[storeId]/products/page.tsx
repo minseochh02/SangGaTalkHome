@@ -16,6 +16,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { formatSGTPrice } from "@/utils/formatters";
 
 interface StoreProductsPageProps {
 	storeId: string;
@@ -63,30 +64,18 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 				// Fetch products for this store
 				const { data: productsData, error: productsError } = await supabase
 					.from("products")
-					.select("*")
+					.select(
+						`
+						*,
+						sgt_price_text:sgt_price::text
+					`
+					)
 					.eq("store_id", storeId)
 					.order("created_at", { ascending: false });
 
 				if (productsError) throw productsError;
 
-				// Process the products to ensure SGT prices maintain their precision
-				const processedProducts = productsData.map((product) => {
-					// If sgt_price exists, ensure it's treated as a string to preserve all decimal places
-					if (product.sgt_price !== null) {
-						// Get the raw value from the database as a string
-						const rawSgtPrice = product.sgt_price.toString();
-						return {
-							...product,
-							// Store the original numeric value for other operations
-							_original_sgt_price: product.sgt_price,
-							// Override the sgt_price with the string representation
-							sgt_price: rawSgtPrice,
-						};
-					}
-					return product;
-				});
-
-				setProducts(processedProducts as Product[]);
+				setProducts(productsData as Product[]);
 			} catch (error) {
 				console.error("Error fetching data:", error);
 				toast({
@@ -242,9 +231,13 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 								<p className="text-lg font-semibold">
 									{product.price.toLocaleString()}원
 								</p>
-								{product.sgt_price && (
+								{(product.sgt_price || product.sgt_price_text) && (
 									<p className="text-sm text-muted-foreground">
-										SGT: {product.sgt_price} 토큰
+										SGT:{" "}
+										{formatSGTPrice(
+											product.sgt_price_text || product.sgt_price
+										)}{" "}
+										토큰
 									</p>
 								)}
 								<p className="line-clamp-2 text-sm text-muted-foreground mt-2">

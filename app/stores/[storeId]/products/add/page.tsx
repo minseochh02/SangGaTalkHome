@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from "uuid";
+import { formatSGTPrice } from "@/utils/formatters";
 
 interface AddProductPageProps {
 	storeId: string;
@@ -250,38 +251,38 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 				sgtPriceValue = formData.sgt_price;
 			}
 
-			// Create product
-			const { data: productData, error: productError } = await supabase
+			// Create product with sgt_price as text to preserve exact numeric representation
+			const { data, error } = await supabase
 				.from("products")
-				.insert({
-					product_id: uuidv4(),
-					product_name: formData.product_name,
-					description: formData.description,
-					price: priceValue,
-					sgt_price: sgtPriceValue,
-					category: formData.category,
-					image_url: imageUrl,
-					store_id: storeId,
-					is_sgt_product: false,
-					status: parseInt(formData.status),
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-				})
+				.insert([
+					{
+						product_id: uuidv4(),
+						product_name: formData.product_name,
+						description: formData.description,
+						price: priceValue,
+						sgt_price: sgtPriceValue,
+						category: formData.category,
+						image_url: imageUrl,
+						store_id: storeId,
+						is_sgt_product: false,
+						status: parseInt(formData.status),
+					},
+				])
 				.select();
 
-			if (productError) throw productError;
+			if (error) throw error;
 
 			toast({
-				title: "등록 완료",
+				title: "상품 등록 완료",
 				description: "상품이 성공적으로 등록되었습니다.",
 			});
 
-			// Redirect to products page
+			// Redirect to product list
 			router.push(`/stores/${storeId}/products`);
-		} catch (error) {
-			console.error("Error creating product:", error);
+		} catch (err) {
+			console.error("Error creating product:", err);
 			toast({
-				title: "등록 실패",
+				title: "상품 등록 실패",
 				description: "상품 등록 중 오류가 발생했습니다.",
 				variant: "destructive",
 			});
