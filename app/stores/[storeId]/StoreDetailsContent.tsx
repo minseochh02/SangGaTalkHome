@@ -45,10 +45,8 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 		// Add commas for thousands in the integer part
 		parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-		// If there's a decimal part, limit to 4 places and remove trailing zeros
+		// If there's a decimal part, preserve all decimal places but remove trailing zeros
 		if (parts.length > 1) {
-			// Limit to 4 decimal places
-			parts[1] = parts[1].substring(0, 4);
 			// Remove trailing zeros
 			parts[1] = parts[1].replace(/0+$/, "");
 
