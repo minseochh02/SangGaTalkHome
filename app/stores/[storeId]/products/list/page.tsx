@@ -43,48 +43,33 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 				// Fetch active products for this store
 				const { data: productsData, error: productsError } = await supabase
 					.from("products")
-					.select(
-						`
-    product_id,
-    product_name,
-    description,
-    price,
-    sgt_price::text,
-    category,
-    image_url,
-    store_id,
-    is_sgt_product,
-    created_at,
-    updated_at,
-    status
-  `
-					)
+					.select("*")
 					.eq("store_id", storeId)
-					.eq("status", 1)
+					.eq("status", 1) // Only active products
 					.order("created_at", { ascending: false });
 
 				if (productsError) throw productsError;
 
 				// Process the products to ensure SGT prices maintain their precision
-				// In your product processing code
-				// const processedProducts = productsData.map((product) => {
-				// 	if (product.sgt_price !== null) {
-				// 		// Use a more precise string conversion
-				// 		const rawSgtPrice =
-				// 			typeof product.sgt_price === "string"
-				// 				? product.sgt_price
-				// 				: product.sgt_price.toFixed(50); // Adjust the number of decimal places as needed
+				const processedProducts = productsData.map((product) => {
+					if (product.sgt_price !== null) {
+						console.log(product.sgt_price);
+						// Use a more precise string conversion
+						const rawSgtPrice =
+							typeof product.sgt_price === "string"
+								? product.sgt_price
+								: product.sgt_price.toFixed(50); // Adjust the number of decimal places as needed
+						console.log(rawSgtPrice);
+						return {
+							...product,
+							_original_sgt_price: product.sgt_price,
+							sgt_price: rawSgtPrice,
+						};
+					}
+					return product;
+				});
 
-				// 		return {
-				// 			...product,
-				// 			_original_sgt_price: product.sgt_price,
-				// 			sgt_price: rawSgtPrice,
-				// 		};
-				// 	}
-				// 	return product;
-				// });
-
-				setProducts(productsData as Product[]);
+				setProducts(processedProducts as Product[]);
 			} catch (error) {
 				console.error("Error fetching data:", error);
 				setError("데이터를 불러오는 중 오류가 발생했습니다.");
