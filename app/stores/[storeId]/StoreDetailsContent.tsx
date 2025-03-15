@@ -15,6 +15,24 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const [loadingProducts, setLoadingProducts] = useState(true);
 	const { user } = useAuth();
 
+	// Helper function to format SGT price
+	const formatSGTPrice = (price: number | string | null): string => {
+		if (price === null) return "0";
+
+		// If it's already a string, return it
+		if (typeof price === "string") return price;
+
+		// For numbers, format with fixed decimal places to avoid scientific notation
+		// and trim trailing zeros
+		const formattedPrice = price.toFixed(4).replace(/\.?0+$/, "");
+
+		// Add commas for thousands
+		const parts = formattedPrice.split(".");
+		parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+		return parts.join(".");
+	};
+
 	useEffect(() => {
 		const fetchStoreDetails = async () => {
 			try {
@@ -313,7 +331,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 													</p>
 													{product.sgt_price && (
 														<p className="text-xs text-primary">
-															SGT: {product.sgt_price.toString()} 토큰
+															SGT: {formatSGTPrice(product.sgt_price)} 토큰
 														</p>
 													)}
 												</div>
