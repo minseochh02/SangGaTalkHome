@@ -294,14 +294,25 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				updatedImageUrl = urlData.publicUrl;
 			}
 
+			// Process price values with exact precision
+			const priceValue = formData.price ? parseFloat(formData.price) : 0;
+
+			// For SGT price, use the exact string value to preserve all decimal places
+			// This avoids JavaScript's floating point precision issues
+			let sgtPriceValue = null;
+			if (formData.sgt_price) {
+				// Use the raw string value directly to avoid rounding
+				sgtPriceValue = formData.sgt_price;
+			}
+
 			// Update product
 			const { error: updateError } = await supabase
 				.from("products")
 				.update({
 					product_name: formData.product_name,
 					description: formData.description,
-					price: parseFloat(formData.price) || 0,
-					sgt_price: formData.sgt_price ? parseFloat(formData.sgt_price) : null,
+					price: priceValue,
+					sgt_price: sgtPriceValue,
 					category: formData.category,
 					image_url: updatedImageUrl,
 					status: parseInt(formData.status),

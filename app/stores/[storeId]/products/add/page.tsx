@@ -230,6 +230,17 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 				imageUrl = urlData.publicUrl;
 			}
 
+			// Process price values with exact precision
+			const priceValue = formData.price ? parseFloat(formData.price) : 0;
+
+			// For SGT price, use the exact string value to preserve all decimal places
+			// This avoids JavaScript's floating point precision issues
+			let sgtPriceValue = null;
+			if (formData.sgt_price) {
+				// Use the raw string value directly to avoid rounding
+				sgtPriceValue = formData.sgt_price;
+			}
+
 			// Create product
 			const { data: productData, error: productError } = await supabase
 				.from("products")
@@ -237,8 +248,8 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 					product_id: uuidv4(),
 					product_name: formData.product_name,
 					description: formData.description,
-					price: parseFloat(formData.price) || 0,
-					sgt_price: formData.sgt_price ? parseFloat(formData.sgt_price) : null,
+					price: priceValue,
+					sgt_price: sgtPriceValue,
 					category: formData.category,
 					image_url: imageUrl,
 					store_id: storeId,
