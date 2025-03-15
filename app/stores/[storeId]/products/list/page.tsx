@@ -51,16 +51,18 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 				if (productsError) throw productsError;
 
 				// Process the products to ensure SGT prices maintain their precision
+				// In your product processing code
 				const processedProducts = productsData.map((product) => {
-					// If sgt_price exists, ensure it's treated as a string to preserve all decimal places
 					if (product.sgt_price !== null) {
-						// Get the raw value from the database as a string
-						const rawSgtPrice = product.sgt_price.toString();
+						// Use a more precise string conversion
+						const rawSgtPrice =
+							typeof product.sgt_price === "string"
+								? product.sgt_price
+								: product.sgt_price.toFixed(10); // Adjust the number of decimal places as needed
+
 						return {
 							...product,
-							// Store the original numeric value for other operations
 							_original_sgt_price: product.sgt_price,
-							// Override the sgt_price with the string representation
 							sgt_price: rawSgtPrice,
 						};
 					}
@@ -201,7 +203,11 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 									</p>
 									{product.sgt_price && (
 										<p className="text-xs text-primary">
-											SGT: {product.sgt_price} 토큰
+											SGT:{" "}
+											{typeof product.sgt_price === "string"
+												? product.sgt_price
+												: product.sgt_price.toFixed(10)}{" "}
+											토큰
 										</p>
 									)}
 								</div>
