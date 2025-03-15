@@ -18,14 +18,14 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	// Helper function to format SGT price
 	const formatSGTPrice = (price: number | string | null): string => {
 		if (price === null) return "0";
-
+		console.log(price);
 		// If it's already a string, return it
 		if (typeof price === "string") return price;
 
 		// For numbers, format with fixed decimal places to avoid scientific notation
 		// and trim trailing zeros
 		const formattedPrice = price.toFixed(4).replace(/\.?0+$/, "");
-
+		console.log(formattedPrice);
 		// Add commas for thousands
 		const parts = formattedPrice.split(".");
 		parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
