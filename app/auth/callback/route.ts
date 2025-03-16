@@ -1,30 +1,24 @@
-// handle googlesignin callback
-// 1, exchange the code for a session
-// 2, redirect to the profile page
-
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
+  // The `/auth/callback` route is required for the server-side auth flow implemented
+  // by the SSR package. It exchanges an auth code for the user's session.
+  // https://supabase.com/docs/guides/auth/server-side/nextjs
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  
-  // If there's no code, something went wrong with the OAuth flow
-  if (!code) {
-    console.error("No code provided in callback");
-    return NextResponse.redirect(new URL("/login", request.url));
+  const origin = requestUrl.origin;
+  const redirectTo = requestUrl.searchParams.get("redirect_to")?.toString();
+
+  if (code) {
+    const supabase = await createClient();
+    await supabase.auth.exchangeCodeForSession(code);
   }
-  
-  const supabase = await createClient();
-  
-  // Exchange the code for a session
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-  
-  if (error) {
-    console.error("Auth error in callback:", error.message);
-    return NextResponse.redirect(new URL("/login", request.url));
+
+  if (redirectTo) {
+    return NextResponse.redirect(`${origin}${redirectTo}`);
   }
-  
-  // Successfully authenticated, redirect to profile page
-  return NextResponse.redirect(new URL("/profile", request.url));
+
+  // URL to redirect to after sign up process completes
+  return NextResponse.redirect(`${origin}/`);
 }
