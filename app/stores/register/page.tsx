@@ -34,6 +34,23 @@ export default function StoreRegistration() {
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	// Check if user is logged in
+	useEffect(() => {
+		const checkAuth = async () => {
+			const supabase = createClient();
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
+
+			if (!user) {
+				toast.error("로그인이 필요합니다.");
+				router.push("/signup");
+			}
+		};
+
+		checkAuth();
+	}, [router]);
+
 	const [formData, setFormData] = useState<FormData>({
 		business_name: "",
 		owner_name: "",
