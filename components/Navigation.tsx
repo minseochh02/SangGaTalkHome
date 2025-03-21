@@ -28,7 +28,7 @@ export default function Navigation() {
 					const { data: profileData } = await supabase
 						.from("profiles")
 						.select("*")
-						.eq("id", user.id)
+						.eq("email", user.email)
 						.single();
 
 					if (profileData) {

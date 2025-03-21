@@ -34,7 +34,7 @@ export default function AccountSettingPage() {
 				const { data: profileData } = await supabase
 					.from("profiles")
 					.select("*")
-					.eq("id", authUser.id)
+					.eq("email", authUser.email)
 					.single();
 
 				if (profileData) {
