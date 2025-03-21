@@ -14,9 +14,8 @@ export default function HtmlContent({
 	if (!content) return null;
 
 	return (
-		<div
-			className={`html-content ${className}`}
-			dangerouslySetInnerHTML={{ __html: content }}
-		/>
+		<div className="ql-editor">
+			<div dangerouslySetInnerHTML={{ __html: content }} />
+		</div>
 	);
 }
