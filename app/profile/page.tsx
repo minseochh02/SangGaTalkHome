@@ -60,6 +60,23 @@ export default function ProfilePage() {
 			}
 		}, 5000); // 5 seconds timeout
 
+		// Add visibility change event listener to handle tab switching
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === "visible") {
+				console.log("Tab became visible again, refreshing auth state");
+				// Force a local state update to trigger a re-evaluation
+				setLocalLoading((prevState) => {
+					// Only force a refresh if we're still in a loading state
+					if (prevState || isLoading) {
+						return false;
+					}
+					return prevState;
+				});
+			}
+		};
+
+		document.addEventListener("visibilitychange", handleVisibilityChange);
+
 		// Update local loading state based on auth context loading
 		if (!isLoading) {
 			console.log(
@@ -81,7 +98,10 @@ export default function ProfilePage() {
 			}
 		}
 
-		return () => clearTimeout(timeoutId);
+		return () => {
+			clearTimeout(timeoutId);
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+		};
 	}, [user, userProfile, isLoading, router, localLoading]);
 
 	// Show loading state

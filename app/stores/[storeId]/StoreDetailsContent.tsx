@@ -124,10 +124,28 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 			}
 		};
 
+		// Add visibility change event listener to handle tab switching
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === "visible") {
+				console.log("Store page: Tab became visible again, refreshing data");
+				// Refetch data when tab becomes visible again
+				if (storeId) {
+					fetchStoreDetails();
+					fetchStoreProducts();
+				}
+			}
+		};
+
+		document.addEventListener("visibilitychange", handleVisibilityChange);
+
 		if (storeId) {
 			fetchStoreDetails();
 			fetchStoreProducts();
 		}
+
+		return () => {
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+		};
 	}, [storeId, user]);
 
 	// Helper function to get store type text
