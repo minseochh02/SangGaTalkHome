@@ -452,9 +452,10 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							<>
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
 									{products.slice(0, 4).map((product) => (
-										<div
+										<Link
 											key={product.product_id}
-											className="border rounded-lg overflow-hidden flex flex-col"
+											href={`/stores/${storeId}/products/${product.product_id}`}
+											className="border rounded-lg overflow-hidden flex flex-col hover:shadow-md transition-shadow"
 										>
 											<div className="aspect-video w-full overflow-hidden bg-gray-100">
 												{product.image_url ? (
@@ -491,7 +492,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 													)}
 												</div>
 											</div>
-										</div>
+										</Link>
 									))}
 								</div>
 
