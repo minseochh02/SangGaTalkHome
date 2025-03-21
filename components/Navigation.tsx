@@ -43,7 +43,7 @@ export default function Navigation() {
 		};
 
 		fetchUser();
-	}, [supabase]);
+	}, [supabase, router]);
 
 	const signOut = async () => {
 		try {
@@ -174,7 +174,10 @@ export default function Navigation() {
 
 			{/* Mobile menu */}
 			{mobileMenuOpen && (
-				<div className="md:hidden w-full bg-white border-b border-b-foreground/10 py-4 px-5">
+				<div
+					className="md:hidden w-full bg-white border-b border-b-foreground/10 py-4 px-5"
+					key={user?.id || "logged-out"}
+				>
 					<div className="flex flex-col space-y-4">
 						<Link
 							href="/stores/categories"
@@ -218,7 +221,10 @@ export default function Navigation() {
 						>
 							고객센터
 						</Link>
-						<div className="flex items-center gap-4 pt-4 border-t">
+						<div
+							className="flex items-center gap-4 pt-4 border-t"
+							key={user?.id || "no-user"}
+						>
 							<Link
 								href="/search"
 								className="hover:text-primary"
