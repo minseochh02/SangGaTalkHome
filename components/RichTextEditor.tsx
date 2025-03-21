@@ -2,17 +2,17 @@
 
 import React, { useMemo } from "react";
 import dynamic from "next/dynamic";
-import "react-quill/dist/quill.snow.css";
+import "react-quill-new/dist/quill.snow.css";
 
 // Dynamically import Quill to avoid SSR issues
-const ReactQuill = dynamic(() => import("react-quill"), {
+const ReactQuill = dynamic(() => import("react-quill-new"), {
 	ssr: false,
 	loading: () => (
 		<div className="h-[300px] flex items-center justify-center bg-gray-100 rounded-lg">
 			<div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
 		</div>
 	),
-});
+}) as any; // Use type assertion to avoid TypeScript errors
 
 interface RichTextEditorProps {
 	value: string;
