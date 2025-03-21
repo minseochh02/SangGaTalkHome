@@ -55,7 +55,7 @@ export default function ProfileForm({ userData }: { userData: UserData }) {
 						username,
 						updated_at: new Date().toISOString(),
 					})
-					.eq("id", userData.user_id);
+					.eq("user_id", userData.user_id);
 			} else {
 				// Create new profile
 				result = await supabase.from("users").insert({
