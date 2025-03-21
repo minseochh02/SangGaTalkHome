@@ -1,20 +1,54 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
 import ProfileForm from "./ProfileForm";
 
 export default function AccountSettingPage() {
-	const { user, userProfile, isLoading } = useAuth();
 	const router = useRouter();
+	const supabase = createClient();
+
+	const [user, setUser] = useState<any>(null);
+	const [userProfile, setUserProfile] = useState<any>(null);
+	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
-		// If not authenticated, redirect to login
-		if (!isLoading && !user) {
-			router.push("/login");
-		}
-	}, [user, isLoading, router]);
+		const fetchUserData = async () => {
+			try {
+				// Check if user is authenticated
+				const {
+					data: { user: authUser },
+					error: authError,
+				} = await supabase.auth.getUser();
+
+				if (authError || !authUser) {
+					console.log("No authenticated user found");
+					router.push("/login");
+					return;
+				}
+
+				setUser(authUser);
+
+				// Try to fetch user profile if it exists
+				const { data: profileData } = await supabase
+					.from("profiles")
+					.select("*")
+					.eq("id", authUser.id)
+					.single();
+
+				if (profileData) {
+					setUserProfile(profileData);
+				}
+			} catch (error) {
+				console.error("Error fetching user data:", error);
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		fetchUserData();
+	}, [router, supabase]);
 
 	if (isLoading) {
 		return (

@@ -1,25 +1,50 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 
 export default function SignupPage() {
-	const { user, signInWithGoogle, isLoading } = useAuth();
 	const router = useRouter();
+	const supabase = createClient();
+	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
-		// If user is already logged in, redirect to profile
-		if (user && !isLoading) {
-			router.push("/profile");
-		}
-	}, [user, isLoading, router]);
+		// Check if user is already logged in
+		const checkAuth = async () => {
+			try {
+				const {
+					data: { user },
+					error,
+				} = await supabase.auth.getUser();
+
+				if (!error && user) {
+					router.push("/profile");
+				}
+			} catch (error) {
+				console.error("Auth error:", error);
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		checkAuth();
+	}, [router, supabase]);
 
 	const handleGoogleSignUp = async () => {
 		try {
-			await signInWithGoogle();
+			const { error } = await supabase.auth.signInWithOAuth({
+				provider: "google",
+				options: {
+					redirectTo: `${window.location.origin}/profile`,
+				},
+			});
+
+			if (error) {
+				throw error;
+			}
 		} catch (error) {
 			console.error("Error signing up with Google:", error);
 		}

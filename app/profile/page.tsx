@@ -14,16 +14,20 @@ import UserReviewsList from "@/components/UserReviewsList";
 import AdminStoreApplicationsList from "@/components/AdminStoreApplicationsList";
 import AdminApprovedStoresList from "@/components/AdminApprovedStoresList";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ToastContainer } from "@/components/ui/use-toast";
+import { createClient } from "@/utils/supabase/client";
 
 export default function ProfilePage() {
-	const { user, userProfile, isLoading } = useAuth();
+	const supabase = createClient();
 	const router = useRouter();
-	const [localLoading, setLocalLoading] = useState(true);
+
+	const [user, setUser] = useState<any>(null);
+	const [userProfile, setUserProfile] = useState<any>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [localLoading, setLocalLoading] = useState(false);
 	const [redirecting, setRedirecting] = useState(false);
 	const [activeTab, setActiveTab] = useState<"applications" | "stores">(
 		"applications"
@@ -34,6 +38,53 @@ export default function ProfilePage() {
 	const [activeAdminTab, setActiveAdminTab] = useState<
 		"applications" | "stores"
 	>("applications");
+
+	useEffect(() => {
+		const fetchUserData = async () => {
+			try {
+				// Check if user is authenticated
+				const {
+					data: { user: authUser },
+					error: authError,
+				} = await supabase.auth.getUser();
+
+				if (authError || !authUser) {
+					console.log("No authenticated user found");
+					router.push("/login");
+					setRedirecting(true);
+					return;
+				}
+
+				setUser(authUser);
+
+				// Fetch user profile data
+				const { data: profileData, error: profileError } = await supabase
+					.from("profiles")
+					.select("*")
+					.eq("id", authUser.id)
+					.single();
+
+				if (profileError || !profileData) {
+					console.log(
+						"No profile found for user, redirecting to account settings"
+					);
+					router.push("/account-setting");
+					setRedirecting(true);
+					return;
+				}
+
+				setUserProfile(profileData);
+			} catch (error) {
+				console.error("Error fetching user data:", error);
+				router.push("/login");
+				setRedirecting(true);
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		fetchUserData();
+	}, [router, supabase]);
 
 	console.log("ProfilePage render:", {
 		isLoading,
@@ -72,32 +123,11 @@ export default function ProfilePage() {
 
 		document.addEventListener("visibilitychange", handleVisibilityChange);
 
-		// Update local loading state based on auth context loading
-		if (!isLoading || (user && userProfile)) {
-			console.log(
-				"ProfilePage: Auth context loading completed or data available, updating local loading state"
-			);
-			setLocalLoading(false);
-
-			// Handle redirects only after loading is complete or we have necessary data
-			if (!user) {
-				console.log("ProfilePage: Not authenticated, redirecting to login");
-				setRedirecting(true);
-				router.push("/login");
-			} else if (!userProfile) {
-				console.log(
-					"ProfilePage: Authenticated but no profile, redirecting to account setting"
-				);
-				setRedirecting(true);
-				router.push("/account-setting");
-			}
-		}
-
 		return () => {
 			clearTimeout(timeoutId);
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
-	}, [user, userProfile, isLoading, router, localLoading]);
+	}, [localLoading]);
 
 	// Show loading state
 	if (isLoading || localLoading) {

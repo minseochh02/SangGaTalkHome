@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/utils/supabase/client";
 import { Store, Category } from "@/utils/type";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,11 @@ interface EditStoreFormProps {
 
 function EditStoreForm({ storeId }: EditStoreFormProps) {
 	const router = useRouter();
-	const { user, userProfile, isLoading } = useAuth();
+	const supabase = createClient();
+
+	const [user, setUser] = useState<any>(null);
+	const [isAuthLoading, setIsAuthLoading] = useState(true);
+
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isLoadingStore, setIsLoadingStore] = useState(true);
@@ -44,14 +47,42 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+	// First check authentication status
+	useEffect(() => {
+		const checkAuth = async () => {
+			try {
+				const {
+					data: { user },
+					error,
+				} = await supabase.auth.getUser();
+
+				if (error || !user) {
+					router.push("/login");
+					return;
+				}
+
+				setUser(user);
+			} catch (error) {
+				console.error("Auth error:", error);
+				router.push("/login");
+			} finally {
+				setIsAuthLoading(false);
+			}
+		};
+
+		checkAuth();
+	}, [router, supabase]);
+
 	// Fetch store data and categories when component mounts
 	useEffect(() => {
 		const fetchData = async () => {
-			if (!user) return;
+			if (isAuthLoading) return;
+			if (!user) {
+				router.push("/login");
+				return;
+			}
 
 			try {
-				const supabase = createClient();
-
 				// Fetch store data
 				const { data: storeData, error: storeError } = await supabase
 					.from("stores")
@@ -122,10 +153,10 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 			}
 		};
 
-		if (!isLoading) {
+		if (!isAuthLoading) {
 			fetchData();
 		}
-	}, [user, storeId, isLoading, router]);
+	}, [user, storeId, isAuthLoading, router, supabase]);
 
 	// Handle form input changes
 	const handleChange = (
@@ -171,7 +202,6 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 		setIsSubmitting(true);
 
 		try {
-			const supabase = createClient();
 			let updatedImageUrl = formData.image_url;
 
 			// Upload new image if selected
@@ -233,7 +263,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 	};
 
 	// Show loading state
-	if (isLoading || isLoadingStore) {
+	if (isAuthLoading || isLoadingStore) {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
 				<div className="text-center">
@@ -244,7 +274,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 	}
 
 	// Check if user is logged in
-	if (!user || !userProfile) {
+	if (!user) {
 		router.push("/login");
 		return null;
 	}

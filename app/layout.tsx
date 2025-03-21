@@ -2,7 +2,6 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -23,16 +22,14 @@ export default function RootLayout({
 	return (
 		<html lang="en" className={geistSans.className} suppressHydrationWarning>
 			<body>
-				<AuthProvider>
-					<main className="min-h-screen flex flex-col items-center">
-						<div className="flex-1 w-full flex flex-col items-center">
-							<Navigation />
-							<div className="flex flex-col w-full">{children}</div>
-							<Footer />
-						</div>
-					</main>
-					<Toaster position="top-center" />
-				</AuthProvider>
+				<main className="min-h-screen flex flex-col items-center">
+					<div className="flex-1 w-full flex flex-col items-center">
+						<Navigation />
+						<div className="flex flex-col w-full">{children}</div>
+						<Footer />
+					</div>
+				</main>
+				<Toaster position="top-center" />
 			</body>
 		</html>
 	);

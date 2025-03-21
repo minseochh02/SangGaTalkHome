@@ -4,16 +4,17 @@ import { useState, useEffect } from "react";
 import { Store, Product } from "@/utils/type";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function StoreDetailsContent({ storeId }: { storeId: string }) {
+	const supabase = createClient();
 	const [store, setStore] = useState<Store | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [isOwner, setIsOwner] = useState(false);
 	const [products, setProducts] = useState<Product[]>([]);
 	const [loadingProducts, setLoadingProducts] = useState(true);
-	const { user } = useAuth();
+	const [user, setUser] = useState<any>(null);
+	const [isAuthLoading, setIsAuthLoading] = useState(true);
 
 	// Helper function to format SGT price
 	const formatSGTPrice = (price: number | string | null): string => {
@@ -40,11 +41,29 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 		return parts[0];
 	};
 
+	// First, check authentication status
+	useEffect(() => {
+		const checkAuth = async () => {
+			try {
+				const {
+					data: { user: authUser },
+					error,
+				} = await supabase.auth.getUser();
+				setUser(authUser || null);
+			} catch (error) {
+				console.error("Auth error:", error);
+			} finally {
+				setIsAuthLoading(false);
+			}
+		};
+
+		checkAuth();
+	}, [supabase]);
+
 	useEffect(() => {
 		const fetchStoreDetails = async () => {
 			try {
 				setLoading(true);
-				const supabase = createClient();
 
 				const { data, error } = await supabase
 					.from("stores")
@@ -95,7 +114,6 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 		const fetchStoreProducts = async () => {
 			try {
 				setLoadingProducts(true);
-				const supabase = createClient();
 
 				// Fetch only active products (status = 1)
 				// Cast sgt_price to text to preserve exact numeric representation

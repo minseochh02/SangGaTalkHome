@@ -1,13 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function Navigation() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-	const { user, userProfile, signOut } = useAuth();
-	const isLoggedIn = !!user;
+	const [user, setUser] = useState<any>(null);
+	const [userProfile, setUserProfile] = useState<any>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const router = useRouter();
+	const supabase = createClient();
+
+	useEffect(() => {
+		const fetchUser = async () => {
+			try {
+				const {
+					data: { user },
+					error,
+				} = await supabase.auth.getUser();
+
+				if (!error && user) {
+					setUser(user);
+
+					// Fetch user profile if needed
+					const { data: profileData } = await supabase
+						.from("profiles")
+						.select("*")
+						.eq("id", user.id)
+						.single();
+
+					if (profileData) {
+						setUserProfile(profileData);
+					}
+				}
+			} catch (error) {
+				console.error("Error fetching user:", error);
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		fetchUser();
+	}, [supabase]);
+
+	const signOut = async () => {
+		try {
+			await supabase.auth.signOut();
+			setUser(null);
+			setUserProfile(null);
+			router.push("/");
+		} catch (error) {
+			console.error("Error signing out:", error);
+		}
+	};
 
 	return (
 		<>
@@ -55,7 +102,7 @@ export default function Navigation() {
 								<line x1="21" y1="21" x2="16.65" y2="16.65" />
 							</svg>
 						</Link>
-						{!isLoggedIn ? (
+						{!user ? (
 							<>
 								<Link href="/login" className="hover:text-primary">
 									로그인
@@ -70,7 +117,7 @@ export default function Navigation() {
 						) : (
 							<>
 								<Link href="/profile" className="hover:text-primary">
-									{userProfile?.username || "프로필"}
+									{userProfile?.username || user.email || "프로필"}
 								</Link>
 								<button
 									onClick={() => signOut()}
@@ -179,7 +226,7 @@ export default function Navigation() {
 							>
 								검색
 							</Link>
-							{!isLoggedIn ? (
+							{!user ? (
 								<>
 									<Link
 										href="/login"

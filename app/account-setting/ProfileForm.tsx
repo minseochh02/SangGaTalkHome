@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { createClient } from "@/utils/supabase/client";
 
 type UserData = {
 	user_id: string;
@@ -21,7 +21,7 @@ export default function ProfileForm({ userData }: { userData: UserData }) {
 		text: string;
 	} | null>(null);
 	const router = useRouter();
-	const { refreshUserProfile } = useAuth();
+	const supabase = createClient();
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -38,27 +38,39 @@ export default function ProfileForm({ userData }: { userData: UserData }) {
 		}
 
 		try {
-			// Use server action to update profile
-			const response = await fetch("/api/profile", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					user_id: userData.user_id,
-					username,
-					role: userData.role,
-					email: userData.email,
-				}),
-			});
+			// Check if profile exists
+			const { data: existingProfile } = await supabase
+				.from("profiles")
+				.select()
+				.eq("id", userData.user_id)
+				.single();
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || "Failed to update profile");
+			let result;
+
+			if (existingProfile) {
+				// Update existing profile
+				result = await supabase
+					.from("profiles")
+					.update({
+						username,
+						updated_at: new Date().toISOString(),
+					})
+					.eq("id", userData.user_id);
+			} else {
+				// Create new profile
+				result = await supabase.from("profiles").insert({
+					id: userData.user_id,
+					username,
+					email: userData.email,
+					role: userData.role || "customer",
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+				});
 			}
 
-			// Update the user profile in the auth context
-			await refreshUserProfile();
+			if (result.error) {
+				throw new Error(result.error.message || "Failed to update profile");
+			}
 
 			setMessage({ type: "success", text: "Profile updated successfully" });
 			setTimeout(() => router.push("/profile"), 1500);

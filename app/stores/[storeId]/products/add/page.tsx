@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/utils/supabase/client";
 import { Store } from "@/utils/type";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,11 @@ interface AddProductPageProps {
 
 function AddProductContent({ storeId }: AddProductPageProps) {
 	const router = useRouter();
-	const { user, isLoading } = useAuth();
+	const supabase = createClient();
+
+	const [user, setUser] = useState<any>(null);
+	const [isAuthLoading, setIsAuthLoading] = useState(true);
+
 	const [store, setStore] = useState<Store | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isLoadingStore, setIsLoadingStore] = useState(true);
@@ -37,16 +40,40 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 	const [displaySgtPrice, setDisplaySgtPrice] = useState("");
 
 	useEffect(() => {
+		// First check authentication status
+		const checkAuth = async () => {
+			try {
+				const {
+					data: { user },
+					error,
+				} = await supabase.auth.getUser();
+
+				if (error || !user) {
+					router.push("/login");
+					return;
+				}
+
+				setUser(user);
+			} catch (error) {
+				console.error("Auth error:", error);
+				router.push("/login");
+			} finally {
+				setIsAuthLoading(false);
+			}
+		};
+
+		checkAuth();
+	}, [router, supabase]);
+
+	useEffect(() => {
 		const fetchStoreData = async () => {
-			if (isLoading) return;
+			if (isAuthLoading) return;
 			if (!user) {
 				router.push("/login");
 				return;
 			}
 
 			try {
-				const supabase = createClient();
-
 				// Verify store ownership
 				const { data: storeData, error: storeError } = await supabase
 					.from("stores")
@@ -79,7 +106,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		};
 
 		fetchStoreData();
-	}, [user, storeId, isLoading, router]);
+	}, [user, storeId, isAuthLoading, router, supabase]);
 
 	// Handle form input changes
 	const handleChange = (
@@ -216,7 +243,6 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		setIsSubmitting(true);
 
 		try {
-			const supabase = createClient();
 			let imageUrl = "";
 
 			// Upload image if selected
@@ -291,7 +317,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		}
 	};
 
-	if (isLoading || isLoadingStore) {
+	if (isAuthLoading || isLoadingStore) {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
 				<div className="text-center">

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/utils/supabase/client";
 import { Store, Product } from "@/utils/type";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,11 @@ interface StoreProductsPageProps {
 
 function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 	const router = useRouter();
-	const { user, isLoading } = useAuth();
+
+	// Dummy data replacing useAuth
+	const user = { id: "dummy-user-id" };
+	const isLoading = false;
+
 	const [store, setStore] = useState<Store | null>(null);
 	const [products, setProducts] = useState<Product[]>([]);
 	const [isLoadingData, setIsLoadingData] = useState(true);
