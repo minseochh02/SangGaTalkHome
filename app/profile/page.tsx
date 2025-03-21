@@ -61,7 +61,7 @@ export default function ProfilePage() {
 				const { data: profileData, error: profileError } = await supabase
 					.from("profiles")
 					.select("*")
-					.eq("id", authUser.id)
+					.eq("email", authUser.email)
 					.single();
 
 				if (profileError || !profileData) {
