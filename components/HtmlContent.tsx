@@ -15,7 +15,7 @@ export default function HtmlContent({
 
 	return (
 		<div
-			className={`html-content ${className}`}
+			className={`prose max-w-none ${className}`}
 			dangerouslySetInnerHTML={{ __html: content }}
 		/>
 	);
