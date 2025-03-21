@@ -64,27 +64,22 @@ export default function ProfilePage() {
 		const handleVisibilityChange = () => {
 			if (document.visibilityState === "visible") {
 				console.log("Tab became visible again, refreshing auth state");
-				// Force a local state update to trigger a re-evaluation
-				setLocalLoading((prevState) => {
-					// Only force a refresh if we're still in a loading state
-					if (prevState || isLoading) {
-						return false;
-					}
-					return prevState;
-				});
+				// Force local loading to false regardless of auth context state
+				// This ensures we don't get stuck in a loading state
+				setLocalLoading(false);
 			}
 		};
 
 		document.addEventListener("visibilitychange", handleVisibilityChange);
 
 		// Update local loading state based on auth context loading
-		if (!isLoading) {
+		if (!isLoading || (user && userProfile)) {
 			console.log(
-				"ProfilePage: Auth context loading completed, updating local loading state"
+				"ProfilePage: Auth context loading completed or data available, updating local loading state"
 			);
 			setLocalLoading(false);
 
-			// Handle redirects only after loading is complete
+			// Handle redirects only after loading is complete or we have necessary data
 			if (!user) {
 				console.log("ProfilePage: Not authenticated, redirecting to login");
 				setRedirecting(true);
