@@ -164,10 +164,10 @@ export default function ProfilePage() {
 	return (
 		<div className="flex min-h-screen bg-background">
 			<div className="flex-1 flex flex-col">
-				<div className="container mx-auto py-10">
+				<div className="container mx-auto py-6 px-4 sm:py-10 sm:px-6">
 					<div className="max-w-6xl mx-auto">
-						<main className="space-y-8">
-							<h1 className="text-3xl font-bold">프로필</h1>
+						<main className="space-y-6 sm:space-y-8">
+							<h1 className="text-2xl sm:text-3xl font-bold">프로필</h1>
 
 							<UserProfileCard
 								username={userProfile.username}
@@ -176,7 +176,7 @@ export default function ProfilePage() {
 								createdAt={userProfile.created_at}
 							/>
 
-							<div className="mt-8 flex justify-end">
+							<div className="mt-4 sm:mt-8 flex justify-end">
 								<Button asChild>
 									<Link href="/account-setting">Edit Profile</Link>
 								</Button>
@@ -184,14 +184,16 @@ export default function ProfilePage() {
 
 							{/* Admin Section - Only visible to admins */}
 							{isAdmin && (
-								<div className="mt-12">
-									<h2 className="text-2xl font-bold mb-6">관리자 기능</h2>
+								<div className="mt-8 sm:mt-12">
+									<h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
+										관리자 기능
+									</h2>
 
-									<div className="flex justify-between items-center mb-6">
-										<div className="flex space-x-4">
+									<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6">
+										<div className="flex flex-wrap gap-2 sm:space-x-4 w-full sm:w-auto mb-4 sm:mb-0">
 											<button
 												onClick={() => setActiveAdminTab("applications")}
-												className={`px-4 py-2 rounded-lg ${
+												className={`px-3 py-2 sm:px-4 text-sm sm:text-base rounded-lg ${
 													activeAdminTab === "applications"
 														? "bg-primary text-white"
 														: "bg-gray-100 hover:bg-gray-200"
@@ -201,7 +203,7 @@ export default function ProfilePage() {
 											</button>
 											<button
 												onClick={() => setActiveAdminTab("stores")}
-												className={`px-4 py-2 rounded-lg ${
+												className={`px-3 py-2 sm:px-4 text-sm sm:text-base rounded-lg ${
 													activeAdminTab === "stores"
 														? "bg-primary text-white"
 														: "bg-gray-100 hover:bg-gray-200"
@@ -212,17 +214,17 @@ export default function ProfilePage() {
 										</div>
 									</div>
 
-									<div className="bg-white rounded-lg shadow-md p-6">
+									<div className="bg-white rounded-lg shadow-md p-3 sm:p-6 overflow-x-auto">
 										{activeAdminTab === "applications" ? (
 											<div>
-												<h3 className="text-lg font-semibold mb-4">
+												<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
 													매장 신청 관리
 												</h3>
 												<AdminStoreApplicationsList />
 											</div>
 										) : (
 											<div>
-												<h3 className="text-lg font-semibold mb-4">
+												<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
 													등록된 매장 관리
 												</h3>
 												<AdminApprovedStoresList />
@@ -233,14 +235,16 @@ export default function ProfilePage() {
 							)}
 
 							{/* Favorites and Reviews Section */}
-							<div className="mt-12">
-								<h2 className="text-2xl font-bold mb-6">즐겨찾기 및 리뷰</h2>
+							<div className="mt-8 sm:mt-12">
+								<h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
+									즐겨찾기 및 리뷰
+								</h2>
 
-								<div className="flex justify-between items-center mb-6">
-									<div className="flex space-x-4">
+								<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6">
+									<div className="flex flex-wrap gap-2 sm:space-x-4 w-full sm:w-auto mb-4 sm:mb-0">
 										<button
 											onClick={() => setActiveFavoritesReviewsTab("favorites")}
-											className={`px-4 py-2 rounded-lg ${
+											className={`px-3 py-2 sm:px-4 text-sm sm:text-base rounded-lg ${
 												activeFavoritesReviewsTab === "favorites"
 													? "bg-primary text-white"
 													: "bg-gray-100 hover:bg-gray-200"
@@ -250,7 +254,7 @@ export default function ProfilePage() {
 										</button>
 										<button
 											onClick={() => setActiveFavoritesReviewsTab("reviews")}
-											className={`px-4 py-2 rounded-lg ${
+											className={`px-3 py-2 sm:px-4 text-sm sm:text-base rounded-lg ${
 												activeFavoritesReviewsTab === "reviews"
 													? "bg-primary text-white"
 													: "bg-gray-100 hover:bg-gray-200"
@@ -261,17 +265,19 @@ export default function ProfilePage() {
 									</div>
 								</div>
 
-								<div className="bg-white rounded-lg shadow-md p-6">
+								<div className="bg-white rounded-lg shadow-md p-3 sm:p-6 overflow-x-auto">
 									{activeFavoritesReviewsTab === "favorites" ? (
 										<div>
-											<h3 className="text-lg font-semibold mb-4">
+											<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
 												즐겨찾기 매장
 											</h3>
 											<UserFavoritesList userId={user.id} />
 										</div>
 									) : (
 										<div>
-											<h3 className="text-lg font-semibold mb-4">내 리뷰</h3>
+											<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
+												내 리뷰
+											</h3>
 											<UserReviewsList userId={user.id} />
 										</div>
 									)}
@@ -279,14 +285,16 @@ export default function ProfilePage() {
 							</div>
 
 							{/* SGT Stores Section */}
-							<div className="mt-12">
-								<h2 className="text-2xl font-bold mb-6">SGT 매장</h2>
+							<div className="mt-8 sm:mt-12">
+								<h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
+									SGT 매장
+								</h2>
 
-								<div className="flex justify-between items-center mb-6">
-									<div className="flex space-x-4">
+								<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6">
+									<div className="flex flex-wrap gap-2 sm:space-x-4 w-full sm:w-auto mb-4 sm:mb-0">
 										<button
 											onClick={() => setActiveTab("applications")}
-											className={`px-4 py-2 rounded-lg ${
+											className={`px-3 py-2 sm:px-4 text-sm sm:text-base rounded-lg ${
 												activeTab === "applications"
 													? "bg-primary text-white"
 													: "bg-gray-100 hover:bg-gray-200"
@@ -296,7 +304,7 @@ export default function ProfilePage() {
 										</button>
 										<button
 											onClick={() => setActiveTab("stores")}
-											className={`px-4 py-2 rounded-lg ${
+											className={`px-3 py-2 sm:px-4 text-sm sm:text-base rounded-lg ${
 												activeTab === "stores"
 													? "bg-primary text-white"
 													: "bg-gray-100 hover:bg-gray-200"
@@ -305,22 +313,22 @@ export default function ProfilePage() {
 											승인된 매장
 										</button>
 									</div>
-									<Button asChild>
+									<Button asChild className="w-full sm:w-auto mt-2 sm:mt-0">
 										<Link href="/stores/register">새 매장 신청</Link>
 									</Button>
 								</div>
 
-								<div className="bg-white rounded-lg shadow-md p-6">
+								<div className="bg-white rounded-lg shadow-md p-3 sm:p-6 overflow-x-auto">
 									{activeTab === "applications" ? (
 										<div>
-											<h3 className="text-lg font-semibold mb-4">
+											<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
 												매장 신청 현황
 											</h3>
 											<StoreApplicationsList userId={user.id} />
 										</div>
 									) : (
 										<div>
-											<h3 className="text-lg font-semibold mb-4">
+											<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
 												승인된 매장
 											</h3>
 											<ApprovedStoresList userId={user.id} />
@@ -333,7 +341,6 @@ export default function ProfilePage() {
 				</div>
 			</div>
 			<ToastContainer />
-			<div></div>
 		</div>
 	);
 }
