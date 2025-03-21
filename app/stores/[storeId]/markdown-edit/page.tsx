@@ -6,14 +6,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import MarkdownContent from "@/components/MarkdownContent";
 
-export default function MarkdownEditor({
-	params,
-}: {
-	params: { storeId: string };
-}) {
+interface MarkdownEditorProps {
+	storeId: string;
+}
+
+function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
 	const supabase = createClient();
 	const router = useRouter();
-	const { storeId } = params;
 
 	const [markdown, setMarkdown] = useState("");
 	const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -266,4 +265,15 @@ export default function MarkdownEditor({
 			</div>
 		</div>
 	);
+}
+
+// This is the actual page component that Next.js will use
+export default async function MarkdownEditorPage({
+	params,
+}: {
+	params: Promise<{ storeId: string }>;
+}) {
+	const resolvedParams = await params;
+	const { storeId } = resolvedParams;
+	return <MarkdownEditorContent storeId={storeId} />;
 }
