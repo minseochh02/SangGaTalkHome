@@ -16,6 +16,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const [loadingProducts, setLoadingProducts] = useState(true);
 	const [user, setUser] = useState<any>(null);
 	const [isAuthLoading, setIsAuthLoading] = useState(true);
+	const [isHtmlContentExpanded, setIsHtmlContentExpanded] = useState(false);
 
 	// Helper function to format SGT price
 	const formatSGTPrice = (price: number | string | null): string => {
@@ -362,7 +363,30 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							</div>
 
 							{store.markdown_content ? (
-								<HtmlContent content={store.markdown_content} />
+								<div>
+									<div
+										className={
+											isHtmlContentExpanded
+												? ""
+												: "max-h-40 overflow-hidden relative"
+										}
+									>
+										<HtmlContent content={store.markdown_content} />
+										{!isHtmlContentExpanded && (
+											<div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent"></div>
+										)}
+									</div>
+									<div className="text-center mt-4">
+										<button
+											onClick={() =>
+												setIsHtmlContentExpanded(!isHtmlContentExpanded)
+											}
+											className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+										>
+											{isHtmlContentExpanded ? "접기" : "더 보기"}
+										</button>
+									</div>
+								</div>
 							) : isOwner ? (
 								<div className="bg-primary/5 rounded-lg p-6 text-center">
 									<svg
