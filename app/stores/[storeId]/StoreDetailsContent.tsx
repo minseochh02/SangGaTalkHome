@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Store, Product } from "@/utils/type";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-import MarkdownContent from "@/components/MarkdownContent";
+import HtmlContent from "@/components/HtmlContent";
 
 export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const supabase = createClient();
@@ -362,7 +362,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							</div>
 
 							{store.markdown_content ? (
-								<MarkdownContent content={store.markdown_content} />
+								<HtmlContent content={store.markdown_content} />
 							) : isOwner ? (
 								<div className="bg-primary/5 rounded-lg p-6 text-center">
 									<svg
@@ -382,8 +382,8 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 										매장 상세 정보를 추가해보세요!
 									</h3>
 									<p className="text-muted-foreground mb-4">
-										마크다운을 사용해 이미지, 표, 목록 등을 포함한 풍부한
-										콘텐츠를 작성할 수 있습니다.
+										편집기를 사용해 이미지, 표, 목록 등을 포함한 풍부한 콘텐츠를
+										작성할 수 있습니다.
 									</p>
 									<Link href={`/stores/${storeId}/markdown-edit`}>
 										<button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">

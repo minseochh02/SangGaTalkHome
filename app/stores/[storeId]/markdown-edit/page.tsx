@@ -4,17 +4,18 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import MarkdownContent from "@/components/MarkdownContent";
+import RichTextEditor from "@/components/RichTextEditor";
+import HtmlContent from "@/components/HtmlContent";
 
-interface MarkdownEditorProps {
+interface StoreEditorProps {
 	storeId: string;
 }
 
-function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
+function StoreEditorContent({ storeId }: StoreEditorProps) {
 	const supabase = createClient();
 	const router = useRouter();
 
-	const [markdown, setMarkdown] = useState("");
+	const [content, setContent] = useState("");
 	const [isPreviewMode, setIsPreviewMode] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
@@ -49,18 +50,16 @@ function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
 				}
 
 				if (store.user_id !== user.id) {
-					setError(
-						"해당 매장의 소유자만 마크다운 컨텐츠를 수정할 수 있습니다."
-					);
+					setError("해당 매장의 소유자만 매장 소개를 수정할 수 있습니다.");
 					return;
 				}
 
 				// User is owner
 				setIsOwner(true);
 
-				// Load existing markdown content if available
+				// Load existing content if available
 				if (store.markdown_content) {
-					setMarkdown(store.markdown_content);
+					setContent(store.markdown_content);
 				}
 			} catch (err) {
 				console.error("Error loading store data:", err);
@@ -73,14 +72,14 @@ function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
 		checkOwnershipAndLoadData();
 	}, [storeId, supabase]);
 
-	// Save markdown content
-	const saveMarkdown = async () => {
+	// Save content
+	const saveContent = async () => {
 		try {
 			setIsSaving(true);
 
 			const { error } = await supabase
 				.from("stores")
-				.update({ markdown_content: markdown })
+				.update({ markdown_content: content })
 				.eq("store_id", storeId);
 
 			if (error) throw error;
@@ -88,8 +87,8 @@ function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
 			// Navigate back to store page
 			router.push(`/stores/${storeId}`);
 		} catch (err) {
-			console.error("Error saving markdown:", err);
-			setError("마크다운 저장 중 오류가 발생했습니다.");
+			console.error("Error saving content:", err);
+			setError("저장 중 오류가 발생했습니다.");
 			setIsSaving(false);
 		}
 	};
@@ -166,7 +165,7 @@ function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
 					</button>
 
 					<button
-						onClick={saveMarkdown}
+						onClick={saveContent}
 						disabled={isSaving}
 						className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-70"
 					>
@@ -177,10 +176,10 @@ function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
 
 			<div className="bg-white rounded-xl shadow-lg overflow-hidden">
 				<div className="p-4 bg-gray-50 border-b">
-					<h1 className="text-xl font-bold">매장 소개 마크다운 편집</h1>
+					<h1 className="text-xl font-bold">매장 소개 편집</h1>
 					<p className="text-sm text-gray-500 mt-1">
-						마크다운을 사용하여 매장에 대한 풍부한 설명을 추가하세요. 이미지,
-						링크, 표 등을 지원합니다.
+						텍스트 편집기를 사용하여 매장에 대한 풍부한 설명을 추가하세요.
+						이미지, 링크, 표 등을 지원합니다.
 					</p>
 				</div>
 
@@ -190,76 +189,21 @@ function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
 							<h3 className="font-medium text-gray-700 mb-2">미리보기</h3>
 						</div>
 
-						{markdown ? (
-							<MarkdownContent content={markdown} className="p-2" />
+						{content ? (
+							<HtmlContent content={content} className="p-2" />
 						) : (
 							<div className="text-center py-12 text-gray-500">
-								<p>미리볼 내용이 없습니다. 마크다운을 입력해주세요.</p>
+								<p>미리볼 내용이 없습니다. 내용을 입력해주세요.</p>
 							</div>
 						)}
 					</div>
 				) : (
 					<div className="p-6">
-						<textarea
-							value={markdown}
-							onChange={(e) => setMarkdown(e.target.value)}
-							placeholder="# 매장 소개
-              
-## 우리 매장에 대해서
-
-마크다운 문법을 활용하여 매장 소개를 작성해보세요!
-
-- 글머리 기호를 사용한 목록
-- 다양한 **텍스트 스타일**
-- [링크](https://example.com)
-- 이미지 등을 추가할 수 있습니다
-
-표도 사용 가능합니다:
-
-| 상품 | 가격 |
-|------|------|
-| 상품1 | 10,000원 |
-| 상품2 | 20,000원 |"
-							className="w-full h-[60vh] p-4 border rounded-lg font-mono resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+						<RichTextEditor
+							value={content}
+							onChange={setContent}
+							placeholder="매장 소개글을 작성해주세요..."
 						/>
-
-						<div className="mt-4 text-sm text-gray-500">
-							<p>마크다운 도움말:</p>
-							<ul className="list-disc pl-5 mt-2 space-y-1">
-								<li>
-									<code className="bg-gray-100 px-1 rounded"># 제목</code> - 큰
-									제목
-								</li>
-								<li>
-									<code className="bg-gray-100 px-1 rounded">## 부제목</code> -
-									중간 제목
-								</li>
-								<li>
-									<code className="bg-gray-100 px-1 rounded">**굵게**</code> -{" "}
-									<strong>굵게</strong>
-								</li>
-								<li>
-									<code className="bg-gray-100 px-1 rounded">*기울임*</code> -{" "}
-									<em>기울임</em>
-								</li>
-								<li>
-									<code className="bg-gray-100 px-1 rounded">
-										[링크텍스트](URL)
-									</code>{" "}
-									- 링크
-								</li>
-								<li>
-									<code className="bg-gray-100 px-1 rounded">
-										![대체텍스트](이미지URL)
-									</code>{" "}
-									- 이미지
-								</li>
-								<li>
-									<code className="bg-gray-100 px-1 rounded">- 항목</code> -
-									글머리 기호 목록
-								</li>
-							</ul>
-						</div>
 					</div>
 				)}
 			</div>
@@ -268,12 +212,12 @@ function MarkdownEditorContent({ storeId }: MarkdownEditorProps) {
 }
 
 // This is the actual page component that Next.js will use
-export default async function MarkdownEditorPage({
+export default async function StoreEditorPage({
 	params,
 }: {
 	params: Promise<{ storeId: string }>;
 }) {
 	const resolvedParams = await params;
 	const { storeId } = resolvedParams;
-	return <MarkdownEditorContent storeId={storeId} />;
+	return <StoreEditorContent storeId={storeId} />;
 }
