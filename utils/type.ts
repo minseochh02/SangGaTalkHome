@@ -23,6 +23,7 @@ export interface Store {
 	longitude: number;
 	created_at: string;
 	updated_at: string;
+	markdown_content?: string;
 	referrer_phone_number?: string;
 	categories?: {
 		category_id: string;
