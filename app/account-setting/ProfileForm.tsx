@@ -59,7 +59,7 @@ export default function ProfileForm({ userData }: { userData: UserData }) {
 			} else {
 				// Create new profile
 				result = await supabase.from("users").insert({
-					id: userData.user_id,
+					user_id: userData.user_id,
 					username,
 					email: userData.email,
 					role: userData.role || "customer",
