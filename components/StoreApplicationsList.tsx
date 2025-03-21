@@ -135,207 +135,311 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 	}
 
 	return (
-		<div className="overflow-x-auto">
-			<table className="min-w-full divide-y divide-gray-200">
-				<thead className="bg-gray-50">
-					<tr>
-						<th
-							scope="col"
-							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+		<div>
+			{/* Mobile card view */}
+			<div className="md:hidden space-y-4">
+				{applications.map((app) => (
+					<div
+						key={app.application_id}
+						className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+					>
+						<div
+							className="p-4 cursor-pointer"
+							onClick={() => toggleExpand(app.application_id)}
 						>
-							매장명
-						</th>
-						<th
-							scope="col"
-							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-						>
-							사업자명
-						</th>
-						<th
-							scope="col"
-							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-						>
-							카테고리
-						</th>
-						<th
-							scope="col"
-							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-						>
-							상태
-						</th>
-						<th
-							scope="col"
-							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-						>
-							신청일
-						</th>
-					</tr>
-				</thead>
-				<tbody className="bg-white divide-y divide-gray-200">
-					{applications.map((app) => (
-						<>
-							<tr
-								key={app.application_id}
-								className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === app.application_id ? "bg-gray-50" : ""}`}
-								onClick={() => toggleExpand(app.application_id)}
+							<div className="flex justify-between items-center">
+								<h3 className="font-medium text-gray-900">
+									{app.business_name}
+								</h3>
+								{getStatusBadge(app.status)}
+							</div>
+							<div className="text-sm text-gray-500 mt-1">{app.owner_name}</div>
+							<div className="text-sm text-gray-500 mt-1">
+								{app.categories?.category_name || "카테고리 없음"}
+							</div>
+							<div className="text-xs text-gray-400 mt-2">
+								{formatDate(app.created_at)}
+							</div>
+							<div className="flex justify-end mt-2">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									className={`transition-transform ${expandedApplicationId === app.application_id ? "rotate-180" : ""}`}
+								>
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+						</div>
+
+						{expandedApplicationId === app.application_id && (
+							<div className="p-4 bg-gray-50 border-t border-gray-100">
+								<div className="space-y-3">
+									<div>
+										<span className="text-gray-500 text-sm">
+											사업자 등록번호:
+										</span>
+										<div className="mt-1">{app.business_number}</div>
+									</div>
+									{app.description && (
+										<div>
+											<span className="text-gray-500 text-sm">설명:</span>
+											<div className="mt-1">{app.description}</div>
+										</div>
+									)}
+									{app.operating_hours && (
+										<div>
+											<span className="text-gray-500 text-sm">영업 시간:</span>
+											<div className="mt-1">{app.operating_hours}</div>
+										</div>
+									)}
+									<div>
+										<span className="text-gray-500 text-sm">주소:</span>
+										<div className="mt-1">{app.address}</div>
+									</div>
+									<div>
+										<span className="text-gray-500 text-sm">연락처:</span>
+										<div className="mt-1">{app.phone_number}</div>
+									</div>
+									<div>
+										<span className="text-gray-500 text-sm">이메일:</span>
+										<div className="mt-1">{app.email}</div>
+									</div>
+									{app.website && (
+										<div>
+											<span className="text-gray-500 text-sm">웹사이트:</span>
+											<div className="mt-1">
+												<a
+													href={app.website}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-primary hover:underline"
+												>
+													{app.website}
+												</a>
+											</div>
+										</div>
+									)}
+								</div>
+							</div>
+						)}
+					</div>
+				))}
+			</div>
+
+			{/* Desktop table view */}
+			<div className="hidden md:block overflow-x-auto">
+				<table className="min-w-full divide-y divide-gray-200">
+					<thead className="bg-gray-50">
+						<tr>
+							<th
+								scope="col"
+								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
 							>
-								<td className="px-6 py-4 whitespace-nowrap">
-									<div className="text-sm font-medium text-gray-900 flex items-center">
-										{app.business_name}
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="16"
-											height="16"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											strokeWidth="2"
-											className={`ml-2 transition-transform ${expandedApplicationId === app.application_id ? "rotate-180" : ""}`}
-										>
-											<polyline points="6 9 12 15 18 9"></polyline>
-										</svg>
-									</div>
-								</td>
-								<td className="px-6 py-4 whitespace-nowrap">
-									<div className="text-sm text-gray-500">{app.owner_name}</div>
-								</td>
-								<td className="px-6 py-4 whitespace-nowrap">
-									<div className="text-sm text-gray-500">
-										{app.categories?.category_name || "카테고리 없음"}
-									</div>
-								</td>
-								<td className="px-6 py-4 whitespace-nowrap">
-									{getStatusBadge(app.status)}
-								</td>
-								<td className="px-6 py-4 whitespace-nowrap">
-									<div className="text-sm text-gray-500">
-										{formatDate(app.created_at)}
-									</div>
-								</td>
-							</tr>
-							{expandedApplicationId === app.application_id && (
-								<tr>
-									<td
-										colSpan={5}
-										className="px-6 py-4 bg-gray-50 border-t border-gray-100"
-									>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div>
-												<h4 className="font-semibold text-gray-700 mb-3">
-													신청 정보
-												</h4>
-												<div className="space-y-2">
-													<div className="flex">
-														<span className="text-gray-500 w-32">
-															사업자 등록번호:
-														</span>
-														<span>{app.business_number}</span>
-													</div>
-													{app.description && (
-														<div className="flex">
-															<span className="text-gray-500 w-32">설명:</span>
-															<span>{app.description}</span>
-														</div>
-													)}
-													{app.operating_hours && (
-														<div className="flex">
-															<span className="text-gray-500 w-32">
-																영업 시간:
-															</span>
-															<span>{app.operating_hours}</span>
-														</div>
-													)}
-													<div className="flex">
-														<span className="text-gray-500 w-32">상태:</span>
-														<span>{getStatusBadge(app.status)}</span>
-													</div>
-													<div className="flex">
-														<span className="text-gray-500 w-32">
-															최종 업데이트:
-														</span>
-														<span>{formatDate(app.updated_at)}</span>
-													</div>
-												</div>
-											</div>
-
-											<div>
-												<h4 className="font-semibold text-gray-700 mb-3">
-													연락처 정보
-												</h4>
-												<div className="space-y-2">
-													{app.address && (
-														<div className="flex">
-															<span className="text-gray-500 w-32">주소:</span>
-															<span>{app.address}</span>
-														</div>
-													)}
-													{app.phone_number && (
-														<div className="flex">
-															<span className="text-gray-500 w-32">
-																전화번호:
-															</span>
-															<span>{app.phone_number}</span>
-														</div>
-													)}
-													{app.email && (
-														<div className="flex">
-															<span className="text-gray-500 w-32">
-																이메일:
-															</span>
-															<span>{app.email}</span>
-														</div>
-													)}
-													{app.website && (
-														<div className="flex">
-															<span className="text-gray-500 w-32">
-																웹사이트:
-															</span>
-															<a
-																href={app.website}
-																target="_blank"
-																rel="noopener noreferrer"
-																className="text-primary hover:underline"
-															>
-																{app.website}
-															</a>
-														</div>
-													)}
-													{app.referrer_phone_number && (
-														<div className="flex">
-															<span className="text-gray-500 w-32">
-																추천인 전화번호:
-															</span>
-															<span>{app.referrer_phone_number}</span>
-														</div>
-													)}
-												</div>
-											</div>
-
-											{/* Add image section if image_url exists */}
-											{app.image_url && (
-												<div className="col-span-1 md:col-span-2 mt-4">
-													<h4 className="font-semibold text-gray-700 mb-3">
-														매장 이미지
-													</h4>
-													<div className="relative w-full max-w-md h-48 border border-gray-200 rounded-lg overflow-hidden">
-														<Image
-															src={app.image_url}
-															alt={app.business_name}
-															fill
-															style={{ objectFit: "contain" }}
-															unoptimized
-														/>
-													</div>
-												</div>
-											)}
+								매장명
+							</th>
+							<th
+								scope="col"
+								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+							>
+								사업자명
+							</th>
+							<th
+								scope="col"
+								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+							>
+								카테고리
+							</th>
+							<th
+								scope="col"
+								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+							>
+								상태
+							</th>
+							<th
+								scope="col"
+								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+							>
+								신청일
+							</th>
+						</tr>
+					</thead>
+					<tbody className="bg-white divide-y divide-gray-200">
+						{applications.map((app) => (
+							<>
+								<tr
+									key={app.application_id}
+									className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === app.application_id ? "bg-gray-50" : ""}`}
+									onClick={() => toggleExpand(app.application_id)}
+								>
+									<td className="px-6 py-4 whitespace-nowrap">
+										<div className="text-sm font-medium text-gray-900 flex items-center">
+											{app.business_name}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												width="16"
+												height="16"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												strokeWidth="2"
+												className={`ml-2 transition-transform ${expandedApplicationId === app.application_id ? "rotate-180" : ""}`}
+											>
+												<polyline points="6 9 12 15 18 9"></polyline>
+											</svg>
+										</div>
+									</td>
+									<td className="px-6 py-4 whitespace-nowrap">
+										<div className="text-sm text-gray-500">
+											{app.owner_name}
+										</div>
+									</td>
+									<td className="px-6 py-4 whitespace-nowrap">
+										<div className="text-sm text-gray-500">
+											{app.categories?.category_name || "카테고리 없음"}
+										</div>
+									</td>
+									<td className="px-6 py-4 whitespace-nowrap">
+										{getStatusBadge(app.status)}
+									</td>
+									<td className="px-6 py-4 whitespace-nowrap">
+										<div className="text-sm text-gray-500">
+											{formatDate(app.created_at)}
 										</div>
 									</td>
 								</tr>
-							)}
-						</>
-					))}
-				</tbody>
-			</table>
+								{expandedApplicationId === app.application_id && (
+									<tr>
+										<td
+											colSpan={5}
+											className="px-6 py-4 bg-gray-50 border-t border-gray-100"
+										>
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+												<div>
+													<h4 className="font-semibold text-gray-700 mb-3">
+														신청 정보
+													</h4>
+													<div className="space-y-2">
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																사업자 등록번호:
+															</span>
+															<span>{app.business_number}</span>
+														</div>
+														{app.description && (
+															<div className="flex">
+																<span className="text-gray-500 w-32">
+																	설명:
+																</span>
+																<span>{app.description}</span>
+															</div>
+														)}
+														{app.operating_hours && (
+															<div className="flex">
+																<span className="text-gray-500 w-32">
+																	영업 시간:
+																</span>
+																<span>{app.operating_hours}</span>
+															</div>
+														)}
+														<div className="flex">
+															<span className="text-gray-500 w-32">상태:</span>
+															<span>{getStatusBadge(app.status)}</span>
+														</div>
+														<div className="flex">
+															<span className="text-gray-500 w-32">
+																최종 업데이트:
+															</span>
+															<span>{formatDate(app.updated_at)}</span>
+														</div>
+													</div>
+												</div>
+
+												<div>
+													<h4 className="font-semibold text-gray-700 mb-3">
+														연락처 정보
+													</h4>
+													<div className="space-y-2">
+														{app.address && (
+															<div className="flex">
+																<span className="text-gray-500 w-32">
+																	주소:
+																</span>
+																<span>{app.address}</span>
+															</div>
+														)}
+														{app.phone_number && (
+															<div className="flex">
+																<span className="text-gray-500 w-32">
+																	전화번호:
+																</span>
+																<span>{app.phone_number}</span>
+															</div>
+														)}
+														{app.email && (
+															<div className="flex">
+																<span className="text-gray-500 w-32">
+																	이메일:
+																</span>
+																<span>{app.email}</span>
+															</div>
+														)}
+														{app.website && (
+															<div className="flex">
+																<span className="text-gray-500 w-32">
+																	웹사이트:
+																</span>
+																<a
+																	href={app.website}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="text-primary hover:underline"
+																>
+																	{app.website}
+																</a>
+															</div>
+														)}
+														{app.referrer_phone_number && (
+															<div className="flex">
+																<span className="text-gray-500 w-32">
+																	추천인 전화번호:
+																</span>
+																<span>{app.referrer_phone_number}</span>
+															</div>
+														)}
+													</div>
+												</div>
+
+												{/* Add image section if image_url exists */}
+												{app.image_url && (
+													<div className="col-span-1 md:col-span-2 mt-4">
+														<h4 className="font-semibold text-gray-700 mb-3">
+															매장 이미지
+														</h4>
+														<div className="relative w-full max-w-md h-48 border border-gray-200 rounded-lg overflow-hidden">
+															<Image
+																src={app.image_url}
+																alt={app.business_name}
+																fill
+																style={{ objectFit: "contain" }}
+																unoptimized
+															/>
+														</div>
+													</div>
+												)}
+											</div>
+										</td>
+									</tr>
+								)}
+							</>
+						))}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	);
 }

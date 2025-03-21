@@ -81,7 +81,7 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 	}
 
 	return (
-		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
 			{stores.map((store) => (
 				<div
 					key={store.store_id}
@@ -99,26 +99,28 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 								Store Image
 							</div>
 						)}
-						<div className="absolute top-3 right-3 bg-primary/80 text-white text-xs rounded-full px-2 py-1">
+						<div className="absolute top-2 right-2 bg-primary/80 text-white text-xs rounded-full px-2 py-1">
 							{store.categories?.category_name || "카테고리 없음"}
 						</div>
-						<div className="absolute top-3 left-3 bg-black/60 text-white text-xs rounded-full px-2 py-1">
+						<div className="absolute top-2 left-2 bg-black/60 text-white text-xs rounded-full px-2 py-1">
 							{getStoreTypeText(store.store_type)}
 						</div>
 					</div>
-					<div className="p-4 md:p-6 flex-1 flex flex-col">
-						<h3 className="font-bold text-lg mb-2">{store.store_name}</h3>
-						<p className="text-gray-600 text-sm mb-3 flex-grow">
+					<div className="p-3 sm:p-4 md:p-6 flex-1 flex flex-col">
+						<h3 className="font-bold text-base sm:text-lg mb-2">
+							{store.store_name}
+						</h3>
+						<p className="text-gray-600 text-xs sm:text-sm mb-3 flex-grow line-clamp-3">
 							{store.description}
 						</p>
 
-						<div className="space-y-2 text-sm text-gray-600 mb-4">
+						<div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
 							{store.address && (
-								<div className="flex items-start gap-2">
+								<div className="flex items-start gap-1 sm:gap-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
+										width="14"
+										height="14"
 										viewBox="0 0 24 24"
 										fill="none"
 										stroke="currentColor"
@@ -128,16 +130,16 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 										<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path>
 										<circle cx="12" cy="10" r="3"></circle>
 									</svg>
-									<span>{store.address}</span>
+									<span className="line-clamp-1">{store.address}</span>
 								</div>
 							)}
 
 							{store.phone_number && (
-								<div className="flex items-start gap-2">
+								<div className="flex items-start gap-1 sm:gap-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
+										width="14"
+										height="14"
 										viewBox="0 0 24 24"
 										fill="none"
 										stroke="currentColor"
@@ -151,11 +153,11 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 							)}
 
 							{store.operating_hours && (
-								<div className="flex items-start gap-2">
+								<div className="flex items-start gap-1 sm:gap-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
+										width="14"
+										height="14"
 										viewBox="0 0 24 24"
 										fill="none"
 										stroke="currentColor"
@@ -165,16 +167,16 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 										<circle cx="12" cy="12" r="10"></circle>
 										<polyline points="12 6 12 12 16 14"></polyline>
 									</svg>
-									<span>{store.operating_hours}</span>
+									<span className="line-clamp-1">{store.operating_hours}</span>
 								</div>
 							)}
 
 							{store.website_url && (
-								<div className="flex items-start gap-2">
+								<div className="flex items-start gap-1 sm:gap-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
+										width="14"
+										height="14"
 										viewBox="0 0 24 24"
 										fill="none"
 										stroke="currentColor"
@@ -187,7 +189,7 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 									</svg>
 									<a
 										href={store.website_url}
-										className="text-primary hover:underline"
+										className="text-primary hover:underline line-clamp-1"
 										target="_blank"
 										rel="noopener noreferrer"
 									>
@@ -198,17 +200,17 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 						</div>
 
 						<div className="mt-auto">
-							<div className="flex gap-2">
+							<div className="flex gap-2 flex-col sm:flex-row">
 								<Link
 									href={`/stores/${store.store_id}`}
-									className="flex-1 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors duration-200 text-base font-medium flex items-center justify-center gap-2"
+									className="flex-1 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors duration-200 text-sm sm:text-base font-medium flex items-center justify-center gap-1 sm:gap-2"
 								>
 									자세히 보기
-									<span className="text-lg">→</span>
+									<span className="text-base sm:text-lg">→</span>
 								</Link>
 								<Link
 									href={`/stores/edit/${store.store_id}`}
-									className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 text-base font-medium flex items-center justify-center"
+									className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 text-sm sm:text-base font-medium flex items-center justify-center"
 								>
 									수정
 								</Link>

@@ -162,13 +162,13 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 	}
 
 	return (
-		<div className="grid grid-cols-1 gap-6">
+		<div className="grid grid-cols-1 gap-4 sm:gap-6">
 			{favorites.map((store) => (
 				<div
 					key={store.store_id}
-					className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col md:flex-row"
+					className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col sm:flex-row border border-gray-100"
 				>
-					<div className="relative h-48 md:h-auto md:w-48 md:min-w-48">
+					<div className="relative h-40 sm:h-auto sm:w-44 sm:min-w-44">
 						<ImagePlaceholder
 							src={store.image_url}
 							alt={store.store_name}
@@ -177,19 +177,21 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 						/>
 					</div>
 
-					<div className="p-4 md:p-6 flex-1 flex flex-col">
-						<h3 className="font-bold text-lg mb-2">{store.store_name}</h3>
-						<p className="text-gray-600 text-sm mb-3 flex-grow">
+					<div className="p-3 sm:p-4 md:p-6 flex-1 flex flex-col">
+						<h3 className="font-bold text-base sm:text-lg mb-2">
+							{store.store_name}
+						</h3>
+						<p className="text-gray-600 text-xs sm:text-sm mb-3 flex-grow line-clamp-3">
 							{store.description}
 						</p>
 
-						<div className="space-y-2 text-sm text-gray-600 mb-4">
+						<div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
 							{store.address && (
-								<div className="flex items-start gap-2">
+								<div className="flex items-start gap-1 sm:gap-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
+										width="14"
+										height="14"
 										viewBox="0 0 24 24"
 										fill="none"
 										stroke="currentColor"
@@ -199,16 +201,16 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 										<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path>
 										<circle cx="12" cy="10" r="3"></circle>
 									</svg>
-									<span>{store.address}</span>
+									<span className="line-clamp-1">{store.address}</span>
 								</div>
 							)}
 
 							{store.phone_number && (
-								<div className="flex items-start gap-2">
+								<div className="flex items-start gap-1 sm:gap-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
+										width="14"
+										height="14"
 										viewBox="0 0 24 24"
 										fill="none"
 										stroke="currentColor"
@@ -225,18 +227,18 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 						<div className="flex flex-wrap gap-2 mt-auto">
 							<Link
 								href={`/stores/${store.store_id}`}
-								className="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 transition-colors"
+								className="px-3 py-1.5 sm:px-4 sm:py-2 bg-primary text-white rounded-md text-xs sm:text-sm hover:bg-primary/90 transition-colors"
 							>
 								매장 보기
 							</Link>
 							<button
 								onClick={() => removeFavorite(store.favorite_id)}
-								className="px-4 py-2 bg-red-50 text-red-600 rounded-md text-sm hover:bg-red-100 transition-colors flex items-center gap-1"
+								className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 text-red-600 rounded-md text-xs sm:text-sm hover:bg-red-100 transition-colors flex items-center gap-1"
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
-									width="16"
-									height="16"
+									width="14"
+									height="14"
 									viewBox="0 0 24 24"
 									fill="none"
 									stroke="currentColor"
