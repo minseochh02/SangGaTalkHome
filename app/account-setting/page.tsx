@@ -32,7 +32,7 @@ export default function AccountSettingPage() {
 
 				// Try to fetch user profile if it exists
 				const { data: profileData } = await supabase
-					.from("profiles")
+					.from("users")
 					.select("*")
 					.eq("email", authUser.email)
 					.single();

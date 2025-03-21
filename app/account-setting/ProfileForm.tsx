@@ -40,7 +40,7 @@ export default function ProfileForm({ userData }: { userData: UserData }) {
 		try {
 			// Check if profile exists
 			const { data: existingProfile } = await supabase
-				.from("profiles")
+				.from("users")
 				.select()
 				.eq("id", userData.user_id)
 				.single();
@@ -50,7 +50,7 @@ export default function ProfileForm({ userData }: { userData: UserData }) {
 			if (existingProfile) {
 				// Update existing profile
 				result = await supabase
-					.from("profiles")
+					.from("users")
 					.update({
 						username,
 						updated_at: new Date().toISOString(),
@@ -58,7 +58,7 @@ export default function ProfileForm({ userData }: { userData: UserData }) {
 					.eq("id", userData.user_id);
 			} else {
 				// Create new profile
-				result = await supabase.from("profiles").insert({
+				result = await supabase.from("users").insert({
 					id: userData.user_id,
 					username,
 					email: userData.email,

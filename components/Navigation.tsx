@@ -26,7 +26,7 @@ export default function Navigation() {
 
 					// Fetch user profile if needed
 					const { data: profileData } = await supabase
-						.from("profiles")
+						.from("users")
 						.select("*")
 						.eq("email", user.email)
 						.single();

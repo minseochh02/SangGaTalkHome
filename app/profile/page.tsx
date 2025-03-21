@@ -59,7 +59,7 @@ export default function ProfilePage() {
 
 				// Fetch user profile data
 				const { data: profileData, error: profileError } = await supabase
-					.from("profiles")
+					.from("users")
 					.select("*")
 					.eq("email", authUser.email)
 					.single();
