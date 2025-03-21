@@ -14,8 +14,18 @@ export default function HtmlContent({
 	if (!content) return null;
 
 	return (
-		<div className="ql-editor">
-			<div dangerouslySetInnerHTML={{ __html: content }} />
+		<div className={`ql-editor ${className}`}>
+			<div
+				dangerouslySetInnerHTML={{ __html: content }}
+				className="custom-quill-content"
+			/>
+			<style jsx>{`
+				.custom-quill-content :global(img) {
+					display: block;
+					margin-left: auto;
+					margin-right: auto;
+				}
+			`}</style>
 		</div>
 	);
 }
