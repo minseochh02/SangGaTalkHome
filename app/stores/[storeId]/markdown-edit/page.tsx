@@ -5,8 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import RichTextEditor from "@/components/RichTextEditor";
-import HtmlContent, { QuillStylesGlobal } from "@/components/HtmlContent";
-import { sanitizeHtml } from "@/utils/richTextUtils";
+import HtmlContent from "@/components/HtmlContent";
 
 interface StoreEditorProps {
 	storeId: string;
@@ -78,12 +77,9 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 		try {
 			setIsSaving(true);
 
-			// Sanitize HTML before saving to prevent XSS
-			const sanitizedContent = sanitizeHtml(content);
-
 			const { error } = await supabase
 				.from("stores")
-				.update({ markdown_content: sanitizedContent })
+				.update({ markdown_content: content })
 				.eq("store_id", storeId);
 
 			if (error) throw error;
@@ -193,18 +189,13 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 							<h3 className="font-medium text-gray-700 mb-2">미리보기</h3>
 						</div>
 
-						<div className="flex-1 border rounded-lg overflow-auto">
-							{content ? (
-								<>
-									<HtmlContent content={content} className="p-6" />
-									<QuillStylesGlobal />
-								</>
-							) : (
-								<div className="text-center py-12 text-gray-500">
-									<p>미리볼 내용이 없습니다. 내용을 입력해주세요.</p>
-								</div>
-							)}
-						</div>
+						{content ? (
+							<HtmlContent content={content} className="p-2" />
+						) : (
+							<div className="text-center py-12 text-gray-500">
+								<p>미리볼 내용이 없습니다. 내용을 입력해주세요.</p>
+							</div>
+						)}
 					</div>
 				) : (
 					<div className="p-6">
@@ -213,10 +204,6 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 							onChange={setContent}
 							placeholder="매장 소개글을 작성해주세요..."
 						/>
-						<div className="text-sm text-gray-500 mt-2">
-							* 서식이 있는 텍스트로 매장 소개를 작성하세요. HTML 형식으로
-							저장됩니다.
-						</div>
 					</div>
 				)}
 			</div>
