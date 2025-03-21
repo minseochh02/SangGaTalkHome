@@ -14,10 +14,11 @@ export default function HtmlContent({
 	if (!content) return null;
 
 	return (
-		<div
-			className={`html-content ql-editor ${className}`}
-			dangerouslySetInnerHTML={{ __html: content }}
-		>
+		<>
+			<div
+				className={`html-content ql-editor ${className}`}
+				dangerouslySetInnerHTML={{ __html: content }}
+			/>
 			<style jsx global>{`
 				.ql-align-center {
 					text-align: center !important;
@@ -32,6 +33,6 @@ export default function HtmlContent({
 					text-align: justify !important;
 				}
 			`}</style>
-		</div>
+		</>
 	);
 }
