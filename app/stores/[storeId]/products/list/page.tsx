@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { Store, Product } from "@/utils/type";
+import { formatSGTPrice } from "@/utils/formatters";
 
 interface StoreProductsListProps {
 	storeId: string;
@@ -50,26 +51,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 
 				if (productsError) throw productsError;
 
-				// Process the products to ensure SGT prices maintain their precision
-				const processedProducts = productsData.map((product) => {
-					if (product.sgt_price !== null) {
-						console.log(product.sgt_price);
-						// Use a more precise string conversion
-						const rawSgtPrice =
-							typeof product.sgt_price === "string"
-								? product.sgt_price
-								: product.sgt_price.toFixed(50); // Adjust the number of decimal places as needed
-						console.log(rawSgtPrice);
-						return {
-							...product,
-							_original_sgt_price: product.sgt_price,
-							sgt_price: rawSgtPrice,
-						};
-					}
-					return product;
-				});
-
-				setProducts(processedProducts as Product[]);
+				setProducts(productsData as Product[]);
 			} catch (error) {
 				console.error("Error fetching data:", error);
 				setError("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -203,11 +185,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 									</p>
 									{product.sgt_price && (
 										<p className="text-xs text-primary">
-											SGT:{" "}
-											{typeof product.sgt_price === "string"
-												? product.sgt_price
-												: product.sgt_price.toFixed(10)}{" "}
-											토큰
+											SGT: {formatSGTPrice(product.sgt_price)} 토큰
 										</p>
 									)}
 								</div>
