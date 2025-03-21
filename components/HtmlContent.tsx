@@ -14,25 +14,9 @@ export default function HtmlContent({
 	if (!content) return null;
 
 	return (
-		<>
-			<div
-				className={`html-content ql-editor ${className}`}
-				dangerouslySetInnerHTML={{ __html: content }}
-			/>
-			<style jsx global>{`
-				.ql-align-center {
-					text-align: center !important;
-				}
-				.ql-align-right {
-					text-align: right !important;
-				}
-				.ql-align-left {
-					text-align: left !important;
-				}
-				.ql-align-justify {
-					text-align: justify !important;
-				}
-			`}</style>
-		</>
+		<div
+			className={`html-content ${className}`}
+			dangerouslySetInnerHTML={{ __html: content }}
+		/>
 	);
 }
