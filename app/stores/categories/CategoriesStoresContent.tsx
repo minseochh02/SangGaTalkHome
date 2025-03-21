@@ -225,7 +225,7 @@ export default function CategoriesStoresContent() {
 								</div>
 								<div className="p-4 md:p-6 flex-1 flex flex-col">
 									<h3 className="font-bold text-lg mb-2">{store.store_name}</h3>
-									<p className="text-gray-600 text-sm mb-3 flex-grow">
+									<p className="text-gray-600 text-sm mb-3 line-clamp-3 flex-grow">
 										{store.description}
 									</p>
 
