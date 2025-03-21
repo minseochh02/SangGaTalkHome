@@ -18,12 +18,25 @@ interface RichTextEditorProps {
 	value: string;
 	onChange: (value: string) => void;
 	placeholder?: string;
+	onChangeText?: (plainText: string) => void; // Optional callback for plain text
 }
+
+/**
+ * Extracts plain text from HTML content
+ */
+export const getPlainTextFromHtml = (html: string): string => {
+	if (!html) return "";
+	// Create a temporary div to parse HTML
+	const tempDiv = document.createElement("div");
+	tempDiv.innerHTML = html;
+	return tempDiv.textContent || tempDiv.innerText || "";
+};
 
 export default function RichTextEditor({
 	value,
 	onChange,
 	placeholder,
+	onChangeText,
 }: RichTextEditorProps) {
 	// Quill modules (toolbar options)
 	const modules = useMemo(
@@ -57,12 +70,23 @@ export default function RichTextEditor({
 		"image",
 	];
 
+	// Handle content change with both HTML and plain text
+	const handleChange = (html: string) => {
+		onChange(html);
+
+		// If onChangeText callback is provided, extract plain text
+		if (onChangeText) {
+			const plainText = getPlainTextFromHtml(html);
+			onChangeText(plainText);
+		}
+	};
+
 	return (
 		<div className="rich-text-editor">
 			<ReactQuill
 				theme="snow"
 				value={value}
-				onChange={onChange}
+				onChange={handleChange}
 				modules={modules}
 				formats={formats}
 				placeholder={placeholder || "내용을 입력하세요..."}

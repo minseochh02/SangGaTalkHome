@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Store, Product } from "@/utils/type";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-import HtmlContent from "@/components/HtmlContent";
+import HtmlContent, { QuillStylesGlobal } from "@/components/HtmlContent";
 
 export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const supabase = createClient();
@@ -362,7 +362,10 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							</div>
 
 							{store.markdown_content ? (
-								<HtmlContent content={store.markdown_content} />
+								<>
+									<HtmlContent content={store.markdown_content} />
+									<QuillStylesGlobal />
+								</>
 							) : isOwner ? (
 								<div className="bg-primary/5 rounded-lg p-6 text-center">
 									<svg
