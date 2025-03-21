@@ -42,7 +42,7 @@ export default function ProfileForm({ userData }: { userData: UserData }) {
 			const { data: existingProfile } = await supabase
 				.from("users")
 				.select()
-				.eq("id", userData.user_id)
+				.eq("user_id", userData.user_id)
 				.single();
 
 			let result;
