@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-import { signInWithGoogleAction } from "@/app/actions";
 
 export default function SignupPage() {
 	const router = useRouter();
@@ -36,7 +35,16 @@ export default function SignupPage() {
 
 	const handleGoogleSignUp = async () => {
 		try {
-			await signInWithGoogleAction();
+			const { error } = await supabase.auth.signInWithOAuth({
+				provider: "google",
+				options: {
+					redirectTo: `${window.location.origin}/profile`,
+				},
+			});
+
+			if (error) {
+				throw error;
+			}
 		} catch (error) {
 			console.error("Error signing up with Google:", error);
 		}

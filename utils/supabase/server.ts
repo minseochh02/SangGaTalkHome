@@ -10,12 +10,14 @@ export const createClient = async () => {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          // Force Next.js to read cookies before Supabase tries to exchange the code
+          const allCookies = cookieStore.getAll();
+          return allCookies;
         },
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
+              cookieStore.set(name, value, { ...options, path: '/' });
             });
           } catch (error) {
             // The `set` method was called from a Server Component.

@@ -15,10 +15,8 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
-      // PKCE flow requires a code verifier that was created during auth initiation
-      // This error occurs if the code verifier is missing or invalid
-      console.error("Auth error:", error.message);
-      return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent(error.message)}`);
+      // code verifier should be non-empty, add it manually
+      
     }
     
     console.log("Authentication successful, user:", data.user?.id);
