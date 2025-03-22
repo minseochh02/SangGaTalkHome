@@ -15,7 +15,7 @@ export function LocationStoresContent() {
 	const [stores, setStores] = useState([
 		{
 			id: 1,
-			name: "테스트 매장 1",
+			name: "테스트 스토어 1",
 			address: "서울시 강남구",
 			lat: 37.498095,
 			lng: 127.02761,
@@ -23,7 +23,7 @@ export function LocationStoresContent() {
 		},
 		{
 			id: 2,
-			name: "테스트 매장 2",
+			name: "테스트 스토어 2",
 			address: "서울시 서초구",
 			lat: 37.496587,
 			lng: 127.024924,
@@ -71,7 +71,7 @@ export function LocationStoresContent() {
 
 	return (
 		<div className="container mx-auto px-4 py-8">
-			<h1 className="text-3xl font-bold mb-8">지역별 매장</h1>
+			<h1 className="text-3xl font-bold mb-8">지역별 스토어</h1>
 
 			{/* Mobile toggle for store list */}
 			<div className="lg:hidden mb-4">
@@ -79,7 +79,7 @@ export function LocationStoresContent() {
 					onClick={() => setShowStoreList(!showStoreList)}
 					className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-lg"
 				>
-					<span>{showStoreList ? "지도 보기" : "매장 목록 보기"}</span>
+					<span>{showStoreList ? "지도 보기" : "스토어 목록 보기"}</span>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						width="20"

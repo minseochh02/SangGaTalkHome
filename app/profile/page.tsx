@@ -199,7 +199,7 @@ export default function ProfilePage() {
 														: "bg-gray-100 hover:bg-gray-200"
 												}`}
 											>
-												매장 신청 관리
+												스토어 신청 관리
 											</button>
 											<button
 												onClick={() => setActiveAdminTab("stores")}
@@ -209,7 +209,7 @@ export default function ProfilePage() {
 														: "bg-gray-100 hover:bg-gray-200"
 												}`}
 											>
-												등록된 매장 관리
+												등록된 스토어 관리
 											</button>
 										</div>
 									</div>
@@ -218,14 +218,14 @@ export default function ProfilePage() {
 										{activeAdminTab === "applications" ? (
 											<div>
 												<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
-													매장 신청 관리
+													스토어 신청 관리
 												</h3>
 												<AdminStoreApplicationsList />
 											</div>
 										) : (
 											<div>
 												<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
-													등록된 매장 관리
+													등록된 스토어 관리
 												</h3>
 												<AdminApprovedStoresList />
 											</div>
@@ -250,7 +250,7 @@ export default function ProfilePage() {
 													: "bg-gray-100 hover:bg-gray-200"
 											}`}
 										>
-											즐겨찾기 매장
+											즐겨찾기 스토어
 										</button>
 										<button
 											onClick={() => setActiveFavoritesReviewsTab("reviews")}
@@ -269,7 +269,7 @@ export default function ProfilePage() {
 									{activeFavoritesReviewsTab === "favorites" ? (
 										<div>
 											<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
-												즐겨찾기 매장
+												즐겨찾기 스토어
 											</h3>
 											<UserFavoritesList userId={user.id} />
 										</div>
@@ -287,7 +287,7 @@ export default function ProfilePage() {
 							{/* SGT Stores Section */}
 							<div className="mt-8 sm:mt-12">
 								<h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
-									SGT 매장
+									SGT 스토어
 								</h2>
 
 								<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6">
@@ -300,7 +300,7 @@ export default function ProfilePage() {
 													: "bg-gray-100 hover:bg-gray-200"
 											}`}
 										>
-											매장 신청 현황
+											스토어 신청 현황
 										</button>
 										<button
 											onClick={() => setActiveTab("stores")}
@@ -310,11 +310,11 @@ export default function ProfilePage() {
 													: "bg-gray-100 hover:bg-gray-200"
 											}`}
 										>
-											승인된 매장
+											승인된 스토어
 										</button>
 									</div>
 									<Button asChild className="w-full sm:w-auto mt-2 sm:mt-0">
-										<Link href="/stores/register">새 매장 신청</Link>
+										<Link href="/stores/register">새 스토어 신청</Link>
 									</Button>
 								</div>
 
@@ -322,14 +322,14 @@ export default function ProfilePage() {
 									{activeTab === "applications" ? (
 										<div>
 											<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
-												매장 신청 현황
+												스토어 신청 현황
 											</h3>
 											<StoreApplicationsList userId={user.id} />
 										</div>
 									) : (
 										<div>
 											<h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
-												승인된 매장
+												승인된 스토어
 											</h3>
 											<ApprovedStoresList userId={user.id} />
 										</div>

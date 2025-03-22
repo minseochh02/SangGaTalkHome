@@ -81,16 +81,16 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 					<div className="text-center">
 						<div className="text-5xl mb-4">😕</div>
 						<h2 className="text-2xl font-bold mb-2">
-							매장 정보를 찾을 수 없습니다
+							스토어 정보를 찾을 수 없습니다
 						</h2>
 						<p className="text-gray-600 mb-6">
-							{error || "요청하신 매장 정보가 존재하지 않습니다."}
+							{error || "요청하신 스토어 정보가 존재하지 않습니다."}
 						</p>
 						<Link
 							href="/stores/categories"
 							className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
 						>
-							매장 목록으로 돌아가기
+							스토어 목록으로 돌아가기
 						</Link>
 					</div>
 				</div>
@@ -117,7 +117,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 					>
 						<path d="M19 12H5M12 19l-7-7 7-7" />
 					</svg>
-					매장 정보로 돌아가기
+					스토어 정보로 돌아가기
 				</Link>
 			</div>
 
@@ -148,7 +148,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 					</p>
 					<Link href={`/stores/${storeId}`}>
 						<button className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-							매장 정보로 돌아가기
+							스토어 정보로 돌아가기
 						</button>
 					</Link>
 				</div>

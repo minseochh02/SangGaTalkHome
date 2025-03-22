@@ -55,7 +55,7 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 				if (storeError || !storeData) {
 					toast({
 						title: "접근 권한 없음",
-						description: "해당 매장의 관리 권한이 없습니다.",
+						description: "해당 스토어의 관리 권한이 없습니다.",
 						variant: "destructive",
 					});
 					router.push("/profile");
@@ -186,7 +186,7 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 				<div>
 					<h1 className="text-3xl font-bold">{store.store_name} 상품 관리</h1>
 					<p className="text-muted-foreground mt-2">
-						매장의 상품을 추가, 수정, 삭제할 수 있습니다.
+						스토어의 상품을 추가, 수정, 삭제할 수 있습니다.
 					</p>
 				</div>
 				<Link href={`/stores/${storeId}/products/add`}>
@@ -273,7 +273,7 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 
 			<div className="mt-8">
 				<Link href={`/stores/${storeId}`}>
-					<Button variant="outline">매장 정보로 돌아가기</Button>
+					<Button variant="outline">스토어 정보로 돌아가기</Button>
 				</Link>
 			</div>
 		</div>

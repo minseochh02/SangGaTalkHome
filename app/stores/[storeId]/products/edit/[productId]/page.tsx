@@ -101,7 +101,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				if (storeError || !storeData) {
 					toast({
 						title: "접근 권한 없음",
-						description: "해당 매장의 관리 권한이 없습니다.",
+						description: "해당 스토어의 관리 권한이 없습니다.",
 						variant: "destructive",
 					});
 					router.push("/profile");
@@ -297,7 +297,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		if (!user || !store || !product) {
 			toast({
 				title: "오류 발생",
-				description: "로그인이 필요하거나 매장 정보가 없습니다.",
+				description: "로그인이 필요하거나 스토어 정보가 없습니다.",
 				variant: "destructive",
 			});
 			return;

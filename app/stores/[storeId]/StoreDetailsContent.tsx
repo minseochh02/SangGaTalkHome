@@ -108,7 +108,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 				}
 			} catch (err) {
 				console.error("Error fetching store details:", err);
-				setError("매장 정보를 불러오는 중 오류가 발생했습니다.");
+				setError("스토어 정보를 불러오는 중 오류가 발생했습니다.");
 			} finally {
 				setLoading(false);
 			}
@@ -189,7 +189,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 				<div className="flex justify-center items-center min-h-[50vh]">
 					<div className="text-center">
 						<div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-						<p className="text-lg">매장 정보를 불러오는 중...</p>
+						<p className="text-lg">스토어 정보를 불러오는 중...</p>
 					</div>
 				</div>
 			</div>
@@ -203,16 +203,16 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 					<div className="text-center">
 						<div className="text-5xl mb-4">😕</div>
 						<h2 className="text-2xl font-bold mb-2">
-							매장 정보를 찾을 수 없습니다
+							스토어 정보를 찾을 수 없습니다
 						</h2>
 						<p className="text-gray-600 mb-6">
-							{error || "요청하신 매장 정보가 존재하지 않습니다."}
+							{error || "요청하신 스토어 정보가 존재하지 않습니다."}
 						</p>
 						<Link
 							href="/stores/categories"
 							className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
 						>
-							매장 목록으로 돌아가기
+							스토어 목록으로 돌아가기
 						</Link>
 					</div>
 				</div>
@@ -240,7 +240,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 					>
 						<path d="M19 12H5M12 19l-7-7 7-7" />
 					</svg>
-					매장 목록으로 돌아가기
+					스토어 목록으로 돌아가기
 				</Link>
 			</div>
 
@@ -272,7 +272,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 									<circle cx="9" cy="9" r="2"></circle>
 									<path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
 								</svg>
-								<p>매장 이미지 없음</p>
+								<p>스토어 이미지 없음</p>
 							</div>
 						</div>
 					)}
@@ -313,10 +313,10 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z"></path>
 								<path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"></path>
 							</svg>
-							매장 소개
+							스토어 소개
 						</h2>
 						<p className="text-gray-700 whitespace-pre-line">
-							{store.description || "매장 소개 정보가 없습니다."}
+							{store.description || "스토어 소개 정보가 없습니다."}
 						</p>
 					</div>
 
@@ -338,7 +338,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 										<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
 										<path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path>
 									</svg>
-									매장 상세 정보
+									스토어 상세 정보
 								</h2>
 								{isOwner && (
 									<Link href={`/stores/${storeId}/markdown-edit`}>
@@ -403,7 +403,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 										<path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path>
 									</svg>
 									<h3 className="text-lg font-medium mb-2">
-										매장 상세 정보를 추가해보세요!
+										스토어 상세 정보를 추가해보세요!
 									</h3>
 									<p className="text-muted-foreground mb-4">
 										편집기를 사용해 이미지, 표, 목록 등을 포함한 풍부한 콘텐츠를
@@ -757,7 +757,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 									<path d="M12 20h9"></path>
 									<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
 								</svg>
-								매장 관리
+								스토어 관리
 							</h2>
 							<div className="space-y-3">
 								<Link href={`/stores/edit/${storeId}`} className="w-full">
@@ -775,7 +775,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 											<path d="M12 20h9"></path>
 											<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
 										</svg>
-										매장 정보 수정
+										스토어 정보 수정
 									</button>
 								</Link>
 

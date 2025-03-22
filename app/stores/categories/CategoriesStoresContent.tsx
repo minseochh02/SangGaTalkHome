@@ -90,7 +90,7 @@ export default function CategoriesStoresContent() {
 				}
 			} catch (err) {
 				console.error("Error fetching stores:", err);
-				setStoresError("매장 정보를 불러오는 중 오류가 발생했습니다.");
+				setStoresError("스토어 정보를 불러오는 중 오류가 발생했습니다.");
 			} finally {
 				setStoresLoading(false);
 			}
@@ -190,12 +190,12 @@ export default function CategoriesStoresContent() {
 			<div className="flex-1 p-4 md:p-8">
 				{/* Stores Grid */}
 				{storesLoading ? (
-					<div className="py-8 text-center">매장 정보를 불러오는 중...</div>
+					<div className="py-8 text-center">스토어 정보를 불러오는 중...</div>
 				) : storesError ? (
 					<div className="py-8 text-center text-red-500">{storesError}</div>
 				) : displayStores.length === 0 ? (
 					<div className="py-8 text-center">
-						해당 카테고리에 매장이 없습니다.
+						해당 카테고리에 스토어이 없습니다.
 					</div>
 				) : (
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">

@@ -103,7 +103,7 @@ function SearchResults({
 									className="object-cover"
 								/>
 								<div className="absolute top-2 right-2 md:top-4 md:right-4 px-2 py-1 md:px-3 md:py-1 bg-white/90 rounded-full text-xs md:text-sm">
-									{result.type === "store" ? "매장" : "상품"}
+									{result.type === "store" ? "스토어" : "상품"}
 								</div>
 							</div>
 							<div className="p-4 md:p-6">
@@ -203,7 +203,7 @@ export function SearchPageContent() {
 							type="text"
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
-							placeholder="매장명, 상품명, 지역명으로 검색"
+							placeholder="스토어명, 상품명, 지역명으로 검색"
 							className="w-full px-4 py-3 pl-12 pr-16 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 						/>
 						<svg
@@ -262,7 +262,7 @@ export function SearchPageContent() {
 					<div className="flex flex-wrap gap-2">
 						{[
 							{ value: "all", label: "전체" },
-							{ value: "store", label: "매장" },
+							{ value: "store", label: "스토어" },
 							{ value: "product", label: "상품" },
 						].map((type) => (
 							<button

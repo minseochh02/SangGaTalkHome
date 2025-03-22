@@ -75,7 +75,7 @@ export default function ApprovedStoresList({ userId }: { userId: string }) {
 	if (stores.length === 0) {
 		return (
 			<div className="text-center py-4 text-gray-500">
-				승인된 매장이 없습니다.
+				승인된 스토어이 없습니다.
 			</div>
 		);
 	}

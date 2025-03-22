@@ -124,7 +124,7 @@ export default function ReviewModal({
 					onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
 						setReviewText(e.target.value)
 					}
-					placeholder="매장에 대한 솔직한 리뷰를 작성해주세요."
+					placeholder="스토어에 대한 솔직한 리뷰를 작성해주세요."
 					rows={5}
 					className="resize-none"
 				/>

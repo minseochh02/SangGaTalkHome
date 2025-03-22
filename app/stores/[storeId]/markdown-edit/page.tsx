@@ -50,7 +50,7 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 				}
 
 				if (store.user_id !== user.id) {
-					setError("해당 매장의 소유자만 매장 소개를 수정할 수 있습니다.");
+					setError("해당 스토어의 소유자만 스토어 소개를 수정할 수 있습니다.");
 					return;
 				}
 
@@ -63,7 +63,7 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 				}
 			} catch (err) {
 				console.error("Error loading store data:", err);
-				setError("매장 정보를 불러오는 중 오류가 발생했습니다.");
+				setError("스토어 정보를 불러오는 중 오류가 발생했습니다.");
 			} finally {
 				setIsLoading(false);
 			}
@@ -100,7 +100,7 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 				<div className="flex justify-center items-center min-h-[50vh]">
 					<div className="text-center">
 						<div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-						<p className="text-lg">매장 정보를 불러오는 중...</p>
+						<p className="text-lg">스토어 정보를 불러오는 중...</p>
 					</div>
 				</div>
 			</div>
@@ -122,7 +122,7 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 							href={`/stores/${storeId}`}
 							className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
 						>
-							매장 페이지로 돌아가기
+							스토어 페이지로 돌아가기
 						</Link>
 					</div>
 				</div>
@@ -149,7 +149,7 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 					>
 						<path d="M19 12H5M12 19l-7-7 7-7" />
 					</svg>
-					매장 페이지로 돌아가기
+					스토어 페이지로 돌아가기
 				</Link>
 
 				<div className="flex gap-3">
@@ -176,9 +176,9 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 
 			<div className="bg-white rounded-xl shadow-lg overflow-hidden">
 				<div className="p-4 bg-gray-50 border-b">
-					<h1 className="text-xl font-bold">매장 소개 편집</h1>
+					<h1 className="text-xl font-bold">스토어 소개 편집</h1>
 					<p className="text-sm text-gray-500 mt-1">
-						텍스트 편집기를 사용하여 매장에 대한 풍부한 설명을 추가하세요.
+						텍스트 편집기를 사용하여 스토어에 대한 풍부한 설명을 추가하세요.
 						이미지, 링크, 표 등을 지원합니다.
 					</p>
 				</div>
@@ -202,7 +202,7 @@ function StoreEditorContent({ storeId }: StoreEditorProps) {
 						<RichTextEditor
 							value={content}
 							onChange={setContent}
-							placeholder="매장 소개글을 작성해주세요..."
+							placeholder="스토어 소개글을 작성해주세요..."
 						/>
 					</div>
 				)}

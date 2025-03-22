@@ -100,7 +100,7 @@ export default function SGTPage() {
 							<div>
 								<h3 className="text-xl font-semibold mb-2">토큰 획득</h3>
 								<p className="text-gray-600">
-									SGT 앱에서 리뷰 작성, 매장 방문 인증, 친구 초대 등 다양한
+									SGT 앱에서 리뷰 작성, 스토어 방문 인증, 친구 초대 등 다양한
 									활동을 통해 SGT 토큰을 획득하세요.
 								</p>
 							</div>
@@ -112,7 +112,7 @@ export default function SGTPage() {
 							<div>
 								<h3 className="text-xl font-semibold mb-2">토큰 사용</h3>
 								<p className="text-gray-600">
-									획득한 SGT 토큰으로 제휴 매장에서 상품과 서비스를 구매하거나
+									획득한 SGT 토큰으로 제휴 스토어에서 상품과 서비스를 구매하거나
 									특별 할인을 받을 수 있습니다.
 								</p>
 							</div>
@@ -148,7 +148,7 @@ export default function SGTPage() {
 										d="M5 13l4 4L19 7"
 									/>
 								</svg>
-								<span>제휴 매장에서 최대 30% 할인</span>
+								<span>제휴 스토어에서 최대 30% 할인</span>
 							</li>
 							<li className="flex items-center gap-3">
 								<svg
@@ -226,7 +226,7 @@ export default function SGTPage() {
 						href="/stores/register"
 						className="px-6 py-3 bg-white text-[#6A9C89] rounded-lg hover:bg-gray-100 transition-colors"
 					>
-						매장 등록하기
+						스토어 등록하기
 					</Link>
 				</div>
 			</div>

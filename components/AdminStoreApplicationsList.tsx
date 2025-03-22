@@ -210,7 +210,7 @@ export default function AdminStoreApplicationsList() {
 	if (applications.length === 0) {
 		return (
 			<div className="text-center py-4 text-gray-500">
-				신청된 매장이 없습니다.
+				신청된 스토어이 없습니다.
 			</div>
 		);
 	}
@@ -224,7 +224,7 @@ export default function AdminStoreApplicationsList() {
 							scope="col"
 							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
 						>
-							매장명
+							스토어명
 						</th>
 						<th
 							scope="col"
@@ -455,7 +455,7 @@ export default function AdminStoreApplicationsList() {
 											{app.image_url && (
 												<div className="col-span-1 md:col-span-2 mt-4">
 													<h4 className="font-semibold text-gray-700 mb-3">
-														매장 이미지
+														스토어 이미지
 													</h4>
 													<div className="relative w-full max-w-md h-48 border border-gray-200 rounded-lg overflow-hidden">
 														<Image

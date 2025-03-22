@@ -66,10 +66,10 @@ export default function Navigation() {
 						</Link>
 						<div className="hidden md:flex items-center gap-6">
 							<Link href="/stores/categories" className="hover:text-primary">
-								카테고리별 매장
+								카테고리별 스토어
 							</Link>
 							<Link href="/stores/locations" className="hover:text-primary">
-								지역별 매장
+								지역별 스토어
 							</Link>
 							<Link href="/sgt/products" className="hover:text-primary">
 								SGT 상품
@@ -184,14 +184,14 @@ export default function Navigation() {
 							className="hover:text-primary py-2"
 							onClick={() => setMobileMenuOpen(false)}
 						>
-							카테고리별 매장
+							카테고리별 스토어
 						</Link>
 						<Link
 							href="/stores/locations"
 							className="hover:text-primary py-2"
 							onClick={() => setMobileMenuOpen(false)}
 						>
-							지역별 매장
+							지역별 스토어
 						</Link>
 						<Link
 							href="/sgt/products"

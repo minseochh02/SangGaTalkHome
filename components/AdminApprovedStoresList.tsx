@@ -64,7 +64,7 @@ export default function AdminApprovedStoresList() {
 
 		if (
 			!confirm(
-				`정말로 "${store.store_name}" 매장을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+				`정말로 "${store.store_name}" 스토어을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
 			)
 		) {
 			setProcessingId(null);
@@ -85,15 +85,15 @@ export default function AdminApprovedStoresList() {
 			// Refresh the stores list
 			await fetchStores();
 			toast({
-				title: "매장 삭제 완료",
-				description: `${store.store_name} 매장이 성공적으로 삭제되었습니다.`,
+				title: "스토어 삭제 완료",
+				description: `${store.store_name} 스토어이 성공적으로 삭제되었습니다.`,
 				variant: "default",
 			});
 		} catch (err) {
 			console.error("Error removing store:", err);
 			toast({
 				title: "오류 발생",
-				description: "매장 삭제 중 오류가 발생했습니다. 다시 시도해주세요.",
+				description: "스토어 삭제 중 오류가 발생했습니다. 다시 시도해주세요.",
 				variant: "destructive",
 			});
 		} finally {
@@ -141,7 +141,7 @@ export default function AdminApprovedStoresList() {
 	if (stores.length === 0) {
 		return (
 			<div className="text-center py-4 text-gray-500">
-				등록된 매장이 없습니다.
+				등록된 스토어이 없습니다.
 			</div>
 		);
 	}
@@ -155,7 +155,7 @@ export default function AdminApprovedStoresList() {
 							scope="col"
 							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
 						>
-							매장명
+							스토어명
 						</th>
 						<th
 							scope="col"
@@ -173,7 +173,7 @@ export default function AdminApprovedStoresList() {
 							scope="col"
 							className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
 						>
-							매장 유형
+							스토어 유형
 						</th>
 						<th
 							scope="col"
@@ -272,7 +272,7 @@ export default function AdminApprovedStoresList() {
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div>
 												<h4 className="font-semibold text-gray-700 mb-3">
-													매장 정보
+													스토어 정보
 												</h4>
 												<div className="space-y-2">
 													<div className="flex">
@@ -283,7 +283,7 @@ export default function AdminApprovedStoresList() {
 													</div>
 													<div className="flex">
 														<span className="text-gray-500 w-32">
-															매장 유형:
+															스토어 유형:
 														</span>
 														<span>{getStoreTypeText(store.store_type)}</span>
 													</div>
@@ -360,7 +360,7 @@ export default function AdminApprovedStoresList() {
 											{store.image_url && (
 												<div className="col-span-1 md:col-span-2">
 													<h4 className="font-semibold text-gray-700 mb-3">
-														매장 이미지
+														스토어 이미지
 													</h4>
 													<div className="w-full max-w-md h-48 rounded-lg overflow-hidden">
 														<img

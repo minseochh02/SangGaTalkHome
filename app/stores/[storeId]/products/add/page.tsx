@@ -85,7 +85,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 				if (storeError || !storeData) {
 					toast({
 						title: "접근 권한 없음",
-						description: "해당 매장의 관리 권한이 없습니다.",
+						description: "해당 스토어의 관리 권한이 없습니다.",
 						variant: "destructive",
 					});
 					router.push("/profile");
@@ -97,7 +97,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 				console.error("Error fetching store data:", error);
 				toast({
 					title: "오류 발생",
-					description: "매장 정보를 불러오는 중 오류가 발생했습니다.",
+					description: "스토어 정보를 불러오는 중 오류가 발생했습니다.",
 					variant: "destructive",
 				});
 			} finally {
@@ -224,7 +224,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		if (!user || !store) {
 			toast({
 				title: "오류 발생",
-				description: "로그인이 필요하거나 매장 정보가 없습니다.",
+				description: "로그인이 필요하거나 스토어 정보가 없습니다.",
 				variant: "destructive",
 			});
 			return;

@@ -116,7 +116,7 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 				setFavorites(combinedData);
 			} catch (err) {
 				console.error("Error fetching favorite stores:", err);
-				setError("즐겨찾기 매장을 불러오는데 실패했습니다.");
+				setError("즐겨찾기 스토어을 불러오는데 실패했습니다.");
 			} finally {
 				setIsLoading(false);
 			}
@@ -156,7 +156,7 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 	if (favorites.length === 0) {
 		return (
 			<div className="text-center py-8 text-gray-500">
-				즐겨찾기한 매장이 없습니다.
+				즐겨찾기한 스토어이 없습니다.
 			</div>
 		);
 	}
@@ -229,7 +229,7 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 								href={`/stores/${store.store_id}`}
 								className="px-3 py-1.5 sm:px-4 sm:py-2 bg-primary text-white rounded-md text-xs sm:text-sm hover:bg-primary/90 transition-colors"
 							>
-								매장 보기
+								스토어 보기
 							</Link>
 							<button
 								onClick={() => removeFavorite(store.favorite_id)}

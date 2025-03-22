@@ -152,7 +152,7 @@ function ProductDetailsContent({
 							href={`/stores/${storeId}`}
 							className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
 						>
-							매장 정보로 돌아가기
+							스토어 정보로 돌아가기
 						</Link>
 					</div>
 				</div>
@@ -180,7 +180,7 @@ function ProductDetailsContent({
 					>
 						<path d="M19 12H5M12 19l-7-7 7-7" />
 					</svg>
-					매장으로 돌아가기
+					스토어으로 돌아가기
 				</Link>
 			</div>
 
@@ -313,7 +313,7 @@ function ProductDetailsContent({
 								<path d="M15 15h3"></path>
 								<path d="m6 12 6 7 6-7M6 5h12"></path>
 							</svg>
-							판매 매장 정보
+							판매 스토어 정보
 						</h2>
 
 						<div className="flex items-center space-x-4 mb-4">
@@ -338,7 +338,7 @@ function ProductDetailsContent({
 
 						<Link href={`/stores/${storeId}`} className="w-full block">
 							<button className="w-full px-4 py-3 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200 text-base font-medium">
-								매장 정보 보기
+								스토어 정보 보기
 							</button>
 						</Link>
 					</div>

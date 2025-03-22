@@ -176,7 +176,7 @@ export default function StoreRegistration() {
 
 			// Check if image is selected
 			if (!selectedImage) {
-				toast.error("매장 이미지를 선택해주세요.");
+				toast.error("스토어 이미지를 선택해주세요.");
 				setIsSubmitting(false);
 				return;
 			}
@@ -319,13 +319,13 @@ export default function StoreRegistration() {
 						{/* Store Information Section */}
 						<div className="space-y-6 pt-6 border-t">
 							<h2 className="text-xl md:text-2xl font-semibold text-[#6A9C89] mb-4">
-								매장 정보
+								스토어 정보
 							</h2>
 
 							{/* Store Image Upload Section */}
 							<div className="space-y-4">
 								<label className="block text-sm font-medium text-gray-700 mb-2">
-									매장 이미지 <span className="text-red-500">*</span>
+									스토어 이미지 <span className="text-red-500">*</span>
 								</label>
 								<input
 									type="file"
@@ -385,7 +385,7 @@ export default function StoreRegistration() {
 
 							<div>
 								<label className="block text-sm font-medium text-gray-700 mb-2">
-									매장 주소 <span className="text-red-500">*</span>
+									스토어 주소 <span className="text-red-500">*</span>
 								</label>
 								<input
 									type="text"
@@ -438,7 +438,7 @@ export default function StoreRegistration() {
 
 							<div>
 								<label className="block text-sm font-medium text-gray-700 mb-2">
-									매장 소개 <span className="text-red-500">*</span>
+									스토어 소개 <span className="text-red-500">*</span>
 								</label>
 								<textarea
 									name="description"
@@ -447,7 +447,7 @@ export default function StoreRegistration() {
 									value={formData.description}
 									onChange={handleChange}
 									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
-									placeholder="매장 소개와 주요 상품/서비스에 대해 설명해주세요."
+									placeholder="스토어 소개와 주요 상품/서비스에 대해 설명해주세요."
 								/>
 							</div>
 
@@ -516,7 +516,7 @@ export default function StoreRegistration() {
 							</button>
 							{!selectedImage && (
 								<p className="mt-2 text-sm text-red-500 text-center">
-									매장 이미지를 선택해야 신청할 수 있습니다.
+									스토어 이미지를 선택해야 신청할 수 있습니다.
 								</p>
 							)}
 						</div>

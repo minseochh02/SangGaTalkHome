@@ -282,12 +282,12 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 	return (
 		<div className="container mx-auto py-10 px-4 md:px-6">
 			<div className="max-w-3xl mx-auto">
-				<h1 className="text-3xl font-bold mb-8">매장 정보 수정</h1>
+				<h1 className="text-3xl font-bold mb-8">스토어 정보 수정</h1>
 
 				<form onSubmit={handleSubmit} className="space-y-8">
 					{/* Store Name */}
 					<div className="space-y-2">
-						<Label htmlFor="store_name">매장 이름 *</Label>
+						<Label htmlFor="store_name">스토어 이름 *</Label>
 						<Input
 							id="store_name"
 							name="store_name"
@@ -299,7 +299,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 
 					{/* Store Type */}
 					<div className="space-y-2">
-						<Label>매장 유형 *</Label>
+						<Label>스토어 유형 *</Label>
 						<RadioGroup
 							value={formData.store_type}
 							onValueChange={(value) => handleSelectChange("store_type", value)}
@@ -353,7 +353,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 
 					{/* Description */}
 					<div className="space-y-2">
-						<Label htmlFor="description">매장 설명</Label>
+						<Label htmlFor="description">스토어 설명</Label>
 						<Textarea
 							id="description"
 							name="description"
@@ -410,7 +410,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 
 					{/* Store Image */}
 					<div className="space-y-2">
-						<Label htmlFor="image">매장 이미지</Label>
+						<Label htmlFor="image">스토어 이미지</Label>
 						<div className="flex flex-col space-y-4">
 							{imagePreview && (
 								<div className="relative w-full max-w-md h-48 rounded-lg overflow-hidden">
