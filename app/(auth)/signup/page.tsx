@@ -35,15 +35,25 @@ export default function SignupPage() {
 
 	const handleGoogleSignUp = async () => {
 		try {
-			const { error } = await supabase.auth.signInWithOAuth({
+			const { data, error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
 				options: {
 					redirectTo: `${window.location.origin}/auth/callback`,
+					queryParams: {
+						prompt: "consent", // Force consent to ensure fresh auth
+						access_type: "offline", // Request refresh tokens
+					},
 				},
 			});
 
 			if (error) {
 				throw error;
+			}
+
+			// Handle redirect - the SDK does this automatically,
+			// but we can log it for debugging
+			if (data?.url) {
+				console.log("Redirecting to OAuth provider...");
 			}
 		} catch (error) {
 			console.error("Error signing up with Google:", error);

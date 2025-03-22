@@ -10,16 +10,31 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin;
   const redirectTo = requestUrl.searchParams.get("redirect_to")?.toString();
 
+  // Log the code to verify it's present
+  console.log("Auth code received:", code ? "Present" : "Missing");
+  
   if (code) {
     const supabase = await createClient();
+    
+    // Debug cookies to see if code verifier is stored
+    const cookieHeader = request.headers.get("cookie") || "";
+    console.log("Cookie header:", cookieHeader);
+    
+    // Check for the code verifier cookie (sb-SOMETHING-auth-token-code-verifier)
+    const codeVerifierCookie = cookieHeader
+      .split(';')
+      .find(cookie => cookie.trim().match(/sb-.*-auth-token-code-verifier/));
+    
+    console.log("Code verifier cookie:", codeVerifierCookie ? "Present" : "Missing");
+    
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
-      // Log the error
       console.error("Error exchanging code for session:", error.message);
+      console.error("Full error:", JSON.stringify(error, null, 2));
       
-      // Redirect to login page with error
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+      // Redirect to login page with error for debugging
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}&code_present=${!!code}&verifier_present=${!!codeVerifierCookie}`);
     }
     
     console.log("Authentication successful, user:", data.user?.id);

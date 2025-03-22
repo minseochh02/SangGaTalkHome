@@ -12,6 +12,19 @@ export const updateSession = async (request: NextRequest) => {
       },
     });
 
+    // Debug cookie presence
+    const cookies = request.cookies.getAll();
+    const hasPKCECookies = cookies.some(cookie => 
+      cookie.name.includes('code-verifier') || 
+      cookie.name.includes('pkce-verifier')
+    );
+    
+    // Log the state for debugging
+    if (request.nextUrl.pathname === '/auth/callback') {
+      console.log('Cookies in callback:', cookies.map(c => c.name));
+      console.log('PKCE cookies present:', hasPKCECookies);
+    }
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,13 +46,28 @@ export const updateSession = async (request: NextRequest) => {
               },
             });
             
-            // Set cookies on response with full options
+            // Set cookies on response with special handling for secure properties
             cookiesToSet.forEach(({ name, value, options }) => {
+              // Add more secure cookie options for certain cookies
+              const finalOptions = name.includes('code-verifier') ? 
+                {
+                  ...options,
+                  secure: true,
+                  sameSite: 'lax' as const,
+                  httpOnly: true,
+                  maxAge: 60 * 60, // 1 hour
+                } : options;
+                
               response.cookies.set({
                 name,
                 value,
-                ...options,
+                ...finalOptions,
               });
+              
+              // Debug log for PKCE related cookies
+              if (name.includes('code-verifier')) {
+                console.log(`Setting code verifier cookie: ${name}`);
+              }
             });
           },
         },
@@ -48,7 +76,7 @@ export const updateSession = async (request: NextRequest) => {
 
     // This will refresh session if expired - required for Server Components
     // https://supabase.com/docs/guides/auth/server-side/nextjs
-    await supabase.auth.getUser();
+    const user = await supabase.auth.getUser();
 
     // // protected routes
     // if (request.nextUrl.pathname.startsWith("/protected") && user.error) {
