@@ -23,33 +23,37 @@ interface StoreProductsPageProps {
 
 function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 	const router = useRouter();
+	const supabase = createClient();
 
-	// Dummy data replacing useAuth
-	const user = { id: "dummy-user-id" };
-	const isLoading = false;
-
+	const [user, setUser] = useState<any>(null);
 	const [store, setStore] = useState<Store | null>(null);
 	const [products, setProducts] = useState<Product[]>([]);
-	const [isLoadingData, setIsLoadingData] = useState(true);
+	const [isLoading, setIsLoading] = useState(true);
 	const [isDeleting, setIsDeleting] = useState(false);
 
 	useEffect(() => {
 		const fetchData = async () => {
-			if (isLoading) return;
-			if (!user) {
-				router.push("/login");
-				return;
-			}
-
 			try {
-				const supabase = createClient();
+				// Check if user is authenticated
+				const {
+					data: { user: authUser },
+					error: authError,
+				} = await supabase.auth.getUser();
+
+				if (authError || !authUser) {
+					console.log("No authenticated user found");
+					router.push("/login");
+					return;
+				}
+
+				setUser(authUser);
 
 				// Fetch store data to verify ownership
 				const { data: storeData, error: storeError } = await supabase
 					.from("stores")
 					.select("*")
 					.eq("store_id", storeId)
-					.eq("user_id", user.id)
+					.eq("user_id", authUser.id)
 					.single();
 
 				if (storeError || !storeData) {
@@ -87,12 +91,12 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 					variant: "destructive",
 				});
 			} finally {
-				setIsLoadingData(false);
+				setIsLoading(false);
 			}
 		};
 
 		fetchData();
-	}, [user, storeId, isLoading, router]);
+	}, [storeId, router, supabase]);
 
 	const handleDeleteProduct = async (productId: string) => {
 		if (!confirm("정말로 이 상품을 삭제하시겠습니까?")) {
@@ -166,7 +170,7 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 		}
 	};
 
-	if (isLoading || isLoadingData) {
+	if (isLoading) {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
 				<div className="text-center">
