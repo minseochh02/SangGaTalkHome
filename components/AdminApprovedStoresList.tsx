@@ -77,28 +77,134 @@ export default function AdminApprovedStoresList() {
 			// Delete in a transaction-like sequence to maintain data integrity
 			// We need to delete in the following order to avoid foreign key constraint errors:
 
-			// 1. Delete product_images linked to the store's products
-			// First, get all product IDs for this store
+			// 1. First, gather all data we need to delete files from storage
+
+			// Get all products for this store
 			const { data: productData, error: productFetchError } = await supabase
 				.from("products")
-				.select("product_id")
+				.select("product_id, image_url")
 				.eq("store_id", store.store_id);
 
 			if (productFetchError) throw productFetchError;
 
-			// If there are products, delete their images
+			// Get all product images
+			interface ProductImage {
+				product_id: string;
+				image_url: string;
+			}
+
+			let additionalProductImages: ProductImage[] = [];
 			if (productData && productData.length > 0) {
 				const productIds = productData.map((product) => product.product_id);
 
-				const { error: productImagesError } = await supabase
+				const { data: prodImagesData, error: prodImagesError } = await supabase
+					.from("product_images")
+					.select("product_id, image_url")
+					.in("product_id", productIds);
+
+				if (!prodImagesError && prodImagesData) {
+					additionalProductImages = prodImagesData;
+				}
+			}
+
+			// Get all store images
+			const { data: storeImagesData, error: storeImagesQueryError } =
+				await supabase
+					.from("store_images")
+					.select("image_url")
+					.eq("store_id", store.store_id);
+
+			// 2. Now that we have the data, delete files from storage buckets
+
+			// 2.1 Delete product main images
+			if (productData && productData.length > 0) {
+				for (const product of productData) {
+					if (product.image_url) {
+						try {
+							// Extract the path from the URL
+							const urlParts = product.image_url.split("/");
+							const filePath = urlParts[urlParts.length - 1]; // Get filename from URL
+
+							// Delete from bucket - adjust bucket name if needed
+							await supabase.storage.from("product-images").remove([filePath]);
+						} catch (error) {
+							console.error(
+								`Failed to delete image for product ${product.product_id}:`,
+								error
+							);
+							// Continue with other deletions even if this one fails
+						}
+					}
+				}
+			}
+
+			// 2.2 Delete additional product images
+			if (additionalProductImages.length > 0) {
+				for (const img of additionalProductImages) {
+					if (img.image_url) {
+						try {
+							// Extract the path from the URL
+							const urlParts = img.image_url.split("/");
+							const filePath = urlParts[urlParts.length - 1];
+
+							// Delete from bucket
+							await supabase.storage.from("product-images").remove([filePath]);
+						} catch (error) {
+							console.error(
+								"Failed to delete additional product image:",
+								error
+							);
+						}
+					}
+				}
+			}
+
+			// 2.3 Delete store main image
+			if (store.image_url) {
+				try {
+					const urlParts = store.image_url.split("/");
+					const filePath = urlParts[urlParts.length - 1];
+
+					// Delete from store-images bucket
+					await supabase.storage.from("store-images").remove([filePath]);
+				} catch (error) {
+					console.error("Failed to delete store main image:", error);
+				}
+			}
+
+			// 2.4 Delete additional store images
+			if (storeImagesData && storeImagesData.length > 0) {
+				for (const img of storeImagesData) {
+					if (img.image_url) {
+						try {
+							const urlParts = img.image_url.split("/");
+							const filePath = urlParts[urlParts.length - 1];
+
+							// Delete from bucket
+							await supabase.storage.from("store-images").remove([filePath]);
+						} catch (error) {
+							console.error("Failed to delete additional store image:", error);
+						}
+					}
+				}
+			}
+
+			// 3. Now delete database records in the correct order
+
+			// 3.1 Delete product images records
+			if (productData && productData.length > 0) {
+				const productIds = productData.map((product) => product.product_id);
+
+				// Delete product_images records
+				const { error: productImagesDbError } = await supabase
 					.from("product_images")
 					.delete()
 					.in("product_id", productIds);
 
-				if (productImagesError) throw productImagesError;
+				if (productImagesDbError) throw productImagesDbError;
 			}
 
-			// 2. Delete products in this store
+			// 3.2 Delete products in this store
 			const { error: productsError } = await supabase
 				.from("products")
 				.delete()
@@ -106,7 +212,7 @@ export default function AdminApprovedStoresList() {
 
 			if (productsError) throw productsError;
 
-			// 3. Delete store_images
+			// 3.3 Delete store_images records
 			const { error: storeImagesError } = await supabase
 				.from("store_images")
 				.delete()
@@ -114,7 +220,7 @@ export default function AdminApprovedStoresList() {
 
 			if (storeImagesError) throw storeImagesError;
 
-			// 4. Delete store_locations
+			// 3.4 Delete store_locations
 			const { error: storeLocationsError } = await supabase
 				.from("store_locations")
 				.delete()
@@ -122,7 +228,7 @@ export default function AdminApprovedStoresList() {
 
 			if (storeLocationsError) throw storeLocationsError;
 
-			// 5. Delete favorites where target_id is this store's ID and favorite_type is 'store'
+			// 3.5 Delete favorites where target_id is this store's ID and favorite_type is 'store'
 			const { error: favoritesError } = await supabase
 				.from("favorites")
 				.delete()
@@ -131,7 +237,7 @@ export default function AdminApprovedStoresList() {
 
 			if (favoritesError) throw favoritesError;
 
-			// 6. Delete reviews where target_id is this store's ID and review_type is 'store'
+			// 3.6 Delete reviews where target_id is this store's ID and review_type is 'store'
 			const { error: reviewsError } = await supabase
 				.from("reviews")
 				.delete()
@@ -140,7 +246,7 @@ export default function AdminApprovedStoresList() {
 
 			if (reviewsError) throw reviewsError;
 
-			// 7. Finally, delete the store itself
+			// 3.7 Finally, delete the store itself
 			const { error: storeError } = await supabase
 				.from("stores")
 				.delete()

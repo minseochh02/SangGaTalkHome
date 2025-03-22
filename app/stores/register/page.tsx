@@ -529,9 +529,9 @@ export default function StoreRegistration() {
 				<div className="mt-8 p-6 bg-[#FFF5E4] rounded-xl">
 					<h3 className="text-lg font-semibold mb-4">스토어 등록 절차</h3>
 					<ol className="list-decimal list-inside space-y-2 text-gray-700">
-						<li>1. 스토어 등록 신청 </li>
-						<li>2. 등록 내용 담당자 확인(영업일 기준 2~3일 소요)</li>
-						<li>3. 등록 완료</li>
+						<li>스토어 등록 신청 </li>
+						<li>등록 내용 담당자 확인(영업일 기준 2~3일 소요)</li>
+						<li>등록 완료</li>
 					</ol>
 				</div>
 			</div>
