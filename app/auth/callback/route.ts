@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient();
     await supabase.auth.exchangeCodeForSession(code);
+    console.log("code", code);
   }
 
   if (redirectTo) {
@@ -20,5 +21,5 @@ export async function GET(request: Request) {
   }
 
   // URL to redirect to after sign up process completes
-  return NextResponse.redirect(`${origin}/`);
+  return NextResponse.redirect(`${origin}/profile`);
 }
