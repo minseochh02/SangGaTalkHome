@@ -93,29 +93,6 @@ export default function AdminApprovedStoresList() {
 				image_url: string;
 			}
 
-			let additionalProductImages: ProductImage[] = [];
-			if (productData && productData.length > 0) {
-				const productIds = productData.map((product) => product.product_id);
-
-				const { data: prodImagesData, error: prodImagesError } = await supabase
-					.from("product_images")
-					.select("product_id, image_url")
-					.in("product_id", productIds);
-
-				if (!prodImagesError && prodImagesData) {
-					additionalProductImages = prodImagesData;
-				}
-			}
-
-			// Get all store images
-			const { data: storeImagesData, error: storeImagesQueryError } =
-				await supabase
-					.from("store_images")
-					.select("image_url")
-					.eq("store_id", store.store_id);
-
-			// 2. Now that we have the data, delete files from storage buckets
-
 			// 2.1 Delete product main images
 			if (productData && productData.length > 0) {
 				for (const product of productData) {
@@ -125,7 +102,7 @@ export default function AdminApprovedStoresList() {
 							const urlParts = product.image_url.split("/");
 							const filePath = urlParts[urlParts.length - 1]; // Get filename from URL
 
-							// Delete from bucket - adjust bucket name if needed
+							// Delete from bucket - using the correct bucket name
 							await supabase.storage.from("product-images").remove([filePath]);
 						} catch (error) {
 							console.error(
@@ -138,71 +115,20 @@ export default function AdminApprovedStoresList() {
 				}
 			}
 
-			// 2.2 Delete additional product images
-			if (additionalProductImages.length > 0) {
-				for (const img of additionalProductImages) {
-					if (img.image_url) {
-						try {
-							// Extract the path from the URL
-							const urlParts = img.image_url.split("/");
-							const filePath = urlParts[urlParts.length - 1];
-
-							// Delete from bucket
-							await supabase.storage.from("product-images").remove([filePath]);
-						} catch (error) {
-							console.error(
-								"Failed to delete additional product image:",
-								error
-							);
-						}
-					}
-				}
-			}
-
 			// 2.3 Delete store main image
 			if (store.image_url) {
 				try {
 					const urlParts = store.image_url.split("/");
 					const filePath = urlParts[urlParts.length - 1];
 
-					// Delete from store-images bucket
-					await supabase.storage.from("store-images").remove([filePath]);
+					// Delete from store-thumbnail bucket instead of store-images
+					await supabase.storage.from("store-thumbnail").remove([filePath]);
 				} catch (error) {
 					console.error("Failed to delete store main image:", error);
 				}
 			}
 
-			// 2.4 Delete additional store images
-			if (storeImagesData && storeImagesData.length > 0) {
-				for (const img of storeImagesData) {
-					if (img.image_url) {
-						try {
-							const urlParts = img.image_url.split("/");
-							const filePath = urlParts[urlParts.length - 1];
-
-							// Delete from bucket
-							await supabase.storage.from("store-images").remove([filePath]);
-						} catch (error) {
-							console.error("Failed to delete additional store image:", error);
-						}
-					}
-				}
-			}
-
 			// 3. Now delete database records in the correct order
-
-			// 3.1 Delete product images records
-			if (productData && productData.length > 0) {
-				const productIds = productData.map((product) => product.product_id);
-
-				// Delete product_images records
-				const { error: productImagesDbError } = await supabase
-					.from("product_images")
-					.delete()
-					.in("product_id", productIds);
-
-				if (productImagesDbError) throw productImagesDbError;
-			}
 
 			// 3.2 Delete products in this store
 			const { error: productsError } = await supabase
@@ -211,22 +137,6 @@ export default function AdminApprovedStoresList() {
 				.eq("store_id", store.store_id);
 
 			if (productsError) throw productsError;
-
-			// 3.3 Delete store_images records
-			const { error: storeImagesError } = await supabase
-				.from("store_images")
-				.delete()
-				.eq("store_id", store.store_id);
-
-			if (storeImagesError) throw storeImagesError;
-
-			// 3.4 Delete store_locations
-			const { error: storeLocationsError } = await supabase
-				.from("store_locations")
-				.delete()
-				.eq("store_id", store.store_id);
-
-			if (storeLocationsError) throw storeLocationsError;
 
 			// 3.5 Delete favorites where target_id is this store's ID and favorite_type is 'store'
 			const { error: favoritesError } = await supabase
