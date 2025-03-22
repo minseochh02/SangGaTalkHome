@@ -129,7 +129,7 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 	if (applications.length === 0) {
 		return (
 			<div className="text-center py-4 text-gray-500">
-				신청한 스토어이 없습니다.
+				신청한 스토어가 없습니다.
 			</div>
 		);
 	}

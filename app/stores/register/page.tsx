@@ -216,11 +216,13 @@ export default function StoreRegistration() {
 				throw error;
 			}
 
-			alert("입점 신청이 성공적으로 접수되었습니다. 검토 후 연락드리겠습니다.");
+			alert(
+				"스토어 등록 신청이 접수되었습니다. 신청 내용은 검토 후 승인 또는 거절될 수 있으며, 검토 기간은 영업일 기준 2~3일 정도 소요될 수 있습니다. 검토 결과는 등록하신 연락처(e메일 또는 휴대폰)로 안내드리겠습니다."
+			);
 			router.push("/profile");
 		} catch (error) {
 			console.error("Error submitting application:", error);
-			alert("입점 신청 중 오류가 발생했습니다. 다시 시도해주세요.");
+			alert("스토어 등록 중 오류가 발생했습니다. 다시 시도해주세요.");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -239,7 +241,7 @@ export default function StoreRegistration() {
 		<div className="w-full max-w-7xl mx-auto px-4 py-8">
 			{/* Header Section */}
 			<div className="text-center mb-8 md:mb-12">
-				<h1 className="text-3xl md:text-4xl font-bold mb-4">입점 신청</h1>
+				<h1 className="text-3xl md:text-4xl font-bold mb-4">스토어 등록</h1>
 				<p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
 					SGT과 함께 성장할 파트너를 찾습니다. 아래 양식을 작성하시면 검토 후
 					연락드리겠습니다.
@@ -512,7 +514,7 @@ export default function StoreRegistration() {
 										: ""
 								}`}
 							>
-								{isSubmitting ? "제출 중..." : "입점 신청하기"}
+								{isSubmitting ? "제출 중..." : "스토어 등록하기"}
 							</button>
 							{!selectedImage && (
 								<p className="mt-2 text-sm text-red-500 text-center">
@@ -525,12 +527,11 @@ export default function StoreRegistration() {
 
 				{/* Additional Information */}
 				<div className="mt-8 p-6 bg-[#FFF5E4] rounded-xl">
-					<h3 className="text-lg font-semibold mb-4">입점 신청 절차</h3>
+					<h3 className="text-lg font-semibold mb-4">스토어 등록 절차</h3>
 					<ol className="list-decimal list-inside space-y-2 text-gray-700">
-						<li>입점 신청서 작성 및 제출</li>
-						<li>서류 검토 (영업일 기준 3-5일 소요)</li>
-						<li>담당자 전화 상담</li>
-						<li>계약서 작성 및 입점 완료</li>
+						<li>1. 스토어 등록 신청 </li>
+						<li>2. 등록 내용 담당자 확인(영업일 기준 2~3일 소요)</li>
+						<li>3. 등록 완료</li>
 					</ol>
 				</div>
 			</div>

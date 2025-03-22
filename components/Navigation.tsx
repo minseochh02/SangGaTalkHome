@@ -75,7 +75,7 @@ export default function Navigation() {
 								SGT 상품
 							</Link>
 							<Link href="/stores/register" className="hover:text-primary">
-								입점 신청
+								스토어 등록
 							</Link>
 							<Link href="/sgt" className="hover:text-primary">
 								SGT 이용
@@ -205,7 +205,7 @@ export default function Navigation() {
 							className="hover:text-primary py-2"
 							onClick={() => setMobileMenuOpen(false)}
 						>
-							입점 신청
+							스토어 등록
 						</Link>
 						<Link
 							href="/sgt"

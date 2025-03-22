@@ -195,7 +195,7 @@ export default function CategoriesStoresContent() {
 					<div className="py-8 text-center text-red-500">{storesError}</div>
 				) : displayStores.length === 0 ? (
 					<div className="py-8 text-center">
-						해당 카테고리에 스토어이 없습니다.
+						해당 카테고리에 스토어가 없습니다.
 					</div>
 				) : (
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">

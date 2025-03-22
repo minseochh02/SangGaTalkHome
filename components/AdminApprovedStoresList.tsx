@@ -86,7 +86,7 @@ export default function AdminApprovedStoresList() {
 			await fetchStores();
 			toast({
 				title: "스토어 삭제 완료",
-				description: `${store.store_name} 스토어이 성공적으로 삭제되었습니다.`,
+				description: `${store.store_name} 스토어가 성공적으로 삭제되었습니다.`,
 				variant: "default",
 			});
 		} catch (err) {
@@ -141,7 +141,7 @@ export default function AdminApprovedStoresList() {
 	if (stores.length === 0) {
 		return (
 			<div className="text-center py-4 text-gray-500">
-				등록된 스토어이 없습니다.
+				등록된 스토어가 없습니다.
 			</div>
 		);
 	}

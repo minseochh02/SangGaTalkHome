@@ -156,7 +156,7 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 	if (favorites.length === 0) {
 		return (
 			<div className="text-center py-8 text-gray-500">
-				즐겨찾기한 스토어이 없습니다.
+				즐겨찾기한 스토어가 없습니다.
 			</div>
 		);
 	}

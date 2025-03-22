@@ -210,7 +210,7 @@ export default function AdminStoreApplicationsList() {
 	if (applications.length === 0) {
 		return (
 			<div className="text-center py-4 text-gray-500">
-				신청된 스토어이 없습니다.
+				신청된 스토어가 없습니다.
 			</div>
 		);
 	}
