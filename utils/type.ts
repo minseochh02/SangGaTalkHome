@@ -66,4 +66,5 @@ export interface Product {
 	created_at: string;
 	updated_at: string;
 	status: number;
+	markdown_content?: string | null; // Add markdown_content field
 }

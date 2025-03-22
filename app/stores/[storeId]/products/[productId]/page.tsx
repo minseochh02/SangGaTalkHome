@@ -28,6 +28,7 @@ function ProductDetailsContent({
 	const [isAuthLoading, setIsAuthLoading] = useState(true);
 	const [isProductDescriptionExpanded, setIsProductDescriptionExpanded] =
 		useState(false);
+	const [isHtmlContentExpanded, setIsHtmlContentExpanded] = useState(false);
 
 	// First, check authentication status
 	useEffect(() => {
@@ -84,7 +85,8 @@ function ProductDetailsContent({
 					.select(
 						`
             *,
-            sgt_price_text:sgt_price::text
+            sgt_price_text:sgt_price::text,
+            markdown_content
             `
 					)
 					.eq("product_id", productId)
@@ -294,6 +296,109 @@ function ProductDetailsContent({
 							<p className="text-gray-700">상품 설명 정보가 없습니다.</p>
 						)}
 					</div>
+
+					{/* Markdown Content Section - Only show if there's markdown content or if user is owner */}
+					{(product.markdown_content || isOwner) && (
+						<div className="bg-white rounded-xl shadow-md p-6">
+							<div className="flex justify-between items-center mb-4">
+								<h2 className="text-xl font-bold flex items-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="20"
+										height="20"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										className="mr-2 text-primary"
+									>
+										<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+										<path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path>
+									</svg>
+									상품 상세 정보
+								</h2>
+								{isOwner && (
+									<Link
+										href={`/stores/${storeId}/products/markdown-edit/${productId}`}
+									>
+										<button className="text-primary hover:text-primary/80 flex items-center text-sm">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												width="16"
+												height="16"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												strokeWidth="2"
+												className="mr-1"
+											>
+												<path d="M12 20h9"></path>
+												<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+											</svg>
+											수정하기
+										</button>
+									</Link>
+								)}
+							</div>
+
+							{product.markdown_content ? (
+								<div>
+									<div
+										className={
+											isHtmlContentExpanded
+												? ""
+												: "max-h-40 overflow-hidden relative"
+										}
+									>
+										<HtmlContent content={product.markdown_content} />
+										{!isHtmlContentExpanded && (
+											<div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent"></div>
+										)}
+									</div>
+									<div className="text-center mt-4">
+										<button
+											onClick={() =>
+												setIsHtmlContentExpanded(!isHtmlContentExpanded)
+											}
+											className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+										>
+											{isHtmlContentExpanded ? "접기" : "더 보기"}
+										</button>
+									</div>
+								</div>
+							) : isOwner ? (
+								<div className="bg-primary/5 rounded-lg p-6 text-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="40"
+										height="40"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="1.5"
+										className="mx-auto mb-3 text-primary/70"
+									>
+										<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+										<path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path>
+									</svg>
+									<h3 className="text-lg font-medium mb-2">
+										상품 상세 정보를 추가해보세요!
+									</h3>
+									<p className="text-muted-foreground mb-4">
+										편집기를 사용해 이미지, 표, 목록 등을 포함한 풍부한 콘텐츠를
+										작성할 수 있습니다.
+									</p>
+									<Link
+										href={`/stores/${storeId}/products/markdown-edit/${productId}`}
+									>
+										<button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+											상세 정보 추가하기
+										</button>
+									</Link>
+								</div>
+							) : null}
+						</div>
+					)}
 
 					{/* Store Information */}
 					<div className="bg-white rounded-xl shadow-md p-6">
