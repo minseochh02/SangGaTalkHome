@@ -23,6 +23,47 @@ export const updateSession = async (request: NextRequest) => {
     if (request.nextUrl.pathname === '/auth/callback') {
       console.log('Cookies in callback:', cookies.map(c => c.name));
       console.log('PKCE cookies present:', hasPKCECookies);
+      
+      // Special handling - attempt to recover the code verifier from URL if it's passed
+      const url = new URL(request.url);
+      const pkceState = url.searchParams.get('pkce_state');
+      if (pkceState) {
+        console.log('Found PKCE state in URL, will attempt recovery');
+        
+        // Add script to recover code verifier (will be injected via response)
+        response = new NextResponse(
+          `
+          <!DOCTYPE html>
+          <html>
+            <head><title>Authentication</title></head>
+            <body>
+              <script>
+                // Use stored code verifier from localStorage if available
+                try {
+                  const pkceState = "${pkceState}";
+                  const storedVerifier = localStorage.getItem('supabase_pkce_verifier_' + pkceState);
+                  
+                  if (storedVerifier) {
+                    document.cookie = "sb-pkce-verifier=" + storedVerifier + "; path=/; max-age=3600; SameSite=Lax";
+                    console.log("Recovered code verifier from localStorage");
+                  }
+                  
+                  // Redirect to the callback with the same parameters
+                  window.location.href = window.location.href;
+                } catch (e) {
+                  console.error("Error recovering PKCE state:", e);
+                  // Continue with the callback anyway
+                  window.location.href = window.location.href;
+                }
+              </script>
+              <p>Finalizing authentication...</p>
+            </body>
+          </html>
+          `, 
+          { headers: response.headers }
+        );
+        return response;
+      }
     }
 
     const supabase = createServerClient(
