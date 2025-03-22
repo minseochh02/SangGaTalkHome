@@ -64,7 +64,7 @@ export default function AdminApprovedStoresList() {
 
 		if (
 			!confirm(
-				`정말로 "${store.store_name}" 스토어을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+				`정말로 "${store.store_name}" 스토어을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다. 관련된 모든 제품, 이미지, 리뷰 등이 함께 삭제됩니다.`
 			)
 		) {
 			setProcessingId(null);
@@ -74,19 +74,85 @@ export default function AdminApprovedStoresList() {
 		try {
 			const supabase = createClient();
 
-			// Delete the store
-			const { error } = await supabase
+			// Delete in a transaction-like sequence to maintain data integrity
+			// We need to delete in the following order to avoid foreign key constraint errors:
+
+			// 1. Delete product_images linked to the store's products
+			// First, get all product IDs for this store
+			const { data: productData, error: productFetchError } = await supabase
+				.from("products")
+				.select("product_id")
+				.eq("store_id", store.store_id);
+
+			if (productFetchError) throw productFetchError;
+
+			// If there are products, delete their images
+			if (productData && productData.length > 0) {
+				const productIds = productData.map((product) => product.product_id);
+
+				const { error: productImagesError } = await supabase
+					.from("product_images")
+					.delete()
+					.in("product_id", productIds);
+
+				if (productImagesError) throw productImagesError;
+			}
+
+			// 2. Delete products in this store
+			const { error: productsError } = await supabase
+				.from("products")
+				.delete()
+				.eq("store_id", store.store_id);
+
+			if (productsError) throw productsError;
+
+			// 3. Delete store_images
+			const { error: storeImagesError } = await supabase
+				.from("store_images")
+				.delete()
+				.eq("store_id", store.store_id);
+
+			if (storeImagesError) throw storeImagesError;
+
+			// 4. Delete store_locations
+			const { error: storeLocationsError } = await supabase
+				.from("store_locations")
+				.delete()
+				.eq("store_id", store.store_id);
+
+			if (storeLocationsError) throw storeLocationsError;
+
+			// 5. Delete favorites where target_id is this store's ID and favorite_type is 'store'
+			const { error: favoritesError } = await supabase
+				.from("favorites")
+				.delete()
+				.eq("target_id", store.store_id)
+				.eq("favorite_type", "store");
+
+			if (favoritesError) throw favoritesError;
+
+			// 6. Delete reviews where target_id is this store's ID and review_type is 'store'
+			const { error: reviewsError } = await supabase
+				.from("reviews")
+				.delete()
+				.eq("target_id", store.store_id)
+				.eq("review_type", "store");
+
+			if (reviewsError) throw reviewsError;
+
+			// 7. Finally, delete the store itself
+			const { error: storeError } = await supabase
 				.from("stores")
 				.delete()
 				.eq("store_id", store.store_id);
 
-			if (error) throw error;
+			if (storeError) throw storeError;
 
 			// Refresh the stores list
 			await fetchStores();
 			toast({
 				title: "스토어 삭제 완료",
-				description: `${store.store_name} 스토어가 성공적으로 삭제되었습니다.`,
+				description: `${store.store_name} 스토어와 관련된 모든 데이터가 성공적으로 삭제되었습니다.`,
 				variant: "default",
 			});
 		} catch (err) {
