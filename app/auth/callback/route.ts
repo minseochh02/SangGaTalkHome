@@ -1,9 +1,5 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
-
-import type { Database } from '@/types.gen'
 
 export async function GET(request: Request) {
   // The `/auth/callback` route is required for the server-side auth flow implemented
@@ -15,25 +11,15 @@ export async function GET(request: Request) {
   const redirectTo = requestUrl.searchParams.get("redirect_to")?.toString();
 
   if (code) {
-    // Force Next.js to read cookies before Supabase tries to exchange the code
-    // This is the key fix from the GitHub discussion
-    await cookies(); // Access cookies to initialize them
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
-    const supabase = createRouteHandlerClient<Database>({ cookies })
-    
-    // This line is crucial according to the GitHub discussion
-    // It ensures the cookies are properly read before exchanging the code
-    await cookies();
-    
-    const response = await supabase.auth.exchangeCodeForSession(code)
-    
-    // Force Next.js to read cookies after the exchange as well
-    await cookies();
-    
-    if (response.error) {
-      console.error('Error logging in:', response.error.message)
-      return NextResponse.json({ error: response.error.message }, { status: 400 });
+    if (error) {
+      console.error('Error logging in:', error.message)
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
+    
+    console.log("Authentication successful, user:", data.user?.id);
   }
 
   if (redirectTo) {
