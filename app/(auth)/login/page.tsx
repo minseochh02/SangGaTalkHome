@@ -4,34 +4,14 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { signInWithGoogleAction } from "@/app/actions";
 
 export default function LoginPage() {
 	const router = useRouter();
 	const supabase = createClient();
 	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState("");
-	const [debugInfo, setDebugInfo] = useState<{ [key: string]: string }>({});
 
 	useEffect(() => {
-		// Get error message from URL if any
-		if (typeof window !== "undefined") {
-			const params = new URLSearchParams(window.location.search);
-			const errorMsg = params.get("error");
-			const codePresent = params.get("code_present");
-			const verifierPresent = params.get("verifier_present");
-
-			if (errorMsg) {
-				setError(errorMsg);
-			}
-
-			if (codePresent || verifierPresent) {
-				setDebugInfo({
-					codePresent: codePresent || "unknown",
-					verifierPresent: verifierPresent || "unknown",
-				});
-			}
-		}
-
 		// Check if user is already logged in
 		const checkAuth = async () => {
 			try {
@@ -55,102 +35,10 @@ export default function LoginPage() {
 
 	const handleGoogleSignIn = async () => {
 		try {
-			// Add hook for PKCE code verifier storage
-			// Monkey patch the internal auth functions to capture and store PKCE data
-			const originalStorageFunctions = Object.getOwnPropertyDescriptor(
-				Storage.prototype,
-				"setItem"
-			);
-			let pkceState = "";
-
-			// Intercept localStorage setItem to detect and backup code verifier
-			if (originalStorageFunctions) {
-				Object.defineProperty(Storage.prototype, "setItem", {
-					configurable: true,
-					enumerable: true,
-					writable: true,
-					value: function (key: string, value: string) {
-						// When the Supabase SDK stores a code verifier, also back it up
-						if (key.includes("code-verifier")) {
-							console.log("Intercepted code verifier storage", key);
-
-							// Extract state from key if present
-							const stateMatch = key.match(/pkce-(\w+)/);
-							if (stateMatch && stateMatch[1]) {
-								pkceState = stateMatch[1];
-								// Store with a standardized key format
-								localStorage.setItem(
-									"supabase_pkce_verifier_" + pkceState,
-									value
-								);
-							}
-						}
-						// Call original function
-						originalStorageFunctions.value.call(this, key, value);
-					},
-				});
-			}
-
-			const { data, error } = await supabase.auth.signInWithOAuth({
-				provider: "google",
-				options: {
-					redirectTo: `${window.location.origin}/auth/callback`,
-					queryParams: {
-						prompt: "consent", // Force consent to ensure fresh auth
-						access_type: "offline", // Request refresh tokens
-					},
-				},
-			});
-
-			// Restore original storage function
-			if (originalStorageFunctions) {
-				Object.defineProperty(
-					Storage.prototype,
-					"setItem",
-					originalStorageFunctions
-				);
-			}
-
-			if (error) {
-				throw error;
-			}
-
-			// Append PKCE state to the URL if available
-			if (data?.url && pkceState) {
-				const url = new URL(data.url);
-				url.searchParams.append("pkce_state", pkceState);
-				console.log("Redirecting to OAuth provider with PKCE state...");
-				window.location.href = url.toString();
-				return;
-			}
-
-			// Standard redirect
-			if (data?.url) {
-				console.log("Redirecting to OAuth provider...");
-			}
+			await signInWithGoogleAction();
 		} catch (error) {
 			console.error("Error signing in with Google:", error);
 		}
-	};
-
-	// Helper to clear all supabase-related cookies for debugging
-	const clearAuthCookies = () => {
-		if (typeof document === "undefined") return;
-
-		const cookies = document.cookie.split(";");
-		for (let i = 0; i < cookies.length; i++) {
-			const cookie = cookies[i];
-			const [name] = cookie.trim().split("=");
-
-			// Clear any Supabase-related cookies
-			if (name.includes("sb-") || name.includes("supabase")) {
-				document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
-				console.log(`Cleared cookie: ${name}`);
-			}
-		}
-
-		// Reload to ensure clean state
-		window.location.reload();
 	};
 
 	if (isLoading) {
@@ -165,29 +53,6 @@ export default function LoginPage() {
 		<div className="flex min-h-screen items-center justify-center bg-background">
 			<div className="w-full max-w-md p-8 space-y-4 rounded-lg shadow-lg bg-card">
 				<h2 className="text-2xl font-bold text-center">로그인</h2>
-
-				{error && (
-					<div className="p-3 bg-red-100 text-red-800 rounded-md text-sm">
-						<p className="font-semibold">로그인 오류:</p>
-						<p>{error}</p>
-						{Object.keys(debugInfo).length > 0 && (
-							<div className="mt-2 text-xs">
-								<p>디버그 정보:</p>
-								<ul className="list-disc pl-4">
-									<li>코드 존재: {debugInfo.codePresent}</li>
-									<li>코드 검증자 존재: {debugInfo.verifierPresent}</li>
-								</ul>
-								<button
-									onClick={clearAuthCookies}
-									className="mt-2 text-blue-600 underline"
-								>
-									인증 쿠키 초기화 (디버깅용)
-								</button>
-							</div>
-						)}
-					</div>
-				)}
-
 				<div className="space-y-4">
 					<Button
 						onClick={handleGoogleSignIn}

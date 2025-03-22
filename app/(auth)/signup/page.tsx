@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
+import { signInWithGoogleAction } from "@/app/actions";
 
 export default function SignupPage() {
 	const router = useRouter();
@@ -35,79 +36,7 @@ export default function SignupPage() {
 
 	const handleGoogleSignUp = async () => {
 		try {
-			// Add hook for PKCE code verifier storage
-			// Monkey patch the internal auth functions to capture and store PKCE data
-			const originalStorageFunctions = Object.getOwnPropertyDescriptor(
-				Storage.prototype,
-				"setItem"
-			);
-			let pkceState = "";
-
-			// Intercept localStorage setItem to detect and backup code verifier
-			if (originalStorageFunctions) {
-				Object.defineProperty(Storage.prototype, "setItem", {
-					configurable: true,
-					enumerable: true,
-					writable: true,
-					value: function (key: string, value: string) {
-						// When the Supabase SDK stores a code verifier, also back it up
-						if (key.includes("code-verifier")) {
-							console.log("Intercepted code verifier storage", key);
-
-							// Extract state from key if present
-							const stateMatch = key.match(/pkce-(\w+)/);
-							if (stateMatch && stateMatch[1]) {
-								pkceState = stateMatch[1];
-								// Store with a standardized key format
-								localStorage.setItem(
-									"supabase_pkce_verifier_" + pkceState,
-									value
-								);
-							}
-						}
-						// Call original function
-						originalStorageFunctions.value.call(this, key, value);
-					},
-				});
-			}
-
-			const { data, error } = await supabase.auth.signInWithOAuth({
-				provider: "google",
-				options: {
-					redirectTo: `${window.location.origin}/auth/callback`,
-					queryParams: {
-						prompt: "consent", // Force consent to ensure fresh auth
-						access_type: "offline", // Request refresh tokens
-					},
-				},
-			});
-
-			// Restore original storage function
-			if (originalStorageFunctions) {
-				Object.defineProperty(
-					Storage.prototype,
-					"setItem",
-					originalStorageFunctions
-				);
-			}
-
-			if (error) {
-				throw error;
-			}
-
-			// Append PKCE state to the URL if available
-			if (data?.url && pkceState) {
-				const url = new URL(data.url);
-				url.searchParams.append("pkce_state", pkceState);
-				console.log("Redirecting to OAuth provider with PKCE state...");
-				window.location.href = url.toString();
-				return;
-			}
-
-			// Standard redirect
-			if (data?.url) {
-				console.log("Redirecting to OAuth provider...");
-			}
+			await signInWithGoogleAction();
 		} catch (error) {
 			console.error("Error signing up with Google:", error);
 		}
