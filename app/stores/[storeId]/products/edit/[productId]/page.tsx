@@ -587,6 +587,17 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 						>
 							취소
 						</Button>
+						<Button
+							type="button"
+							variant="secondary"
+							onClick={() =>
+								router.push(
+									`/stores/${storeId}/products/markdown-edit/${productId}`
+								)
+							}
+						>
+							리치 텍스트 에디터
+						</Button>
 						<Button type="submit" disabled={isSubmitting}>
 							{isSubmitting ? "저장 중..." : "저장"}
 						</Button>

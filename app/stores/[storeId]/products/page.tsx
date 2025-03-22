@@ -14,7 +14,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, FileText } from "lucide-react";
 import { formatSGTPrice } from "@/utils/formatters";
 
 interface StoreProductsPageProps {
@@ -252,14 +252,24 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 								</p>
 							</CardContent>
 							<CardFooter className="flex justify-between">
-								<Link
-									href={`/stores/${storeId}/products/edit/${product.product_id}`}
-								>
-									<Button variant="outline" size="sm">
-										<Edit className="mr-2 h-4 w-4" />
-										수정
-									</Button>
-								</Link>
+								<div className="flex space-x-2">
+									<Link
+										href={`/stores/${storeId}/products/edit/${product.product_id}`}
+									>
+										<Button variant="outline" size="sm">
+											<Edit className="mr-2 h-4 w-4" />
+											수정
+										</Button>
+									</Link>
+									<Link
+										href={`/stores/${storeId}/products/markdown-edit/${product.product_id}`}
+									>
+										<Button variant="secondary" size="sm">
+											<FileText className="mr-2 h-4 w-4" />
+											리치 에디터
+										</Button>
+									</Link>
+								</div>
 								<Button
 									variant="destructive"
 									size="sm"
