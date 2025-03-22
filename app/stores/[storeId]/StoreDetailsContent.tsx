@@ -437,7 +437,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							>
 								<path d="M20.91 8.84 8.56 21.18a4.18 4.18 0 0 1-5.91 0 4.18 4.18 0 0 1 0-5.91L14.99 2.92a2.79 2.79 0 0 1 3.94 0 2.79 2.79 0 0 1 0 3.94L7.67 18.12a1.4 1.4 0 0 1-1.97 0 1.4 1.4 0 0 1 0-1.97L16.23 5.6"></path>
 							</svg>
-							상품 목록
+							판매 상품
 						</h2>
 
 						{loadingProducts ? (

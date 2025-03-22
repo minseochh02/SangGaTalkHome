@@ -204,12 +204,12 @@ export default function CategoriesStoresContent() {
 								key={store.store_id}
 								className="border border-primary/20 rounded-xl overflow-hidden hover:shadow-xl transition-all duration-200 hover:border-primary/40 flex flex-col"
 							>
-								<div className="aspect-[4/3] bg-gray-100 relative">
+								<div className="h-48 bg-white relative">
 									{store.image_url ? (
 										<img
 											src={store.image_url}
 											alt={store.store_name}
-											className="w-full h-full object-cover"
+											className="w-full h-full object-contain"
 										/>
 									) : (
 										<div className="absolute inset-0 flex items-center justify-center text-gray-400">

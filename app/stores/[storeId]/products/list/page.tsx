@@ -132,7 +132,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 					</div>
 				)}
 				<div>
-					<h1 className="text-3xl font-bold">{store.store_name} 상품 목록</h1>
+					<h1 className="text-3xl font-bold">{store.store_name} 판매 상품</h1>
 					{store.categories?.category_name && (
 						<p className="text-muted-foreground">
 							{store.categories.category_name}

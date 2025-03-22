@@ -7,24 +7,24 @@ import {
 
 const features = [
 	{
-		name: "주변 상점 찾기",
+		name: "주변 스토어 찾기",
 		description:
-			"카테고리나 위치를 기반으로 주변의 최고의 상점들을 찾아보세요.",
+			"카테고리나 위치를 기반으로 주변의 최고의 스토어들을 찾아보세요.",
 		icon: MapIcon,
 	},
 	{
 		name: "SGT 토큰 리워드",
-		description: "쇼핑하고 지역 상점과 소통하면서 SGT 토큰을 적립하세요.",
+		description: "쇼핑하고 지역 스토어과 소통하면서 SGT 토큰을 적립하세요.",
 		icon: CurrencyDollarIcon,
 	},
 	{
 		name: "SGT 연동",
-		description: "SGT을 통해 상점 주인과 다른 쇼핑객들과 직접 소통하세요.",
+		description: "SGT을 통해 스토어 주인과 다른 쇼핑객들과 직접 소통하세요.",
 		icon: ChatBubbleLeftRightIcon,
 	},
 	{
 		name: "특별한 혜택",
-		description: "참여 상점들의 특별한 프로모션과 할인 혜택을 만나보세요.",
+		description: "참여 스토어들의 특별한 프로모션과 할인 혜택을 만나보세요.",
 		icon: ShoppingBagIcon,
 	},
 ];
