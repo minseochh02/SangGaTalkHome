@@ -21,15 +21,26 @@ export const updateSession = async (request: NextRequest) => {
             return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value),
-            );
-            response = NextResponse.next({
-              request,
+            // Set cookies on request for middleware
+            cookiesToSet.forEach(({ name, value }) => {
+              request.cookies.set(name, value);
             });
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options),
-            );
+            
+            // Create a new response to preserve the updated cookies
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            });
+            
+            // Set cookies on response with full options
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set({
+                name,
+                value,
+                ...options,
+              });
+            });
           },
         },
       },
@@ -37,7 +48,7 @@ export const updateSession = async (request: NextRequest) => {
 
     // This will refresh session if expired - required for Server Components
     // https://supabase.com/docs/guides/auth/server-side/nextjs
-    const user = await supabase.auth.getUser();
+    await supabase.auth.getUser();
 
     // // protected routes
     // if (request.nextUrl.pathname.startsWith("/protected") && user.error) {
@@ -50,6 +61,7 @@ export const updateSession = async (request: NextRequest) => {
 
     return response;
   } catch (e) {
+    console.error("Supabase middleware error:", e);
     // If you are here, a Supabase client could not be created!
     // This is likely because you have not set up environment variables.
     // Check out http://localhost:3000 for Next Steps.
