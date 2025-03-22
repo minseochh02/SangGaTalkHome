@@ -15,8 +15,13 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
-      console.error("Error exchanging code for session:", error.message);
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+      // try to refresh the token
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error("Error refreshing session:", refreshError.message);
+      } else {
+        console.log("Session refreshed successfully, user:", refreshData.user?.id);
+      }
     }
     
     console.log("Authentication successful, user:", data.user?.id);
