@@ -13,39 +13,16 @@ interface StoreProductsListProps {
 
 function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 	const router = useRouter();
-	const supabase = createClient();
 	const [store, setStore] = useState<Store | null>(null);
 	const [products, setProducts] = useState<Product[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [isOwner, setIsOwner] = useState(false);
-	const [user, setUser] = useState<any>(null);
-	const [isAuthLoading, setIsAuthLoading] = useState(true);
-
-	// First, check authentication status
-	useEffect(() => {
-		const checkAuth = async () => {
-			try {
-				const {
-					data: { user: authUser },
-					error,
-				} = await supabase.auth.getUser();
-				setUser(authUser || null);
-			} catch (error) {
-				console.error("Auth error:", error);
-			} finally {
-				setIsAuthLoading(false);
-			}
-		};
-
-		checkAuth();
-	}, [supabase]);
 
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
 				setIsLoading(true);
-				// ... existing code ...
+				const supabase = createClient();
 
 				// Fetch store data
 				const { data: storeData, error: storeError } = await supabase
@@ -54,7 +31,6 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 						`
             store_id,
             store_name,
-            user_id,
             image_url,
             categories:category_id(category_id, category_name)
           `
@@ -64,11 +40,6 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 
 				if (storeError) throw storeError;
 				setStore(storeData as unknown as Store);
-
-				// Check if user is store owner
-				if (user && storeData.user_id === user.id) {
-					setIsOwner(true);
-				}
 
 				// Fetch active products for this store
 				const { data: productsData, error: productsError } = await supabase
@@ -90,7 +61,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 		};
 
 		fetchData();
-	}, [storeId, user]);
+	}, [storeId]);
 
 	if (isLoading) {
 		return (
@@ -150,27 +121,6 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 				</Link>
 			</div>
 
-			{isOwner && (
-				<div className="mb-6 p-3 bg-primary/10 rounded-lg border border-primary/30 flex items-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="20"
-						height="20"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2"
-						className="mr-2 text-primary"
-					>
-						<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-						<polyline points="22 4 12 14.01 9 11.01"></polyline>
-					</svg>
-					<span className="text-sm font-medium">
-						스토어 소유자 모드로 상품 목록을 보고 있습니다.
-					</span>
-				</div>
-			)}
-
 			<div className="flex items-center space-x-4 mb-8">
 				{store.image_url && (
 					<div className="w-16 h-16 rounded-full overflow-hidden">
@@ -203,69 +153,46 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 					</Link>
 				</div>
 			) : (
-				<div className="space-y-6">
-					{isOwner && (
-						<div className="flex justify-end mb-4">
-							<Link href={`/stores/${storeId}/products/add`}>
-								<button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="18"
-										height="18"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										strokeWidth="2"
-										className="mr-2"
-									>
-										<path d="M12 5v14M5 12h14" />
-									</svg>
-									새 상품 등록
-								</button>
-							</Link>
-						</div>
-					)}
-					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-						{products.map((product) => (
-							<Link
-								key={product.product_id}
-								href={`/stores/${storeId}/products/${product.product_id}`}
-								className="border rounded-lg overflow-hidden flex flex-col hover:shadow-md transition-shadow"
-							>
-								<div className="aspect-video w-full overflow-hidden bg-gray-100">
-									{product.image_url ? (
-										<img
-											src={product.image_url}
-											alt={product.product_name}
-											className="w-full h-full object-cover"
-										/>
-									) : (
-										<div className="w-full h-full flex items-center justify-center">
-											<p className="text-muted-foreground">이미지 없음</p>
-										</div>
+				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+					{products.map((product) => (
+						<Link
+							key={product.product_id}
+							href={`/stores/${storeId}/products/${product.product_id}`}
+							className="border rounded-lg overflow-hidden flex flex-col hover:shadow-md transition-shadow"
+						>
+							<div className="aspect-video w-full overflow-hidden bg-gray-100">
+								{product.image_url ? (
+									<img
+										src={product.image_url}
+										alt={product.product_name}
+										className="w-full h-full object-cover"
+									/>
+								) : (
+									<div className="w-full h-full flex items-center justify-center">
+										<p className="text-muted-foreground">이미지 없음</p>
+									</div>
+								)}
+							</div>
+							<div className="p-4 flex-1 flex flex-col">
+								<h3 className="font-semibold text-lg line-clamp-1">
+									{product.product_name}
+								</h3>
+								<p className="text-sm text-muted-foreground line-clamp-2 mt-1 flex-1">
+									{product.description || "상품 설명이 없습니다."}
+								</p>
+								<div className="mt-2">
+									<p className="font-semibold">
+										{product.price.toLocaleString()}원
+									</p>
+									{product.sgt_price && (
+										<p className="text-xs text-primary">
+											SGT: {formatSGTPrice(product.sgt_price)} 토큰
+										</p>
 									)}
 								</div>
-								<div className="p-4 flex-1 flex flex-col">
-									<h3 className="font-semibold text-lg line-clamp-1">
-										{product.product_name}
-									</h3>
-									<p className="text-sm text-muted-foreground line-clamp-2 mt-1 flex-1">
-										{product.description || "상품 설명이 없습니다."}
-									</p>
-									<div className="mt-2">
-										<p className="font-semibold">
-											{product.price.toLocaleString()}원
-										</p>
-										{product.sgt_price && (
-											<p className="text-xs text-primary">
-												SGT: {formatSGTPrice(product.sgt_price)} 토큰
-											</p>
-										)}
-									</div>
-								</div>
-							</Link>
-						))}
-					</div>
+							</div>
+						</Link>
+					))}
 				</div>
 			)}
 		</div>
