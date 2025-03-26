@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FaDownload } from "react-icons/fa";
 
 export default function Hero() {
 	return (
@@ -30,6 +31,14 @@ export default function Hero() {
 										className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-[#6A9C89] bg-[#C1D8C3] hover:bg-[#A1C8A3] md:py-4 md:text-lg md:px-8"
 									>
 										스토어 등록하기
+									</Link>
+								</div>
+								<div className="sm:mt-0 w-full sm:w-auto">
+									<Link
+										href="/download"
+										className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-[#4A90E2] hover:bg-[#357ABD] md:py-4 md:text-lg md:px-8"
+									>
+										<FaDownload className="mr-2" />앱 다운로드
 									</Link>
 								</div>
 							</div>
