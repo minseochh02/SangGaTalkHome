@@ -74,11 +74,12 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
     };
 
     // Create a URL with query parameters
-    const params = new URLSearchParams();
-    params.append('confmKey', encodeURIComponent('devU01TX0FVVEgyMDI1MDMyODEyMjUwMzExNTU4ODY='));
-    params.append('returnUrl', encodeURIComponent(window.location.href));
-    params.append('resultType', '4');
-    params.append('inputYn', 'N');
+    const params = new URLSearchParams({
+      confmKey: "devU01TX0FVVEgyMDI1MDMyODIyNTI0OTExNTU5MDg=",
+      returnUrl: window.location.href,
+      resultType: "4",
+      inputYn: "N"
+    });
 
     // Open the popup with GET request
     window.open(
