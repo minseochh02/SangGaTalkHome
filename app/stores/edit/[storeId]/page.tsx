@@ -17,6 +17,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
+import AddressPopup from "@/app/components/AddressPopup";
 
 interface EditStoreFormProps {
 	storeId: string;
@@ -33,6 +34,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isLoadingStore, setIsLoadingStore] = useState(true);
 	const [storeData, setStoreData] = useState<Store | null>(null);
+	const [showAddressPopup, setShowAddressPopup] = useState(false);
 	const [formData, setFormData] = useState({
 		store_name: "",
 		store_type: "1", // Default to physical store
@@ -184,6 +186,11 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 			};
 			reader.readAsDataURL(file);
 		}
+	};
+
+	// Handle address selection from popup
+	const handleAddressSelect = (address: string) => {
+		setFormData((prev) => ({ ...prev, address }));
 	};
 
 	// Handle form submission
@@ -366,13 +373,31 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					{/* Address */}
 					<div className="space-y-2">
 						<Label htmlFor="address">주소</Label>
-						<Input
-							id="address"
-							name="address"
-							value={formData.address}
-							onChange={handleChange}
-						/>
+						<div className="flex gap-2">
+							<Input
+								id="address"
+								name="address"
+								value={formData.address}
+								onChange={handleChange}
+								readOnly
+								className="flex-grow"
+							/>
+							<Button 
+								type="button" 
+								variant="outline"
+								onClick={() => setShowAddressPopup(true)}
+							>
+								주소 검색
+							</Button>
+						</div>
 					</div>
+
+					{showAddressPopup && (
+						<AddressPopup 
+							onClose={() => setShowAddressPopup(false)} 
+							onSelect={handleAddressSelect} 
+						/>
+					)}
 
 					{/* Phone Number */}
 					<div className="space-y-2">
