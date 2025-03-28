@@ -73,33 +73,19 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
       onClose();
     };
 
-    // Create and submit the form to open the address popup
-    const form = document.createElement("form");
-    form.method = "post";
-    form.action = "https://business.juso.go.kr/addrlink/addrLinkUrl.do";
+    // Create a URL with query parameters
+    const params = new URLSearchParams({
+      confmKey: "devU01TX0FVVEgyMDI1MDMyODEyMjUwMzExNTU4ODY=",
+      returnUrl: window.location.href,
+      resultType: "4"
+    });
 
-    const confmKey = document.createElement("input");
-    confmKey.type = "hidden";
-    confmKey.name = "confmKey";
-    confmKey.value = "devU01TX0FVVEgyMDI1MDMyODEyMjUwMzExNTU4ODY=";
-
-    const returnUrl = document.createElement("input");
-    returnUrl.type = "hidden";
-    returnUrl.name = "returnUrl";
-    returnUrl.value = window.location.href;
-
-    const resultType = document.createElement("input");
-    resultType.type = "hidden";
-    resultType.name = "resultType";
-    resultType.value = "4";
-
-    form.appendChild(confmKey);
-    form.appendChild(returnUrl);
-    form.appendChild(resultType);
-
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+    // Open the popup with GET request
+    window.open(
+      `https://business.juso.go.kr/addrlink/addrLinkUrl.do?${params.toString()}`,
+      "popup",
+      "width=570,height=420,scrollbars=yes,resizable=yes"
+    );
 
     return () => {
       // Clean up the callback when component unmounts
