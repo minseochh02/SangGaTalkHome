@@ -48,29 +48,41 @@ async function handleRequest(request: Request) {
   // Send data to parent window and close popup
   return new NextResponse(`
     <html>
+      <head>
+        <meta charset="UTF-8">
+      </head>
       <body>
         <script>
           const parentWindow = window.opener || window.parent;
           if (parentWindow && parentWindow.jusoCallBack) {
+            // Ensure proper decoding of Korean characters
+            const decodeValue = (val) => {
+              try {
+                return decodeURIComponent(encodeURIComponent(val));
+              } catch (e) {
+                return val;
+              }
+            };
+
             parentWindow.jusoCallBack(
-              "${roadFullAddr}",
-              "${roadAddrPart1}",
-              "${addrDetail}",
-              "${roadAddrPart2}",
-              "${engAddr}",
-              "${jibunAddr}",
+              decodeValue("${roadFullAddr}"),
+              decodeValue("${roadAddrPart1}"),
+              decodeValue("${addrDetail}"),
+              decodeValue("${roadAddrPart2}"),
+              decodeValue("${engAddr}"),
+              decodeValue("${jibunAddr}"),
               "${zipNo}",
               "${admCd}",
               "${rnMgtSn}",
               "${bdMgtSn}",
-              "${detBdNmList}",
-              "${bdNm}",
+              decodeValue("${detBdNmList}"),
+              decodeValue("${bdNm}"),
               "${bdKdcd}",
-              "${siNm}",
-              "${sggNm}",
-              "${emdNm}",
-              "${liNm}",
-              "${rn}",
+              decodeValue("${siNm}"),
+              decodeValue("${sggNm}"),
+              decodeValue("${emdNm}"),
+              decodeValue("${liNm}"),
+              decodeValue("${rn}"),
               "${udrtYn}",
               "${buldMnnm}",
               "${buldSlno}",
@@ -86,7 +98,7 @@ async function handleRequest(request: Request) {
     </html>
   `, {
     headers: {
-      'Content-Type': 'text/html',
+      'Content-Type': 'text/html; charset=UTF-8',
     },
   });
 }

@@ -81,7 +81,9 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
       confmKey: "devU01TX0FVVEgyMDI1MDMyODEyMjUwMzExNTU4ODY=",
       returnUrl: callbackUrl,
       resultType: "4", // JSON format for communication
-      inputYn: "N"
+      inputYn: "N",
+      charset: "UTF-8", // Explicitly specify UTF-8 encoding
+      encoding: "UTF-8"  // Additional encoding parameter
     });
 
     // Open the popup with GET request
