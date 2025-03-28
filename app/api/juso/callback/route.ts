@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const params = url.searchParams;
+// Common function to handle both GET and POST requests
+async function handleRequest(request: Request) {
+  let params: URLSearchParams;
+  
+  if (request.method === 'POST') {
+    // Handle POST request data
+    const formData = await request.formData();
+    params = new URLSearchParams();
+    // Convert FormData to URLSearchParams
+    formData.forEach((value, key) => {
+      params.append(key, value.toString());
+    });
+  } else {
+    // Handle GET request data
+    const url = new URL(request.url);
+    params = url.searchParams;
+  }
   
   // Extract the data from the Juso API callback
   const roadFullAddr = params.get('roadFullAddr') || '';
@@ -75,4 +89,14 @@ export async function GET(request: Request) {
       'Content-Type': 'text/html',
     },
   });
+}
+
+// Handle GET requests
+export async function GET(request: Request) {
+  return handleRequest(request);
+}
+
+// Handle POST requests
+export async function POST(request: Request) {
+  return handleRequest(request);
 } 

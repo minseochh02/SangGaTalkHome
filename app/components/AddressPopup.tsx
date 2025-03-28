@@ -73,11 +73,14 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
       onClose();
     };
 
-    // Create a URL with query parameters
+    // Create a URL with query parameters - using absolute URL with https protocol
+    // This ensures the Juso API can properly redirect back to our callback
+    const callbackUrl = `${window.location.protocol}//${window.location.host}/api/juso/callback`;
+    
     const params = new URLSearchParams({
       confmKey: "devU01TX0FVVEgyMDI1MDMyODEyMjUwMzExNTU4ODY=",
-      returnUrl: `${window.location.origin}/api/juso/callback`,
-      resultType: "4",
+      returnUrl: callbackUrl,
+      resultType: "4", // JSON format for communication
       inputYn: "N"
     });
 
