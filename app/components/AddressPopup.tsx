@@ -77,7 +77,8 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
     const params = new URLSearchParams({
       confmKey: "devU01TX0FVVEgyMDI1MDMyODEyMjUwMzExNTU4ODY=",
       returnUrl: window.location.href,
-      resultType: "4"
+      resultType: "4",
+      inputYn: "N"
     });
 
     // Open the popup with GET request
