@@ -7,6 +7,7 @@ import { Category } from "@/utils/type";
 import { toast } from "sonner";
 import Image from "next/image";
 import { v4 as uuidv4 } from "uuid";
+import AddressPopup from "@/app/components/AddressPopup";
 
 interface FormData {
 	business_name: string;
@@ -28,6 +29,7 @@ export default function StoreRegistration() {
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [showAddressPopup, setShowAddressPopup] = useState(false);
 
 	// Image upload states
 	const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -389,14 +391,24 @@ export default function StoreRegistration() {
 								<label className="block text-sm font-medium text-gray-700 mb-2">
 									스토어 주소 <span className="text-red-500">*</span>
 								</label>
-								<input
-									type="text"
-									name="address"
-									required
-									value={formData.address}
-									onChange={handleChange}
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
-								/>
+								<div className="flex gap-2">
+									<input
+										type="text"
+										name="address"
+										required
+										value={formData.address}
+										onChange={handleChange}
+										readOnly
+										className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
+									/>
+									<button
+										type="button"
+										onClick={() => setShowAddressPopup(true)}
+										className="px-4 py-2 bg-[#FFA725] text-white rounded-lg hover:bg-[#FF9500] focus:outline-none focus:ring-2 focus:ring-[#FFA725] focus:ring-opacity-50"
+									>
+										주소 검색
+									</button>
+								</div>
 							</div>
 
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -535,6 +547,16 @@ export default function StoreRegistration() {
 					</ol>
 				</div>
 			</div>
+
+			{showAddressPopup && (
+				<AddressPopup
+					onClose={() => setShowAddressPopup(false)}
+					onSelect={(address) => {
+						setFormData((prev) => ({ ...prev, address }));
+						setShowAddressPopup(false);
+					}}
+				/>
+			)}
 		</div>
 	);
 }
