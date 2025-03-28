@@ -9,7 +9,7 @@ interface AddressPopupProps {
 
 declare global {
   interface Window {
-    jusoCallBack: (
+    jusoCallBack?: (
       roadFullAddr: string,
       roadAddrPart1: string,
       addrDetail: string,
