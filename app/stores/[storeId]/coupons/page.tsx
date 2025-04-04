@@ -1,11 +1,12 @@
-"use client";
-
 import CouponListContent from "./CouponListContent";
 
-export default function CouponListPage({
+export default async function CouponListPage({
   params,
 }: {
-  params: { storeId: string };
+  params: Promise<{ storeId: string }>;
 }) {
-  return <CouponListContent storeId={params.storeId} />;
+  const resolvedParams = await params;
+  const { storeId } = resolvedParams;
+  
+  return <CouponListContent storeId={storeId} />;
 } 

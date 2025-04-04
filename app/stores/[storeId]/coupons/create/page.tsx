@@ -1,11 +1,12 @@
-"use client";
-
 import CouponCreateContent from "./CouponCreateContent";
 
-export default function CouponCreatePage({
+export default async function CouponCreatePage({
   params,
 }: {
-  params: { storeId: string };
+  params: Promise<{ storeId: string }>;
 }) {
-  return <CouponCreateContent storeId={params.storeId} />;
+  const resolvedParams = await params;
+  const { storeId } = resolvedParams;
+  
+  return <CouponCreateContent storeId={storeId} />;
 } 
