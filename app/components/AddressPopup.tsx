@@ -89,7 +89,7 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
     // Open the popup with GET request
     window.open(
       // `https://business.juso.go.kr/addrlink/addrLinkUrl.do?${params.toString()}`,
-      "https://business.juso.go.kr/addrlink/addrCoordUrl.do?${params.toString()}",
+      `https://business.juso.go.kr/addrlink/addrCoordUrl.do?${params.toString()}`,
       "popup",
       "width=570,height=420,scrollbars=yes,resizable=yes"
     );
