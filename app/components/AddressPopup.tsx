@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Script from "next/script";
 
 interface AddressPopupProps {
   onClose: () => void;
@@ -38,6 +39,7 @@ declare global {
       entX: string,
       entY: string
     ) => void;
+    proj4: any;
   }
 }
 
@@ -73,7 +75,29 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
       entX: string,
       entY: string
     ) => {
-      onSelect(roadFullAddr, entY, entX);
+      // Make sure proj4js is loaded
+      if (typeof window.proj4 !== 'undefined') {
+        // Convert coordinates from EPSG:5179 to WGS84 (EPSG:4326)
+        // Round to 6 decimal places for precision
+        const coordX = Math.round(parseFloat(entX) * 1000000) / 1000000;
+        const coordY = Math.round(parseFloat(entY) * 1000000) / 1000000;
+        const point = [coordX, coordY];
+        
+        // Define the coordinate systems
+        window.proj4.defs["EPSG:5179"] = "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs";
+        
+        const grs80 = window.proj4.Proj(window.proj4.defs["EPSG:5179"]);
+        const wgs84 = window.proj4.Proj(window.proj4.defs["EPSG:4326"]); // WGS84 (latitude/longitude)
+        
+        const p = window.proj4.toPoint(point);
+        const transformed = window.proj4.transform(grs80, wgs84, p);
+        
+        // Pass the converted coordinates (latitude, longitude)
+        onSelect(roadFullAddr, transformed.y.toString(), transformed.x.toString());
+      } else {
+        console.error("proj4js library not loaded. Falling back to raw coordinates.");
+        onSelect(roadFullAddr, entY, entX);
+      }
       onClose();
     };
 
@@ -104,5 +128,12 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
     };
   }, [onClose, onSelect]);
 
-  return null;
+  return (
+    <>
+      <Script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.2/proj4.js" 
+        strategy="beforeInteractive"
+      />
+    </>
+  );
 } 
