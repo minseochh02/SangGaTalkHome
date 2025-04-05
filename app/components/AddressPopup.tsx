@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 interface AddressPopupProps {
   onClose: () => void;
-  onSelect: (address: string) => void;
+  onSelect: (address: string, latitude?: string, longitude?: string) => void;
 }
 
 declare global {
@@ -34,7 +34,9 @@ declare global {
       mtYn: string,
       lnbrMnnm: string,
       lnbrSlno: string,
-      emdNo: string
+      emdNo: string,
+      entX: string,
+      entY: string
     ) => void;
   }
 }
@@ -67,9 +69,11 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
       mtYn: string,
       lnbrMnnm: string,
       lnbrSlno: string,
-      emdNo: string
+      emdNo: string,
+      entX: string,
+      entY: string
     ) => {
-      onSelect(roadFullAddr);
+      onSelect(roadFullAddr, entY, entX);
       onClose();
     };
 

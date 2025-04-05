@@ -16,6 +16,8 @@ interface FormData {
 	phone_number: string;
 	email: string;
 	address: string;
+	latitude?: string;
+	longitude?: string;
 	category_id: string;
 	description: string;
 	operating_hours: string;
@@ -60,6 +62,8 @@ export default function StoreRegistration() {
 		phone_number: "",
 		email: "",
 		address: "",
+		latitude: "",
+		longitude: "",
 		category_id: "",
 		description: "",
 		operating_hours: "",
@@ -205,6 +209,8 @@ export default function StoreRegistration() {
 				phone_number: formData.phone_number,
 				email: formData.email,
 				address: formData.address,
+				latitude: formData.latitude || null,
+				longitude: formData.longitude || null,
 				category_id: formData.category_id,
 				description: formData.description,
 				operating_hours: formData.operating_hours,
@@ -551,8 +557,13 @@ export default function StoreRegistration() {
 			{showAddressPopup && (
 				<AddressPopup
 					onClose={() => setShowAddressPopup(false)}
-					onSelect={(address) => {
-						setFormData((prev) => ({ ...prev, address }));
+					onSelect={(address, latitude, longitude) => {
+						setFormData((prev) => ({ 
+							...prev, 
+							address,
+							latitude: latitude || "",
+							longitude: longitude || "" 
+						}));
 						setShowAddressPopup(false);
 					}}
 				/>

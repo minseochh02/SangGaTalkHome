@@ -41,6 +41,8 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 		category_id: "",
 		description: "",
 		address: "",
+		latitude: "",
+		longitude: "",
 		phone_number: "",
 		website_url: "",
 		operating_hours: "",
@@ -96,6 +98,8 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
             category_id,
             description,
             address,
+            latitude,
+            longitude,
             phone_number,
             website_url,
             image_url,
@@ -125,6 +129,8 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					category_id: storeData.category_id || "",
 					description: storeData.description || "",
 					address: storeData.address || "",
+					latitude: storeData.latitude || "",
+					longitude: storeData.longitude || "",
 					phone_number: storeData.phone_number || "",
 					website_url: storeData.website_url || "",
 					operating_hours: storeData.operating_hours || "",
@@ -189,8 +195,13 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 	};
 
 	// Handle address selection from popup
-	const handleAddressSelect = (address: string) => {
-		setFormData((prev) => ({ ...prev, address }));
+	const handleAddressSelect = (address: string, latitude?: string, longitude?: string) => {
+		setFormData((prev) => ({ 
+			...prev, 
+			address,
+			latitude: latitude || "", 
+			longitude: longitude || "" 
+		}));
 	};
 
 	// Handle form submission
@@ -239,6 +250,8 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					category_id: formData.category_id,
 					description: formData.description,
 					address: formData.address,
+					latitude: formData.latitude || null,
+					longitude: formData.longitude || null,
 					phone_number: formData.phone_number,
 					website_url: formData.website_url,
 					operating_hours: formData.operating_hours,

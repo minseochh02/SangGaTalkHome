@@ -44,6 +44,8 @@ async function handleRequest(request: Request) {
   const lnbrMnnm = params.get('lnbrMnnm') || '';
   const lnbrSlno = params.get('lnbrSlno') || '';
   const emdNo = params.get('emdNo') || '';
+  const entX = params.get('entX') || '';
+  const entY = params.get('entY') || '';
 
   // Send data to parent window and close popup
   return new NextResponse(`
@@ -89,7 +91,9 @@ async function handleRequest(request: Request) {
               "${mtYn}",
               "${lnbrMnnm}",
               "${lnbrSlno}",
-              "${emdNo}"
+              "${emdNo}",
+              "${entX}",
+              "${entY}"
             );
           }
           window.close();
