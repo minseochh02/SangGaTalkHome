@@ -558,6 +558,7 @@ export default function StoreRegistration() {
 				<AddressPopup
 					onClose={() => setShowAddressPopup(false)}
 					onSelect={(address, latitude, longitude) => {
+						console.log(address, latitude, longitude);
 						setFormData((prev) => ({ 
 							...prev, 
 							address,
