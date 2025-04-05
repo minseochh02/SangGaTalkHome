@@ -17,7 +17,7 @@ export default function DownloadPage() {
 					</div>
 
 					<p className="text-lg text-muted-foreground">
-						안드로이드 기기에서 SanggaWallet을 설치하세요.
+						안드로이드 기기에서 SGT Wallet을 설치하세요.
 					</p>
 
 					<Button size="lg" className="flex items-center gap-2" asChild>
@@ -28,7 +28,7 @@ export default function DownloadPage() {
 					</Button>
 
 					<div className="mt-8 text-sm text-muted-foreground">
-						<p>버전: v0.1.0-alpha</p>
+						<p>버전: v0.1.1-alpha</p>
 						<p className="mt-2">
 							* 알 수 없는 출처 앱 설치를 허용해야 할 수 있습니다.
 						</p>
