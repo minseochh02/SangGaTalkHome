@@ -288,7 +288,7 @@ export default function CouponCreateContent({ storeId }: { storeId: string }) {
 
               <div>
                 <label htmlFor="max_claims" className="block text-sm font-medium text-gray-700 mb-1">
-                  최대 사용 가능 횟수
+                  최대 발행 수량
                 </label>
                 <input
                   type="number"
