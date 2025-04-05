@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Script from "next/script";
 
 interface AddressPopupProps {
@@ -43,10 +43,66 @@ declare global {
   }
 }
 
+// Function to load proj4js dynamically
+const loadProj4 = async (): Promise<void> => {
+  return new Promise((resolve) => {
+    if (typeof window.proj4 !== 'undefined') {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.2/proj4.js';
+    script.onload = () => resolve();
+    script.onerror = () => {
+      console.error("Failed to load proj4js library");
+      resolve(); // Resolve anyway to prevent hanging
+    };
+    document.head.appendChild(script);
+  });
+};
+
+// Function to convert coordinates using proj4js
+const convertCoordinates = (entX: string, entY: string): { lat: string, lng: string } => {
+  try {
+    if (typeof window.proj4 === 'undefined') {
+      throw new Error("proj4js not available");
+    }
+
+    // Convert coordinates from EPSG:5179 to WGS84 (EPSG:4326)
+    // Round to 6 decimal places for precision
+    const coordX = Math.round(parseFloat(entX) * 1000000) / 1000000;
+    const coordY = Math.round(parseFloat(entY) * 1000000) / 1000000;
+    const point = [coordX, coordY];
+    
+    // Define the coordinate systems
+    window.proj4.defs["EPSG:5179"] = "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs";
+    
+    const grs80 = window.proj4.Proj(window.proj4.defs["EPSG:5179"]);
+    const wgs84 = window.proj4.Proj(window.proj4.defs["EPSG:4326"]); // WGS84 (latitude/longitude)
+    
+    const p = window.proj4.toPoint(point);
+    const transformed = window.proj4.transform(grs80, wgs84, p);
+    
+    return {
+      lat: transformed.y.toString(),
+      lng: transformed.x.toString()
+    };
+  } catch (error) {
+    console.error("Error converting coordinates:", error);
+    return { lat: "", lng: "" };
+  }
+};
+
 export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
+  // Load proj4js when component mounts
+  useEffect(() => {
+    loadProj4();
+  }, []);
+
   useEffect(() => {
     // Define the callback function that will be called by the popup
-    window.jusoCallBack = (
+    window.jusoCallBack = async (
       roadFullAddr: string,
       roadAddrPart1: string,
       addrDetail: string,
@@ -75,29 +131,19 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
       entX: string,
       entY: string
     ) => {
-      // Make sure proj4js is loaded
-      if (typeof window.proj4 !== 'undefined') {
-        // Convert coordinates from EPSG:5179 to WGS84 (EPSG:4326)
-        // Round to 6 decimal places for precision
-        const coordX = Math.round(parseFloat(entX) * 1000000) / 1000000;
-        const coordY = Math.round(parseFloat(entY) * 1000000) / 1000000;
-        const point = [coordX, coordY];
-        
-        // Define the coordinate systems
-        window.proj4.defs["EPSG:5179"] = "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs";
-        
-        const grs80 = window.proj4.Proj(window.proj4.defs["EPSG:5179"]);
-        const wgs84 = window.proj4.Proj(window.proj4.defs["EPSG:4326"]); // WGS84 (latitude/longitude)
-        
-        const p = window.proj4.toPoint(point);
-        const transformed = window.proj4.transform(grs80, wgs84, p);
-        
-        // Pass the converted coordinates (latitude, longitude)
-        onSelect(roadFullAddr, transformed.y.toString(), transformed.x.toString());
-      } else {
-        console.error("proj4js library not loaded. Falling back to raw coordinates.");
+      // Make sure proj4js is loaded before trying to use it
+      await loadProj4();
+      
+      const { lat, lng } = convertCoordinates(entX, entY);
+      
+      // If conversion failed, fall back to raw coordinates
+      if (!lat || !lng) {
+        console.error("Coordinate conversion failed. Falling back to raw coordinates.");
         onSelect(roadFullAddr, entY, entX);
+      } else {
+        onSelect(roadFullAddr, lat, lng);
       }
+      
       onClose();
     };
 
@@ -128,12 +174,5 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
     };
   }, [onClose, onSelect]);
 
-  return (
-    <>
-      <Script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.2/proj4.js" 
-        strategy="beforeInteractive"
-      />
-    </>
-  );
+  return null;
 } 
