@@ -9,7 +9,7 @@ export default function DownloadPage() {
 	return (
 		<div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
 			<div className="w-full max-w-2xl text-center space-y-8">
-				<h1 className="text-4xl font-bold">SanggaWallet 다운로드</h1>
+				<h1 className="text-4xl font-bold">SGT Wallet 다운로드</h1>
 
 				<div className="space-y-4">
 					<div className="flex justify-center">
