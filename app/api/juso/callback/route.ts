@@ -46,6 +46,7 @@ async function handleRequest(request: Request) {
   const emdNo = params.get('emdNo') || '';
   const entX = params.get('entX') || '';
   const entY = params.get('entY') || '';
+  console.log(entX, entY);
 
   // Send data to parent window and close popup
   return new NextResponse(`
