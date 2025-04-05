@@ -78,7 +78,7 @@ export default function AddressPopup({ onClose, onSelect }: AddressPopupProps) {
     const callbackUrl = `${window.location.protocol}//${window.location.host}/api/juso/callback`;
     
     const params = new URLSearchParams({
-      confmKey: "devU01TX0FVVEgyMDI1MDMyODEyMjUwMzExNTU4ODY=",
+      confmKey: process.env.NEXT_PUBLIC_JUSO_API || "",
       returnUrl: callbackUrl,
       resultType: "4", // JSON format for communication
       inputYn: "N",
