@@ -109,7 +109,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
             operating_hours,
             business_number,
             email,
-			owner_name,
+            owner_name
           `
 					)
 					.eq("store_id", storeId)
