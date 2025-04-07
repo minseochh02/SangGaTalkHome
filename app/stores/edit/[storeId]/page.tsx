@@ -49,7 +49,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 		image_url: "",
 		business_number: "",
 		email: "",
-		owner_name: "",
+		owner_name: ""
 	});
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
