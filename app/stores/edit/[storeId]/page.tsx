@@ -128,26 +128,27 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					return;
 				}
 
-				setStoreData(storeData as unknown as Store);
+				const typedStoreData = storeData as unknown as Store;
+				setStoreData(typedStoreData);
 				setFormData({
-					store_name: storeData.store_name || "",
-					store_type: storeData.store_type.toString(),
-					category_id: storeData.category_id || "",
-					description: storeData.description || "",
-					address: storeData.address || "",
-					latitude: storeData.latitude || "",
-					longitude: storeData.longitude || "",
-					phone_number: storeData.phone_number || "",
-					website_url: storeData.website_url || "",
-					operating_hours: storeData.operating_hours || "",
-					image_url: storeData.image_url || "",
-					business_number: storeData.business_number || "",
-					email: storeData.email || "",
-					owner_name: storeData.owner_name || "",
+					store_name: typedStoreData.store_name || "",
+					store_type: typedStoreData.store_type.toString(),
+					category_id: typedStoreData.category_id || "",
+					description: typedStoreData.description || "",
+					address: typedStoreData.address || "",
+					latitude: typedStoreData.latitude.toString(),
+					longitude: typedStoreData.longitude.toString(),
+					phone_number: typedStoreData.phone_number || "",
+					website_url: typedStoreData.website_url || "",
+					operating_hours: typedStoreData.operating_hours || "",
+					image_url: typedStoreData.image_url || "",
+					business_number: typedStoreData.business_number || "",
+					email: typedStoreData.email || "",
+					owner_name: typedStoreData.owner_name || "",
 				});
 
-				if (storeData.image_url) {
-					setImagePreview(storeData.image_url);
+				if (typedStoreData.image_url) {
+					setImagePreview(typedStoreData.image_url);
 				}
 
 				// Fetch categories
@@ -327,7 +328,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 							required
 						/>
 					</div>
-					
+
 					{/* Store Name */}
 					<div className="space-y-2">
 						<Label htmlFor="store_name">스토어 이름 *</Label>
