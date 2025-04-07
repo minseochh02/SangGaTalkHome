@@ -268,6 +268,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					image_url: updatedImageUrl,
 					business_number: formData.business_number || null,
 					email: formData.email,
+					owner_name: formData.owner_name,
 					updated_at: new Date().toISOString(),
 				})
 				.eq("store_id", storeId)
@@ -329,7 +330,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 							required
 						/>
 					</div>
-					
+
 					{/* Store Name */}
 					<div className="space-y-2">
 						<Label htmlFor="owner_name">대표자 이름 *</Label>
