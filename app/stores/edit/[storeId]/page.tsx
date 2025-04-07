@@ -49,6 +49,9 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 		image_url: "",
 		business_number: "",
 		email: "",
+		business_name: "",
+		owner_name: "",
+		status: "",
 	});
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -107,7 +110,10 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
             image_url,
             operating_hours,
             business_number,
-            email
+            email,
+            business_name,
+            owner_name,
+            status
           `
 					)
 					.eq("store_id", storeId)
@@ -126,7 +132,7 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					return;
 				}
 
-				setStoreData(storeData as Store);
+				setStoreData(storeData as unknown as Store);
 				setFormData({
 					store_name: storeData.store_name || "",
 					store_type: storeData.store_type.toString(),
@@ -141,6 +147,9 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					image_url: storeData.image_url || "",
 					business_number: storeData.business_number || "",
 					email: storeData.email || "",
+					business_name: storeData.business_name || "",
+					owner_name: storeData.owner_name || "",
+					status: storeData.status?.toString() || "",
 				});
 
 				if (storeData.image_url) {
@@ -264,6 +273,9 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					image_url: updatedImageUrl,
 					business_number: formData.business_number || null,
 					email: formData.email,
+					business_name: formData.business_name,
+					owner_name: formData.owner_name,
+					status: formData.status ? parseInt(formData.status) : null,
 					updated_at: new Date().toISOString(),
 				})
 				.eq("store_id", storeId)
@@ -313,6 +325,30 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 				<h1 className="text-3xl font-bold mb-8">스토어 정보 수정</h1>
 
 				<form onSubmit={handleSubmit} className="space-y-8">
+					{/* Business Name */}
+					<div className="space-y-2">
+						<Label htmlFor="business_name">상호명 *</Label>
+						<Input
+							id="business_name"
+							name="business_name"
+							value={formData.business_name}
+							onChange={handleChange}
+							required
+						/>
+					</div>
+
+					{/* Owner Name */}
+					<div className="space-y-2">
+						<Label htmlFor="owner_name">대표자명 *</Label>
+						<Input
+							id="owner_name"
+							name="owner_name"
+							value={formData.owner_name}
+							onChange={handleChange}
+							required
+						/>
+					</div>
+
 					{/* Store Name */}
 					<div className="space-y-2">
 						<Label htmlFor="store_name">스토어 이름 *</Label>
@@ -477,6 +513,26 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 							value={formData.operating_hours}
 							onChange={handleChange}
 						/>
+					</div>
+
+					{/* Status */}
+					<div className="space-y-2">
+						<Label htmlFor="status">스토어 상태</Label>
+						<Select
+							value={formData.status}
+							onValueChange={(value) =>
+								handleSelectChange("status", value)
+							}
+						>
+							<SelectTrigger>
+								<SelectValue placeholder="상태 선택" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="0">대기 중</SelectItem>
+								<SelectItem value="1">승인됨</SelectItem>
+								<SelectItem value="2">거부됨</SelectItem>
+							</SelectContent>
+						</Select>
 					</div>
 
 					{/* Store Image */}
