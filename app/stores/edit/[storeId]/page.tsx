@@ -317,17 +317,6 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 				<h1 className="text-3xl font-bold mb-8">스토어 정보 수정</h1>
 
 				<form onSubmit={handleSubmit} className="space-y-8">
-					{/* Store Name */}
-					<div className="space-y-2">
-						<Label htmlFor="owner_name">대표자 이름 *</Label>
-						<Input
-							id="owner_name"
-							name="owner_name"
-							value={formData.owner_name}
-							onChange={handleChange}
-							required
-						/>
-					</div>
 
 					{/* Store Name */}
 					<div className="space-y-2">
@@ -336,6 +325,18 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 							id="store_name"
 							name="store_name"
 							value={formData.store_name}
+							onChange={handleChange}
+							required
+						/>
+					</div>
+					
+					{/* Store Name */}
+					<div className="space-y-2">
+						<Label htmlFor="owner_name">대표자 이름 *</Label>
+						<Input
+							id="owner_name"
+							name="owner_name"
+							value={formData.owner_name}
 							onChange={handleChange}
 							required
 						/>
