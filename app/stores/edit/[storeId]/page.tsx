@@ -47,6 +47,8 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 		website_url: "",
 		operating_hours: "",
 		image_url: "",
+		business_number: "",
+		email: "",
 	});
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -103,7 +105,9 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
             phone_number,
             website_url,
             image_url,
-            operating_hours
+            operating_hours,
+            business_number,
+            email
           `
 					)
 					.eq("store_id", storeId)
@@ -135,6 +139,8 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					website_url: storeData.website_url || "",
 					operating_hours: storeData.operating_hours || "",
 					image_url: storeData.image_url || "",
+					business_number: storeData.business_number || "",
+					email: storeData.email || "",
 				});
 
 				if (storeData.image_url) {
@@ -256,6 +262,8 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					website_url: formData.website_url,
 					operating_hours: formData.operating_hours,
 					image_url: updatedImageUrl,
+					business_number: formData.business_number || null,
+					email: formData.email,
 					updated_at: new Date().toISOString(),
 				})
 				.eq("store_id", storeId)
@@ -420,6 +428,31 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 							name="phone_number"
 							value={formData.phone_number}
 							onChange={handleChange}
+						/>
+					</div>
+
+					{/* Business Number */}
+					<div className="space-y-2">
+						<Label htmlFor="business_number">사업자등록번호</Label>
+						<Input
+							id="business_number"
+							name="business_number"
+							value={formData.business_number}
+							onChange={handleChange}
+							placeholder="000-00-00000"
+						/>
+					</div>
+
+					{/* Email */}
+					<div className="space-y-2">
+						<Label htmlFor="email">이메일 *</Label>
+						<Input
+							id="email"
+							name="email"
+							type="email"
+							value={formData.email}
+							onChange={handleChange}
+							required
 						/>
 					</div>
 
