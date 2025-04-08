@@ -236,7 +236,7 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 							</CardHeader>
 							<CardContent>
 								<p className="text-lg font-semibold">
-									{product.price.toLocaleString()}원
+									{product.won_price.toLocaleString()}원
 								</p>
 								{(product.sgt_price || product.sgt_price_text) && (
 									<p className="text-sm text-muted-foreground">

@@ -475,7 +475,7 @@ function ProductDetailsContent({
 							<div className="bg-gray-50 p-4 rounded-lg">
 								<p className="text-sm text-gray-500 mb-1">상품 가격</p>
 								<p className="text-2xl font-bold">
-									{product.price.toLocaleString()}원
+									{product.won_price.toLocaleString()}원
 								</p>
 							</div>
 

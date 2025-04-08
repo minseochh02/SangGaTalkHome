@@ -479,7 +479,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 												</p>
 												<div className="mt-2">
 													<p className="font-semibold">
-														{product.price.toLocaleString()}원
+														{product.won_price.toLocaleString()}원
 													</p>
 													{(product.sgt_price || product.sgt_price_text) && (
 														<p className="text-xs text-primary">

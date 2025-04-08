@@ -21,6 +21,7 @@ export interface Store {
 	operating_hours: string;
 	latitude: number;
 	longitude: number;
+	location: string;
 	created_at: string;
 	updated_at: string;
 	markdown_content?: string;
@@ -49,6 +50,7 @@ export interface StoreApplication {
 	updated_at: string;
 	referrer_phone_number: string;
 	image_url?: string;
+	location: string;
 }
 
 // Extend the Product type to include the sgt_price_text field
@@ -56,15 +58,16 @@ export interface Product {
 	product_id: string;
 	product_name: string;
 	description: string | null;
-	price: number;
+	won_price: number;
 	sgt_price: number | null;
-	sgt_price_text?: string; // Add the new field
-	category: string | null;
+	sgt_price_text?: string;
+	category_id: string | null;
 	image_url: string | null;
 	store_id: string;
 	is_sgt_product: boolean;
 	created_at: string;
 	updated_at: string;
+	deleted_at: string | null;
 	status: number;
-	markdown_content?: string | null; // Add markdown_content field
+	markdown_content?: string | null;
 }

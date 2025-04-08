@@ -64,7 +64,7 @@ export default function AdminApprovedStoresList() {
 
 		if (
 			!confirm(
-				`정말로 "${store.store_name}" 스토어을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다. 관련된 모든 제품, 이미지, 리뷰 등이 함께 삭제됩니다.`
+				`정말로 "${store.store_name}" 스토어을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다. 관련된 모든 제품, 이미지, 리뷰 등이 함께 삭제됩니다. 주문 기록은 유지됩니다.`
 			)
 		) {
 			setProcessingId(null);
@@ -86,6 +86,9 @@ export default function AdminApprovedStoresList() {
 				.eq("store_id", store.store_id);
 
 			if (productFetchError) throw productFetchError;
+
+			// Get all product IDs for later use
+			const productIds = productData?.map(product => product.product_id) || [];
 
 			// Get all product images
 			interface ProductImage {
@@ -128,17 +131,99 @@ export default function AdminApprovedStoresList() {
 				}
 			}
 
-			// 3. Now delete database records in the correct order
+			// 3. Now handle database records in the correct order
+			
+			// 3.1 Handle cart_items - delete them completely
+			if (productIds.length > 0) {
+				const { error: cartItemsError } = await supabase
+					.from("cart_items")
+					.delete()
+					.in("product_id", productIds);
 
-			// 3.2 Delete products in this store
-			const { error: productsError } = await supabase
-				.from("products")
+				if (cartItemsError) throw cartItemsError;
+			}
+			
+			// 3.2 Handle coupons - delete them completely
+			const { error: couponsError } = await supabase
+				.from("coupons")
 				.delete()
 				.eq("store_id", store.store_id);
 
-			if (productsError) throw productsError;
+			if (couponsError) throw couponsError;
+			
+			// 3.3 Handle coupon_distributions - delete them completely
+			// First get all coupon IDs for this store
+			const { data: couponData, error: couponFetchError } = await supabase
+				.from("coupons")
+				.select("coupon_id")
+				.eq("store_id", store.store_id);
+				
+			if (couponFetchError) throw couponFetchError;
+			
+			const couponIds = couponData?.map(coupon => coupon.coupon_id) || [];
+			
+			if (couponIds.length > 0) {
+				const { error: couponDistributionsError } = await supabase
+					.from("coupon_distributions")
+					.delete()
+					.in("coupon_id", couponIds);
 
-			// 3.5 Delete favorites where target_id is this store's ID and favorite_type is 'store'
+				if (couponDistributionsError) throw couponDistributionsError;
+			}
+
+			// 3.4 For order_items, we keep them for history but mark the products as deleted
+			// We'll need to add a 'is_deleted' field to the products table or use another approach
+			// For now, let's use a different approach by keeping products but marking them
+			
+			// 3.5 Delete products in this store - but first update order_items to preserve history
+			if (productIds.length > 0) {
+				// Instead of deleting products referenced in order_items, we'll mark them as deleted
+				// First, get all product_ids that are referenced in order_items
+				const { data: orderItemProducts, error: orderItemsQueryError } = await supabase
+					.from("order_items")
+					.select("product_id")
+					.in("product_id", productIds);
+					
+				if (orderItemsQueryError) throw orderItemsQueryError;
+				
+				// Products that need to be preserved (with is_deleted flag) because they're in order_items
+				const productsInOrders = orderItemProducts 
+					? Array.from(new Set(orderItemProducts.map(item => item.product_id as string)))
+					: [];
+				
+				// Products that can be safely deleted (not in any orders)
+				const productsToDelete = productIds.filter(id => !productsInOrders.includes(id));
+				
+				// Update products in orders to mark them as deleted
+				if (productsInOrders.length > 0) {
+					const { error: productUpdateError } = await supabase
+						.from("products")
+						.update({ is_deleted: true, store_id: null })
+						.in("product_id", productsInOrders);
+						
+					if (productUpdateError) throw productUpdateError;
+				}
+				
+				// Delete products that aren't in any orders
+				if (productsToDelete.length > 0) {
+					const { error: productsDeleteError } = await supabase
+						.from("products")
+						.delete()
+						.in("product_id", productsToDelete);
+						
+					if (productsDeleteError) throw productsDeleteError;
+				}
+			} else {
+				// If no products, proceed with normal product deletion
+				const { error: productsError } = await supabase
+					.from("products")
+					.delete()
+					.eq("store_id", store.store_id);
+
+				if (productsError) throw productsError;
+			}
+
+			// 3.6 Delete favorites where target_id is this store's ID and favorite_type is 'store'
 			const { error: favoritesError } = await supabase
 				.from("favorites")
 				.delete()
@@ -147,7 +232,7 @@ export default function AdminApprovedStoresList() {
 
 			if (favoritesError) throw favoritesError;
 
-			// 3.6 Delete reviews where target_id is this store's ID and review_type is 'store'
+			// 3.7 Delete reviews where target_id is this store's ID and review_type is 'store'
 			const { error: reviewsError } = await supabase
 				.from("reviews")
 				.delete()
@@ -156,19 +241,39 @@ export default function AdminApprovedStoresList() {
 
 			if (reviewsError) throw reviewsError;
 
-			// 3.7 Finally, delete the store itself
-			const { error: storeError } = await supabase
-				.from("stores")
-				.delete()
-				.eq("store_id", store.store_id);
+			// 3.8 Finally, either delete the store or mark it as deleted
+			// First check if store has any orders
+			const { data: storeOrders, error: storeOrdersError } = await supabase
+				.from("orders")
+				.select("order_id")
+				.eq("store_id", store.store_id)
+				.limit(1);
+				
+			if (storeOrdersError) throw storeOrdersError;
+			
+			if (storeOrders && storeOrders.length > 0) {
+				// If store has orders, mark as deleted but preserve for order history
+				const { error: storeUpdateError } = await supabase
+					.from("stores")
+					.update({ is_deleted: true })
+					.eq("store_id", store.store_id);
+					
+				if (storeUpdateError) throw storeUpdateError;
+			} else {
+				// If store has no orders, delete it completely
+				const { error: storeError } = await supabase
+					.from("stores")
+					.delete()
+					.eq("store_id", store.store_id);
 
-			if (storeError) throw storeError;
+				if (storeError) throw storeError;
+			}
 
 			// Refresh the stores list
 			await fetchStores();
 			toast({
 				title: "스토어 삭제 완료",
-				description: `${store.store_name} 스토어와 관련된 모든 데이터가 성공적으로 삭제되었습니다.`,
+				description: `${store.store_name} 스토어와 관련된 데이터가 성공적으로 삭제되었습니다. 주문 기록은 유지됩니다.`,
 				variant: "default",
 			});
 		} catch (err) {

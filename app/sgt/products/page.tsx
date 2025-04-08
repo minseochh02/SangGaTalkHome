@@ -7,9 +7,9 @@ interface Product {
 	id: number;
 	name: string;
 	description: string;
-	price: number;
-	sgtPrice: number;
-	imageUrl: string;
+	won_price: number;
+	sgt_price: number;
+	image_url: string;	
 	category: string;
 }
 
@@ -18,18 +18,18 @@ const dummyProducts: Product[] = [
 		id: 1,
 		name: "프리미엄 식사권",
 		description: "지역 맛집에서 사용 가능한 프리미엄 식사권",
-		price: 50000,
-		sgtPrice: 45,
-		imageUrl: "/images/products/meal-voucher.jpg",
+		won_price: 50000,
+		sgt_price: 45,
+		image_url: "/images/products/meal-voucher.jpg",
 		category: "식사권",
 	},
 	{
 		id: 2,
 		name: "뷰티 패키지",
 		description: "헤어&메이크업 토탈 뷰티 케어 패키지",
-		price: 100000,
-		sgtPrice: 90,
-		imageUrl: "/images/products/beauty-package.jpg",
+		won_price: 100000,
+		sgt_price: 90,
+		image_url: "/images/products/beauty-package.jpg",
 		category: "뷰티",
 	},
 	// Add more dummy products as needed
@@ -95,7 +95,7 @@ export default function SGTProducts() {
 					>
 						<div className="relative h-40 sm:h-48 w-full bg-gray-200">
 							<Image
-								src={product.imageUrl}
+								src={product.image_url}
 								alt={product.name}
 								fill
 								className="object-cover"
@@ -116,10 +116,10 @@ export default function SGTProducts() {
 							<div className="flex justify-between items-center">
 								<div>
 									<p className="text-gray-500 line-through text-sm">
-										{product.price.toLocaleString()}원
+										{product.won_price.toLocaleString()}원
 									</p>
 									<p className="text-base md:text-lg font-bold text-[#FFA725]">
-										{product.sgtPrice} SGT
+										{product.sgt_price} SGT
 									</p>
 								</div>
 								<button className="px-3 py-1 md:px-4 md:py-2 bg-[#6A9C89] text-white text-sm rounded-lg hover:bg-[#5B8B78] transition-colors">
