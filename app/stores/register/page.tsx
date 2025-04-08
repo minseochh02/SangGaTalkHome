@@ -200,28 +200,38 @@ export default function StoreRegistration() {
 				return;
 			}
 
-			// Submit the application to the store_applications table
-			const { data, error } = await supabase.from("store_applications").insert({
-				user_id: user.id,
-				business_name: formData.business_name,
-				owner_name: formData.owner_name,
-				business_number: formData.business_number || null,
-				phone_number: formData.phone_number,
-				email: formData.email,
-				address: formData.address,
-				latitude: formData.latitude || null,
-				longitude: formData.longitude || null,
-				category_id: formData.category_id,
-				description: formData.description,
-				operating_hours: formData.operating_hours,
-				website: formData.website || null,
-				referrer_phone_number: formData.referrer_phone_number || null,
-				status: 0, // 0: pending
-				image_url: imageUrl, // Add the image URL
-			});
+			// Convert latitude and longitude to PostGIS point
+			const location = formData.latitude && formData.longitude
+				? `POINT(${formData.longitude} ${formData.latitude})`
+				: null;
 
-			if (error) {
-				throw error;
+			// Insert the store application
+			const { data: applicationData, error: applicationError } = await supabase
+				.from("store_applications")
+				.insert([
+					{
+						user_id: user.id,
+						business_name: formData.business_name,
+						owner_name: formData.owner_name,
+						business_number: formData.business_number,
+						phone_number: formData.phone_number,
+						email: formData.email,
+						address: formData.address,
+						category_id: formData.category_id,
+						description: formData.description,
+						operating_hours: formData.operating_hours,
+						website: formData.website,
+						referrer_phone_number: formData.referrer_phone_number,
+						image_url: imageUrl,
+						location: location,
+						status: 0, // Pending status
+					},
+				])
+				.select()
+				.single();
+
+			if (applicationError) {
+				throw applicationError;
 			}
 
 			alert(

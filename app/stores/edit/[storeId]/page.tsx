@@ -251,30 +251,37 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 				updatedImageUrl = urlData.publicUrl;
 			}
 
+			// Convert latitude and longitude to PostGIS point
+			const location = formData.latitude && formData.longitude
+				? `POINT(${formData.longitude} ${formData.latitude})`
+				: null;
+
 			// Update store data
+			const updateData = {
+				store_name: formData.store_name,
+				store_type: parseInt(formData.store_type),
+				category_id: formData.category_id,
+				description: formData.description,
+				address: formData.address,
+				phone_number: formData.phone_number,
+				website_url: formData.website_url,
+				operating_hours: formData.operating_hours,
+				business_number: formData.business_number,
+				email: formData.email,
+				owner_name: formData.owner_name,
+				location: location,
+				...(updatedImageUrl && { image_url: updatedImageUrl }),
+			};
+
 			const { error: updateError } = await supabase
 				.from("stores")
-				.update({
-					store_name: formData.store_name,
-					store_type: parseInt(formData.store_type),
-					category_id: formData.category_id,
-					description: formData.description,
-					address: formData.address,
-					latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-    				longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-					phone_number: formData.phone_number,
-					website_url: formData.website_url,
-					operating_hours: formData.operating_hours,
-					image_url: updatedImageUrl,
-					business_number: formData.business_number || null,
-					email: formData.email,
-					owner_name: formData.owner_name,
-					updated_at: new Date().toISOString(),
-				})
+				.update(updateData)
 				.eq("store_id", storeId)
 				.eq("user_id", user.id);
 
-			if (updateError) throw updateError;
+			if (updateError) {
+				throw updateError;
+			}
 
 			toast({
 				title: "Success",
