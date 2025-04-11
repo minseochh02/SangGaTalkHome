@@ -65,7 +65,7 @@ export default function CouponCreateContent({ storeId }: { storeId: string }) {
     const fetchNearbyDeviceCount = async () => {
       try {
         const { data, error } = await supabase.rpc("get_nearby_device_count", {
-          store_id: storeId,
+          input_store_id: storeId,
           radius: formData.radius_meters
         });
 
