@@ -151,7 +151,7 @@ export default function AdminApprovedStoresList() {
 
 			if (couponsError) throw couponsError;
 			
-			// 3.3 Handle coupon_distributions - delete them completely
+			// 3.3 Handle distributed_coupons - delete them completely
 			// First get all coupon IDs for this store
 			const { data: couponData, error: couponFetchError } = await supabase
 				.from("coupons")
@@ -163,12 +163,12 @@ export default function AdminApprovedStoresList() {
 			const couponIds = couponData?.map(coupon => coupon.coupon_id) || [];
 			
 			if (couponIds.length > 0) {
-				const { error: couponDistributionsError } = await supabase
-					.from("coupon_distributions")
+				const { error: distributedCouponsError } = await supabase
+					.from("distributed_coupons")
 					.delete()
 					.in("coupon_id", couponIds);
 
-				if (couponDistributionsError) throw couponDistributionsError;
+				if (distributedCouponsError) throw distributedCouponsError;
 			}
 
 			// 3.4 For order_items, we keep them for history but mark the products as deleted

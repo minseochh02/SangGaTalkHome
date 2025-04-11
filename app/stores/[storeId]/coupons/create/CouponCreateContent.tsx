@@ -63,12 +63,9 @@ export default function CouponCreateContent({ storeId }: { storeId: string }) {
   // Update nearby device count when radius changes
   useEffect(() => {
     const fetchNearbyDeviceCount = async () => {
-      if (!storeLocation) return;
-      
       try {
         const { data, error } = await supabase.rpc("get_nearby_device_count", {
-          lat: storeLocation.latitude,
-          lng: storeLocation.longitude,
+          store_id: storeId,
           radius: formData.radius_meters
         });
 
@@ -79,10 +76,8 @@ export default function CouponCreateContent({ storeId }: { storeId: string }) {
       }
     };
 
-    if (storeLocation) {
-      fetchNearbyDeviceCount();
-    }
-  }, [formData.radius_meters, storeLocation, supabase]);
+    fetchNearbyDeviceCount();
+  }, [formData.radius_meters, storeId, supabase]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
