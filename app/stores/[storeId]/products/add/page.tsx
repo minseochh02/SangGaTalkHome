@@ -273,11 +273,16 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 			// This avoids JavaScript's floating point precision issues
 			let sgtPriceValue = null;
 			if (formData.sgt_price) {
-				// Use the raw string value directly to avoid rounding
-				sgtPriceValue = formData.sgt_price;
+				// Convert to numeric value for Supabase - using parseFloat
+				sgtPriceValue = parseFloat(formData.sgt_price);
+				
+				// Check if it's a valid number
+				if (isNaN(sgtPriceValue)) {
+					sgtPriceValue = null;
+				}
 			}
 
-			// Create product with sgt_price as text to preserve exact numeric representation
+			// Create product with sgt_price as numeric value for Supabase
 			const { data, error } = await supabase
 				.from("products")
 				.insert([

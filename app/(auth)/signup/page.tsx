@@ -63,7 +63,7 @@ export default function SignupPage() {
 			<div className="w-full max-w-md p-8 space-y-4 rounded-lg shadow-lg bg-card">
 				<h2 className="text-2xl font-bold text-center">회원가입</h2>
 				<p className="text-center text-muted-foreground">
-					SangGaWallet에 오신 것을 환영합니다. 계정을 만들어 시작하세요.
+					SGTWallet에 오신 것을 환영합니다. 계정을 만들어 시작하세요.
 				</p>
 				<div className="space-y-4">
 					<Button

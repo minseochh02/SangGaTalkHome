@@ -4,11 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import ImagePlaceholder from "@/components/ImagePlaceholder";
 
-interface FavoriteItem {
-	favorite_id: string;
-	favorite_type: string;
-	target_id: string;
-	user_id: string;
+interface FavoriteStoreItem {
+	favorite_store_id: string;
+	device_id: string;
+	store_id: string;
 	created_at: string;
 }
 
@@ -32,39 +31,137 @@ interface StoreData {
 }
 
 interface FavoriteStore extends StoreData {
-	favorite_id: string;
+	favorite_store_id: string;
 }
 
-export default function UserFavoritesList({ userId }: { userId: string }) {
+export default function UserFavoritesList() {
 	const [favorites, setFavorites] = useState<FavoriteStore[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [deviceId, setDeviceId] = useState<string | null>(null);
+
+	// Get the device ID from local storage
+	useEffect(() => {
+		const getDeviceId = async () => {
+			try {
+				// Get or create device token from localStorage
+				let deviceToken = localStorage.getItem('fcmToken');
+				
+				// If no token exists, create a new one and store it
+				if (!deviceToken) {
+					// For web, we just generate a random token since we can't use FCM
+					deviceToken = 'web-' + Math.random().toString(36).substring(2, 15) + 
+						'-' + Date.now().toString(36);
+					localStorage.setItem('fcmToken', deviceToken);
+				}
+				
+				const supabase = createClient();
+				
+				// Get device ID from token
+				const { data, error } = await supabase
+					.from('devices')
+					.select('id')
+					.eq('device_token', deviceToken)
+					.single();
+					
+				if (error && error.code !== 'PGRST116') {
+					console.error('Error retrieving device ID:', error);
+					return null;
+				}
+				
+				if (data) {
+					setDeviceId(data.id);
+					return data.id;
+				}
+				
+				// If no device exists, create one
+				// Get approximate location if available (using browser geolocation)
+				let coords = { longitude: 126.9780, latitude: 37.5665 }; // Default to Seoul
+				
+				try {
+					// Try to get location from browser geolocation API if available
+					if (navigator.geolocation) {
+						const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+							navigator.geolocation.getCurrentPosition(resolve, reject, {
+								enableHighAccuracy: true,
+								timeout: 5000,
+								maximumAge: 0
+							});
+						});
+						
+						coords = {
+							longitude: position.coords.longitude,
+							latitude: position.coords.latitude
+						};
+					}
+				} catch (locError) {
+					console.warn('Could not get location, using default:', locError);
+				}
+				
+				// Create new device record
+				const defaultLocation = {
+					type: 'Point',
+					coordinates: [coords.longitude, coords.latitude]
+				};
+				
+				const { data: newDevice, error: createError } = await supabase
+					.from('devices')
+					.insert({
+						device_token: deviceToken,
+						location: defaultLocation,
+						created_at: new Date().toISOString(),
+						updated_at: new Date().toISOString()
+					})
+					.select('id')
+					.single();
+					
+				if (createError) {
+					console.error('Error creating device:', createError);
+					return null;
+				}
+				
+				if (newDevice) {
+					setDeviceId(newDevice.id);
+					return newDevice.id;
+				}
+				
+				return null;
+			} catch (err) {
+				console.error('Error getting device ID:', err);
+				return null;
+			}
+		};
+		
+		getDeviceId();
+	}, []);
 
 	useEffect(() => {
 		const fetchFavorites = async () => {
+			if (!deviceId) return;
+			
 			setIsLoading(true);
 			setError(null);
 
 			try {
 				const supabase = createClient();
 
-				// First get all favorites of type 'store' for this user
+				// Get all favorites for this device
 				const { data: favoritesData, error: favoritesError } = await supabase
-					.from("favorites")
+					.from("favorite_stores")
 					.select("*")
-					.eq("user_id", userId)
-					.eq("favorite_type", "store");
+					.eq("device_id", deviceId);
 
 				if (favoritesError) throw favoritesError;
 
 				if (!favoritesData || favoritesData.length === 0) {
 					setFavorites([]);
+					setIsLoading(false);
 					return;
 				}
 
 				// Get all the store details for the favorited stores
 				const storeIds = favoritesData.map(
-					(fav: FavoriteItem) => fav.target_id
+					(fav: FavoriteStoreItem) => fav.store_id
 				);
 
 				const { data: storesData, error: storesError } = await supabase
@@ -93,7 +190,7 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 
 				for (const store of storesData) {
 					const favorite = favoritesData.find(
-						(fav: FavoriteItem) => fav.target_id === store.store_id
+						(fav: FavoriteStoreItem) => fav.store_id === store.store_id
 					);
 					if (favorite) {
 						combinedData.push({
@@ -108,7 +205,7 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 							operating_hours: store.operating_hours,
 							created_at: favorite.created_at || store.created_at,
 							categories: store.categories,
-							favorite_id: favorite.favorite_id,
+							favorite_store_id: favorite.favorite_store_id,
 						});
 					}
 				}
@@ -122,23 +219,21 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 			}
 		};
 
-		if (userId) {
-			fetchFavorites();
-		}
-	}, [userId]);
+		fetchFavorites();
+	}, [deviceId]);
 
-	const removeFavorite = async (favoriteId: string) => {
+	const removeFavorite = async (favoriteStoreId: string) => {
 		try {
 			const supabase = createClient();
 			const { error } = await supabase
-				.from("favorites")
+				.from("favorite_stores")
 				.delete()
-				.eq("favorite_id", favoriteId);
+				.eq("favorite_store_id", favoriteStoreId);
 
 			if (error) throw error;
 
 			// Update the local state to remove the deleted favorite
-			setFavorites(favorites.filter((fav) => fav.favorite_id !== favoriteId));
+			setFavorites(favorites.filter((fav) => fav.favorite_store_id !== favoriteStoreId));
 		} catch (err) {
 			console.error("Error removing favorite:", err);
 			setError("즐겨찾기 삭제에 실패했습니다.");
@@ -151,6 +246,14 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 
 	if (error) {
 		return <div className="text-center py-4 text-red-500">{error}</div>;
+	}
+
+	if (!deviceId) {
+		return (
+			<div className="text-center py-8 text-gray-500">
+				기기 정보를 가져올 수 없습니다.
+			</div>
+		);
 	}
 
 	if (favorites.length === 0) {
@@ -232,7 +335,7 @@ export default function UserFavoritesList({ userId }: { userId: string }) {
 								스토어 보기
 							</Link>
 							<button
-								onClick={() => removeFavorite(store.favorite_id)}
+								onClick={() => removeFavorite(store.favorite_store_id)}
 								className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 text-red-600 rounded-md text-xs sm:text-sm hover:bg-red-100 transition-colors flex items-center gap-1"
 							>
 								<svg
