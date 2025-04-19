@@ -22,6 +22,8 @@ export interface Store {
 	email: string;
 	operating_hours: string;
 	location: string; // geography(Point,4326) format
+	latitude: number;
+	longitude: number;
 	created_at: string;
 	updated_at: string;
 	deleted_at?: string;
@@ -52,6 +54,8 @@ export interface StoreApplication {
 	referrer_phone_number: string;
 	image_url?: string;
 	location: string; // geography(Point,4326) format
+	latitude: number;
+	longitude: number;
 	type?: number; // 0: online_only, 1: offline_only, 2: both
 }
 
