@@ -149,10 +149,10 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				});
 
 				// Set display values with formatted values
-				if (productData.price) {
+				if (productData.won_price) {
 					// Use a safer approach to add commas without parsing to integer
 					setDisplayPrice(
-						productData.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+						productData.won_price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 					);
 				}
 
@@ -188,10 +188,10 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		const { name, value } = e.target;
 
 		// Handle special cases for price fields
-		if (name === "price" || name === "sgt_price") {
+		if (name === "won_price" || name === "sgt_price") {
 			// Skip processing if the field is being cleared
 			if (!value) {
-				if (name === "price") {
+				if (name === "won_price") {
 					setDisplayPrice("");
 				} else {
 					setDisplaySgtPrice("");
@@ -226,7 +226,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		setDisplayPrice(formattedValue);
 
 		// Store the numeric value in formData
-		setFormData((prev) => ({ ...prev, price: numericValue }));
+		setFormData((prev) => ({ ...prev, won_price: numericValue }));
 	};
 
 	// Format SGT price with commas and decimal places
@@ -455,10 +455,10 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 
 					{/* Price */}
 					<div className="space-y-2">
-						<Label htmlFor="price">가격 (원) *</Label>
+						<Label htmlFor="won_price">가격 (원) *</Label>
 						<Input
-							id="price"
-							name="price"
+							id="won_price"
+							name="won_price"
 							type="text"
 							inputMode="numeric"
 							value={displayPrice}
