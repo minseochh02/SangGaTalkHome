@@ -287,7 +287,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 				.from("products")
 				.insert([
 					{
-						product_id: uuidv4(),
+						// product_id: uuidv4(),
 						product_name: formData.product_name,
 						description: formData.description,
 						won_price: priceValue,
