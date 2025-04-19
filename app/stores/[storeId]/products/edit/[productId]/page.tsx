@@ -15,7 +15,7 @@ interface Product {
 	product_id: string;
 	product_name: string;
 	description: string;
-	price: number;
+	won_price: number;
 	sgt_price: number | null;
 	category: string;
 	image_url: string;
@@ -45,7 +45,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 	const [formData, setFormData] = useState({
 		product_name: "",
 		description: "",
-		price: "",
+		won_price: "",
 		sgt_price: "",
 		category: "",
 		status: "1",
@@ -139,7 +139,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				setFormData({
 					product_name: productData.product_name || "",
 					description: productData.description || "",
-					price: productData.price?.toString() || "",
+					won_price: productData.won_price?.toString() || "",
 					sgt_price:
 						productData.sgt_price_text ||
 						productData.sgt_price?.toString() ||
@@ -304,7 +304,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		}
 
 		// Validate form
-		if (!formData.product_name || !formData.price) {
+		if (!formData.product_name || !formData.won_price) {
 			toast({
 				title: "입력 오류",
 				description: "상품명과 가격은 필수 입력 항목입니다.",
@@ -371,7 +371,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 			}
 
 			// Process price values with exact precision
-			const priceValue = formData.price ? parseFloat(formData.price) : 0;
+			const priceValue = formData.won_price ? parseFloat(formData.won_price) : 0;
 
 			// For SGT price, use the exact string value to preserve all decimal places
 			// This avoids JavaScript's floating point precision issues
@@ -387,7 +387,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				.update({
 					product_name: formData.product_name,
 					description: formData.description,
-					price: priceValue,
+					won_price: priceValue,
 					sgt_price: sgtPriceValue,
 					category: formData.category,
 					image_url: imageUrl,
