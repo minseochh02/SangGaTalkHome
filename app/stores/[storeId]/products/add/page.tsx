@@ -292,7 +292,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 						description: formData.description,
 						won_price: priceValue,
 						sgt_price: sgtPriceValue,
-						category_id: formData.category,
+						category: formData.category,
 						image_url: imageUrl,
 						store_id: storeId,
 						is_sgt_product: false,
