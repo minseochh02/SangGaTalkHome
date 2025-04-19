@@ -34,7 +34,7 @@ interface FavoriteStore extends StoreData {
 	favorite_store_id: string;
 }
 
-export default function UserFavoritesList() {
+export default function UserFavoritesList({ userId }: { userId: string }) {
 	const [favorites, setFavorites] = useState<FavoriteStore[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);

@@ -19,13 +19,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ToastContainer } from "@/components/ui/use-toast";
 import { createClient } from "@/utils/supabase/client";
+import { User } from "@/utils/type";
 
 export default function ProfilePage() {
 	const supabase = createClient();
 	const router = useRouter();
 
 	const [user, setUser] = useState<any>(null);
-	const [userProfile, setUserProfile] = useState<any>(null);
+	const [userProfile, setUserProfile] = useState<User | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [localLoading, setLocalLoading] = useState(false);
 	const [redirecting, setRedirecting] = useState(false);

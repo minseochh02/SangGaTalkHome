@@ -2,13 +2,15 @@ export interface Category {
 	category_id: string;
 	category_name: string;
 	description?: string;
+	created_at?: string;
+	updated_at?: string;
 }
 
 export interface Store {
 	store_id: string;
 	user_id: string;
 	store_name: string;
-	store_type: number;
+	store_type: number; // 0: online_only, 1: offline_only, 2: both
 	category_id: string;
 	description: string;
 	address: string;
@@ -19,11 +21,10 @@ export interface Store {
 	owner_name: string;
 	email: string;
 	operating_hours: string;
-	latitude: number;
-	longitude: number;
-	location: string;
+	location: string; // geography(Point,4326) format
 	created_at: string;
 	updated_at: string;
+	deleted_at?: string;
 	markdown_content?: string;
 	referrer_phone_number?: string;
 	categories?: {
@@ -45,12 +46,13 @@ export interface StoreApplication {
 	description: string;
 	operating_hours: string;
 	website: string;
-	status: number;
+	status: number; // 0: pending, 1: approved, 2: rejected
 	created_at: string;
 	updated_at: string;
 	referrer_phone_number: string;
 	image_url?: string;
-	location: string;
+	location: string; // geography(Point,4326) format
+	type?: number; // 0: online_only, 1: offline_only, 2: both
 }
 
 // Extend the Product type to include the sgt_price_text field
@@ -68,6 +70,170 @@ export interface Product {
 	created_at: string;
 	updated_at: string;
 	deleted_at: string | null;
-	status: number;
+	status: number; // 0: active, 1: not_active, 2: soft_delete
 	markdown_content?: string | null;
+}
+
+export interface User {
+	user_id: string;
+	username: string;
+	email: string;
+	role: string; // customer, store_owner, admin, super_admin
+	created_at: string;
+	updated_at: string;
+}
+
+export interface Order {
+	order_id: string;
+	wallet_id: string;
+	sgt_total: number;
+	won_total: number;
+	sgt_shipping_cost: number;
+	won_shipping_cost: number;
+	shipping_address: string;
+	status: number; // 0: pending, 1: completed, 2: other statuses
+	created_at: string;
+	updated_at: string;
+}
+
+export interface OrderItem {
+	order_items_id: string;
+	order_id: string;
+	product_id: string;
+	quantity: number;
+	won_price: number;
+	sgt_price: number;
+	created_at: string;
+}
+
+export interface Coupon {
+	coupon_id: string;
+	store_id: string;
+	name: string;
+	description?: string;
+	warning?: string;
+	created_at: string;
+	expiry_date: string;
+	radius_meters: number;
+	is_active: boolean;
+	max_claims?: number;
+}
+
+export interface Device {
+	device_id: string;
+	device_token: string;
+	created_at: string;
+	updated_at: string;
+	location: string; // geography(Point,4326) format
+}
+
+export interface FavoriteStore {
+	favorite_store_id: string;
+	device_id: string;
+	store_id: string;
+	created_at: string;
+}
+
+export interface SavedAddress {
+	saved_address_id: string;
+	device_id: string;
+	nickname?: string;
+	address: string;
+	is_default: boolean;
+	address_detail?: string;
+	recipient_name?: string;
+	phone_number?: string;
+	created_at: string;
+}
+
+export interface CartItem {
+	cart_item_id: string;
+	wallet_id: string;
+	product_id: string;
+	quantity: number;
+	created_at: string;
+}
+
+export interface Wallet {
+	wallet_id: string;
+	created_at: string;
+	wallet_address: string;
+	nfc_id?: string;
+	wallet_name: string;
+	balance: number;
+}
+
+export interface Transaction {
+	transaction_id: string;
+	amount: number;
+	created_at: string;
+	receiver_wallet_address: string;
+	sender_wallet_address?: string;
+	status: number;
+	completed_at?: string;
+	notes?: string;
+	transaction_fee?: number;
+	location?: string; // geography(Point,4326) format
+	type: number; // 0: offline, 1: online, 2: sgt_exchange_out, 3: sgt_exchange_in, 4: sgt_TVL
+}
+
+export interface DistributedCoupon {
+	distributed_coupon_id: string;
+	coupon_id: string;
+	wallet_id: string;
+	device_id: string;
+	status: number; // 0: pending, 1: accepted, 2: rejected
+}
+
+export interface Review {
+	review_id: string;
+	wallet_id: string;
+	order_id: string;
+	store_id: string;
+	rating: number; // 1-5
+	review_text?: string;
+	created_at: string;
+}
+
+export interface LiquidSupplier {
+	liquid_supplier_id: string;
+	wallet_id: string;
+	bank_name: string;
+	bank_account_no: string;
+	registered_at: string;
+}
+
+export interface Policy {
+	policy_id: string;
+	liquid_supplier_id: string;
+	rate: number;
+	baseline_fee: number;
+	title: string;
+	content: string;
+	created_at: string;
+}
+
+export interface Exchange {
+	exchange_id: string;
+	transaction_id: string;
+	liquid_supplier_id: string;
+	policy_id: string;
+	sgt_amount: number;
+	won_amount: number;
+	supplier_fee: number;
+	content?: string;
+	status: number; // 0: pending, 1: sgt_sent, 2: payment_complete, 3: canceled
+	created_at: string;
+}
+
+export interface Notification {
+	notification_id: string;
+	device_id: string;
+	created_at: string;
+	message: string;
+	topic?: string;
+	title: string;
+	body?: string;
+	read: boolean;
+	metadata?: any;
 }

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { formatSGTPrice } from "@/utils/formatters";
-
+import { Category, Product } from "@/utils/type";
 interface AddProductPageProps {
 	storeId: string;
 }
