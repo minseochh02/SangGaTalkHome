@@ -45,6 +45,8 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 	const [displaySgtPrice, setDisplaySgtPrice] = useState("");
 	const [displaySgtDeliveryFee, setDisplaySgtDeliveryFee] = useState("");
 	const [displaySgtSpecialDeliveryFee, setDisplaySgtSpecialDeliveryFee] = useState("");
+	const [displayWonDeliveryFee, setDisplayWonDeliveryFee] = useState("");
+	const [displayWonSpecialDeliveryFee, setDisplayWonSpecialDeliveryFee] = useState("");
 
 	// First check authentication status
 	useEffect(() => {
@@ -170,6 +172,21 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 				if (productData.sgt_special_delivery_fee) {
 					setDisplaySgtSpecialDeliveryFee(formatSGTPrice(productData.sgt_special_delivery_fee.toString()));
 				}
+
+				// Set display values with formatted values for won delivery fees
+				if (productData.won_delivery_fee) {
+					// Format with commas
+					setDisplayWonDeliveryFee(
+						productData.won_delivery_fee.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+					);
+				}
+				
+				if (productData.won_special_delivery_fee) {
+					// Format with commas
+					setDisplayWonSpecialDeliveryFee(
+						productData.won_special_delivery_fee.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+					);
+				}
 			} catch (error) {
 				console.error("Error fetching data:", error);
 				toast({
@@ -289,6 +306,17 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
 		if (numericValue.length > 10) return;
 
+		// Format with commas - avoid parseInt for large numbers
+		let formattedValue;
+		if (!numericValue) {
+			formattedValue = "";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
+		setDisplayWonDeliveryFee(formattedValue);
+
 		// Store the numeric value in formData
 		setFormData((prev) => ({ ...prev, won_delivery_fee: numericValue }));
 	};
@@ -302,6 +330,17 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 
 		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
 		if (numericValue.length > 10) return;
+
+		// Format with commas - avoid parseInt for large numbers
+		let formattedValue;
+		if (!numericValue) {
+			formattedValue = "";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
+		setDisplayWonSpecialDeliveryFee(formattedValue);
 
 		// Store the numeric value in formData
 		setFormData((prev) => ({ ...prev, won_special_delivery_fee: numericValue }));
@@ -688,7 +727,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 									name="won_delivery_fee"
 									type="text"
 									inputMode="numeric"
-									value={formData.won_delivery_fee}
+									value={displayWonDeliveryFee}
 									onChange={handleDeliveryFeeChange}
 									placeholder="기본 배송비를 입력하세요"
 									required
@@ -725,7 +764,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 									name="won_special_delivery_fee"
 									type="text"
 									inputMode="numeric"
-									value={formData.won_special_delivery_fee}
+									value={displayWonSpecialDeliveryFee}
 									onChange={handleSpecialDeliveryFeeChange}
 									placeholder="도서산간 추가 배송비를 입력하세요"
 								/>

@@ -44,6 +44,8 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 	const [displaySgtPrice, setDisplaySgtPrice] = useState("");
 	const [displaySgtDeliveryFee, setDisplaySgtDeliveryFee] = useState("");
 	const [displaySgtSpecialDeliveryFee, setDisplaySgtSpecialDeliveryFee] = useState("");
+	const [displayWonDeliveryFee, setDisplayWonDeliveryFee] = useState("");
+	const [displayWonSpecialDeliveryFee, setDisplayWonSpecialDeliveryFee] = useState("");
 
 	useEffect(() => {
 		// First check authentication status
@@ -242,8 +244,10 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 			formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 		}
 
+		setDisplayWonDeliveryFee(formattedValue);
+
 		// Store the numeric value in formData
-		setFormData((prev) => ({ ...prev, delivery_fee: numericValue }));
+		setFormData((prev) => ({ ...prev, won_delivery_fee: numericValue }));
 	};
 
 	// Format special delivery fee with commas
@@ -265,8 +269,10 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 			formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 		}
 
+		setDisplayWonSpecialDeliveryFee(formattedValue);
+
 		// Store the numeric value in formData
-		setFormData((prev) => ({ ...prev, special_delivery_fee: numericValue }));
+		setFormData((prev) => ({ ...prev, won_special_delivery_fee: numericValue }));
 	};
 
 	// Format SGT delivery fee with commas and decimal places
@@ -646,7 +652,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 									name="won_delivery_fee"
 									type="text"
 									inputMode="numeric"
-									value={formData.won_delivery_fee}
+									value={displayWonDeliveryFee}
 									onChange={handleDeliveryFeeChange}
 									placeholder="기본 배송비를 입력하세요"
 									required
@@ -683,7 +689,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 									name="won_special_delivery_fee"
 									type="text"
 									inputMode="numeric"
-									value={formData.won_special_delivery_fee}
+									value={displayWonSpecialDeliveryFee}
 									onChange={handleSpecialDeliveryFeeChange}
 									placeholder="도서산간 추가 배송비를 입력하세요"
 								/>
