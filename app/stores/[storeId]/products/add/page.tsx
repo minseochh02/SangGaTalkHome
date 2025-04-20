@@ -33,6 +33,8 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		sgt_price: "",
 		category: "",
 		status: "1", // Default to active
+		delivery_fee: "",
+		special_delivery_fee: "",
 	});
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -217,6 +219,52 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		}
 	};
 
+	// Format delivery fee with commas
+	const handleDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+
+		// Remove all non-digit characters
+		const numericValue = value.replace(/[^\d]/g, "");
+
+		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
+		if (numericValue.length > 10) return;
+
+		// Format with commas - avoid parseInt for large numbers
+		let formattedValue;
+		if (!numericValue) {
+			formattedValue = "";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
+		// Store the numeric value in formData
+		setFormData((prev) => ({ ...prev, delivery_fee: numericValue }));
+	};
+
+	// Format special delivery fee with commas
+	const handleSpecialDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+
+		// Remove all non-digit characters
+		const numericValue = value.replace(/[^\d]/g, "");
+
+		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
+		if (numericValue.length > 10) return;
+
+		// Format with commas - avoid parseInt for large numbers
+		let formattedValue;
+		if (!numericValue) {
+			formattedValue = "";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
+		// Store the numeric value in formData
+		setFormData((prev) => ({ ...prev, special_delivery_fee: numericValue }));
+	};
+
 	// Handle form submission
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -235,6 +283,16 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 			toast({
 				title: "입력 오류",
 				description: "상품명과 가격은 필수 입력 항목입니다.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		// Validate delivery fees if store allows SGT products
+		if (store.store_wallet_address && !formData.delivery_fee) {
+			toast({
+				title: "입력 오류",
+				description: "SGT 상품의 경우 배송비는 필수 입력 항목입니다.",
 				variant: "destructive",
 			});
 			return;
@@ -282,26 +340,25 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 				}
 			}
 
-			// Create product with sgt_price as numeric value for Supabase
-			const { data, error } = await supabase
+			// Create product in database
+			const { data: productData, error: productError } = await supabase
 				.from("products")
-				.insert([
-					{
-						// product_id: uuidv4(),
-						product_name: formData.product_name,
-						description: formData.description,
-						won_price: priceValue,
-						sgt_price: sgtPriceValue,
-						category: formData.category,
-						image_url: imageUrl,
-						store_id: storeId,
-						is_sgt_product: false,
-						status: parseInt(formData.status),
-					},
-				])
+				.insert({
+					product_name: formData.product_name,
+					description: formData.description,
+					won_price: parseInt(formData.price),
+					sgt_price: formData.sgt_price ? formData.sgt_price : null,
+					category: formData.category,
+					image_url: imageUrl,
+					store_id: storeId,
+					status: parseInt(formData.status),
+					is_sgt_product: false, // Default to false, only admin can change this
+					delivery_fee: store.store_wallet_address && formData.delivery_fee ? parseInt(formData.delivery_fee) : null,
+					special_delivery_fee: store.store_wallet_address && formData.special_delivery_fee ? parseInt(formData.special_delivery_fee) : null,
+				})
 				.select();
 
-			if (error) throw error;
+			if (productError) throw productError;
 
 			toast({
 				title: "상품 등록 완료",
@@ -478,6 +535,48 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 							/>
 						</div>
 					</div>
+
+					{/* Delivery Fees - Only show if store has wallet address */}
+					{store.store_wallet_address && (
+						<>
+							<div className="space-y-2">
+								<Label htmlFor="delivery_fee">
+									기본 배송비 (원) <span className="text-red-500">*</span>
+								</Label>
+								<Input
+									id="delivery_fee"
+									name="delivery_fee"
+									type="text"
+									inputMode="numeric"
+									value={formData.delivery_fee}
+									onChange={handleDeliveryFeeChange}
+									placeholder="기본 배송비를 입력하세요"
+									required
+								/>
+								<p className="text-sm text-muted-foreground">
+									일반 지역 배송에 적용되는 배송비입니다.
+								</p>
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="special_delivery_fee">
+									도서산간 추가 배송비 (원)
+								</Label>
+								<Input
+									id="special_delivery_fee"
+									name="special_delivery_fee"
+									type="text"
+									inputMode="numeric"
+									value={formData.special_delivery_fee}
+									onChange={handleSpecialDeliveryFeeChange}
+									placeholder="도서산간 추가 배송비를 입력하세요"
+								/>
+								<p className="text-sm text-muted-foreground">
+									제주도 및 도서산간 지역에 추가로 적용되는 배송비입니다.
+								</p>
+							</div>
+						</>
+					)}
 
 					{/* Submit Button */}
 					<div className="flex justify-end space-x-4">

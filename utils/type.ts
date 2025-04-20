@@ -77,6 +77,8 @@ export interface Product {
 	image_url: string | null;
 	store_id: string;
 	is_sgt_product: boolean;
+	delivery_fee: number;
+	special_delivery_fee: number;
 	created_at: string;
 	updated_at: string;
 	deleted_at: string | null;

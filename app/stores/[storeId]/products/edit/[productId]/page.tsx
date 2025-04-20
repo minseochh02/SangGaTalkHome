@@ -34,6 +34,8 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		sgt_price: "",
 		category: "",
 		status: "1",
+		delivery_fee: "",
+		special_delivery_fee: "",
 	});
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -131,6 +133,8 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 						"",
 					category: productData.category || "",
 					status: productData.status?.toString() || "1",
+					delivery_fee: productData.delivery_fee?.toString() || "",
+					special_delivery_fee: productData.special_delivery_fee?.toString() || "",
 				});
 
 				// Set display values with formatted values
@@ -168,7 +172,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 
 	// Handle form input changes
 	const handleChange = (
-		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
 	) => {
 		const { name, value } = e.target;
 
@@ -260,6 +264,34 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		setFormData((prev) => ({ ...prev, sgt_price: numericValue }));
 	};
 
+	// Format delivery fee with commas
+	const handleDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+
+		// Remove all non-digit characters
+		const numericValue = value.replace(/[^\d]/g, "");
+
+		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
+		if (numericValue.length > 10) return;
+
+		// Store the numeric value in formData
+		setFormData((prev) => ({ ...prev, delivery_fee: numericValue }));
+	};
+
+	// Format special delivery fee with commas
+	const handleSpecialDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+
+		// Remove all non-digit characters
+		const numericValue = value.replace(/[^\d]/g, "");
+
+		// Limit to maximum allowed digits (10 digits for 9,999,999,999)
+		if (numericValue.length > 10) return;
+
+		// Store the numeric value in formData
+		setFormData((prev) => ({ ...prev, special_delivery_fee: numericValue }));
+	};
+
 	// Handle image upload
 	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files && e.target.files[0]) {
@@ -282,7 +314,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		if (!user || !store || !product) {
 			toast({
 				title: "오류 발생",
-				description: "로그인이 필요하거나 스토어 정보가 없습니다.",
+				description: "로그인이 필요하거나 스토어/상품 정보가 없습니다.",
 				variant: "destructive",
 			});
 			return;
@@ -293,6 +325,16 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 			toast({
 				title: "입력 오류",
 				description: "상품명과 가격은 필수 입력 항목입니다.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		// Validate delivery fees for products that already have is_sgt_product = true
+		if (product.is_sgt_product && !formData.delivery_fee) {
+			toast({
+				title: "입력 오류",
+				description: "SGT 상품의 경우 배송비는 필수 입력 항목입니다.",
 				variant: "destructive",
 			});
 			return;
@@ -377,6 +419,8 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 					category: formData.category,
 					image_url: imageUrl,
 					status: parseInt(formData.status),
+					delivery_fee: product.is_sgt_product && formData.delivery_fee ? parseInt(formData.delivery_fee) : null,
+					special_delivery_fee: product.is_sgt_product && formData.special_delivery_fee ? parseInt(formData.special_delivery_fee) : null,
 					updated_at: new Date().toISOString(),
 				})
 				.eq("product_id", productId)
@@ -499,43 +543,71 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 
 					{/* Status */}
 					<div className="space-y-2">
-						<Label htmlFor="status">상태</Label>
-						<div className="flex items-center space-x-4">
-							<label className="flex items-center space-x-2">
-								<input
-									type="radio"
-									name="status"
-									value="1"
-									checked={formData.status === "1"}
-									onChange={handleChange}
-									className="h-4 w-4"
-								/>
-								<span>활성화</span>
-							</label>
-							<label className="flex items-center space-x-2">
-								<input
-									type="radio"
-									name="status"
-									value="2"
-									checked={formData.status === "2"}
-									onChange={handleChange}
-									className="h-4 w-4"
-								/>
-								<span>비활성화</span>
-							</label>
-							<label className="flex items-center space-x-2">
-								<input
-									type="radio"
-									name="status"
-									value="0"
-									checked={formData.status === "0"}
-									onChange={handleChange}
-									className="h-4 w-4"
-								/>
-								<span>초안</span>
-							</label>
-						</div>
+						<Label htmlFor="status">상품 상태</Label>
+						<select
+							id="status"
+							name="status"
+							value={formData.status}
+							onChange={handleChange}
+							className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+						>
+							<option value="0">활성화</option>
+							<option value="1">비활성화</option>
+						</select>
 					</div>
+
+					{/* Only show SGT price and delivery fee fields if the product already has is_sgt_product = true */}
+					{product.is_sgt_product && (
+						<>
+							<div className="space-y-2">
+								<Label htmlFor="sgt_price">SGT 가격 (토큰)</Label>
+								<Input
+									id="sgt_price"
+									name="sgt_price"
+									value={displaySgtPrice}
+									onChange={handleSgtPriceChange}
+									placeholder="SGT 가격을 입력하세요 (선택사항)"
+								/>
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="delivery_fee">
+									기본 배송비 (원) <span className="text-red-500">*</span>
+								</Label>
+								<Input
+									id="delivery_fee"
+									name="delivery_fee"
+									type="text"
+									inputMode="numeric"
+									value={formData.delivery_fee}
+									onChange={handleDeliveryFeeChange}
+									placeholder="기본 배송비를 입력하세요"
+									required
+								/>
+								<p className="text-sm text-muted-foreground">
+									일반 지역 배송에 적용되는 배송비입니다.
+								</p>
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="special_delivery_fee">
+									도서산간 추가 배송비 (원)
+								</Label>
+								<Input
+									id="special_delivery_fee"
+									name="special_delivery_fee"
+									type="text"
+									inputMode="numeric"
+									value={formData.special_delivery_fee}
+									onChange={handleSpecialDeliveryFeeChange}
+									placeholder="도서산간 추가 배송비를 입력하세요"
+								/>
+								<p className="text-sm text-muted-foreground">
+									제주도 및 도서산간 지역에 추가로 적용되는 배송비입니다.
+								</p>
+							</div>
+						</>
+					)}
 
 					{/* Product Image */}
 					<div className="space-y-2">
