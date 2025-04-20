@@ -43,6 +43,8 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 	const [displayPrice, setDisplayPrice] = useState("");
 	const [displaySgtPrice, setDisplaySgtPrice] = useState("");
+	const [displaySgtDeliveryFee, setDisplaySgtDeliveryFee] = useState("");
+	const [displaySgtSpecialDeliveryFee, setDisplaySgtSpecialDeliveryFee] = useState("");
 
 	// First check authentication status
 	useEffect(() => {
@@ -158,6 +160,15 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 
 				if (productData.image_url) {
 					setImagePreview(productData.image_url);
+				}
+
+				// Set display values for SGT delivery fees
+				if (productData.sgt_delivery_fee) {
+					setDisplaySgtDeliveryFee(formatSGTPrice(productData.sgt_delivery_fee.toString()));
+				}
+				
+				if (productData.sgt_special_delivery_fee) {
+					setDisplaySgtSpecialDeliveryFee(formatSGTPrice(productData.sgt_special_delivery_fee.toString()));
 				}
 			} catch (error) {
 				console.error("Error fetching data:", error);
@@ -314,6 +325,24 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 			decimalPart = decimalPart.substring(0, 10);
 		}
 
+		// Format integer part with commas
+		let formattedIntegerPart;
+		if (!integerPart) {
+			formattedIntegerPart = "0";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedIntegerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
+		// Combine parts for display
+		const formattedValue = decimalPart
+			? `${formattedIntegerPart}.${decimalPart}`
+			: value.includes(".")
+				? `${formattedIntegerPart}.`
+				: formattedIntegerPart;
+
+		setDisplaySgtDeliveryFee(formattedValue);
+
 		// Store the numeric value in formData
 		const numericValue = decimalPart
 			? `${integerPart}.${decimalPart}`
@@ -341,6 +370,24 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 		if (decimalPart.length > 10) {
 			decimalPart = decimalPart.substring(0, 10);
 		}
+
+		// Format integer part with commas
+		let formattedIntegerPart;
+		if (!integerPart) {
+			formattedIntegerPart = "0";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedIntegerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
+		// Combine parts for display
+		const formattedValue = decimalPart
+			? `${formattedIntegerPart}.${decimalPart}`
+			: value.includes(".")
+				? `${formattedIntegerPart}.`
+				: formattedIntegerPart;
+
+		setDisplaySgtSpecialDeliveryFee(formattedValue);
 
 		// Store the numeric value in formData
 		const numericValue = decimalPart
@@ -660,7 +707,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 									name="sgt_delivery_fee"
 									type="text"
 									inputMode="decimal"
-									value={formData.sgt_delivery_fee}
+									value={displaySgtDeliveryFee}
 									onChange={handleSgtDeliveryFeeChange}
 									placeholder="SGT 배송비를 입력하세요"
 								/>
@@ -695,7 +742,7 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 									name="sgt_special_delivery_fee"
 									type="text"
 									inputMode="decimal"
-									value={formData.sgt_special_delivery_fee}
+									value={displaySgtSpecialDeliveryFee}
 									onChange={handleSgtSpecialDeliveryFeeChange}
 									placeholder="SGT 도서산간 추가 배송비를 입력하세요"
 								/>

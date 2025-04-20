@@ -42,6 +42,8 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 	const [displayPrice, setDisplayPrice] = useState("");
 	const [displaySgtPrice, setDisplaySgtPrice] = useState("");
+	const [displaySgtDeliveryFee, setDisplaySgtDeliveryFee] = useState("");
+	const [displaySgtSpecialDeliveryFee, setDisplaySgtSpecialDeliveryFee] = useState("");
 
 	useEffect(() => {
 		// First check authentication status
@@ -285,6 +287,24 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 			decimalPart = decimalPart.substring(0, 10);
 		}
 
+		// Format integer part with commas
+		let formattedIntegerPart;
+		if (!integerPart) {
+			formattedIntegerPart = "0";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedIntegerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
+		// Combine parts for display
+		const formattedValue = decimalPart
+			? `${formattedIntegerPart}.${decimalPart}`
+			: value.includes(".")
+				? `${formattedIntegerPart}.`
+				: formattedIntegerPart;
+
+		setDisplaySgtDeliveryFee(formattedValue);
+
 		// Store the numeric value in formData
 		const numericValue = decimalPart
 			? `${integerPart}.${decimalPart}`
@@ -312,6 +332,24 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		if (decimalPart.length > 10) {
 			decimalPart = decimalPart.substring(0, 10);
 		}
+
+		// Format integer part with commas
+		let formattedIntegerPart;
+		if (!integerPart) {
+			formattedIntegerPart = "0";
+		} else {
+			// Use a safer approach to add commas without parsing to integer
+			formattedIntegerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		}
+
+		// Combine parts for display
+		const formattedValue = decimalPart
+			? `${formattedIntegerPart}.${decimalPart}`
+			: value.includes(".")
+				? `${formattedIntegerPart}.`
+				: formattedIntegerPart;
+
+		setDisplaySgtSpecialDeliveryFee(formattedValue);
 
 		// Store the numeric value in formData
 		const numericValue = decimalPart
@@ -627,7 +665,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 									name="sgt_delivery_fee"
 									type="text"
 									inputMode="decimal"
-									value={formData.sgt_delivery_fee}
+									value={displaySgtDeliveryFee}
 									onChange={handleSgtDeliveryFeeChange}
 									placeholder="SGT 배송비를 입력하세요"
 								/>
@@ -662,7 +700,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 									name="sgt_special_delivery_fee"
 									type="text"
 									inputMode="decimal"
-									value={formData.sgt_special_delivery_fee}
+									value={displaySgtSpecialDeliveryFee}
 									onChange={handleSgtSpecialDeliveryFeeChange}
 									placeholder="SGT 도서산간 추가 배송비를 입력하세요"
 								/>	
