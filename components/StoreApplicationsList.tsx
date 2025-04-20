@@ -38,7 +38,7 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 				.from("store_applications")
 				.select(
 					`
-					application_id,
+					store_application_id,
 					user_id,
 					business_name,
 					owner_name,
@@ -140,12 +140,12 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 			<div className="md:hidden space-y-4">
 				{applications.map((app) => (
 					<div
-						key={app.application_id}
+						key={app.store_application_id}
 						className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
 					>
 						<div
 							className="p-4 cursor-pointer"
-							onClick={() => toggleExpand(app.application_id)}
+							onClick={() => toggleExpand(app.store_application_id)}
 						>
 							<div className="flex justify-between items-center">
 								<h3 className="font-medium text-gray-900">
@@ -169,14 +169,14 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 									fill="none"
 									stroke="currentColor"
 									strokeWidth="2"
-									className={`transition-transform ${expandedApplicationId === app.application_id ? "rotate-180" : ""}`}
+									className={`transition-transform ${expandedApplicationId === app.store_application_id ? "rotate-180" : ""}`}
 								>
 									<polyline points="6 9 12 15 18 9"></polyline>
 								</svg>
 							</div>
 						</div>
 
-						{expandedApplicationId === app.application_id && (
+						{expandedApplicationId === app.store_application_id && (
 							<div className="p-4 bg-gray-50 border-t border-gray-100">
 								<div className="space-y-3">
 									<div>
@@ -272,9 +272,9 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 						{applications.map((app) => (
 							<>
 								<tr
-									key={app.application_id}
-									className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === app.application_id ? "bg-gray-50" : ""}`}
-									onClick={() => toggleExpand(app.application_id)}
+									key={app.store_application_id}
+									className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === app.store_application_id ? "bg-gray-50" : ""}`}
+									onClick={() => toggleExpand(app.store_application_id)}
 								>
 									<td className="px-6 py-4 whitespace-nowrap">
 										<div className="text-sm font-medium text-gray-900 flex items-center">
@@ -287,7 +287,7 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 												fill="none"
 												stroke="currentColor"
 												strokeWidth="2"
-												className={`ml-2 transition-transform ${expandedApplicationId === app.application_id ? "rotate-180" : ""}`}
+												className={`ml-2 transition-transform ${expandedApplicationId === app.store_application_id ? "rotate-180" : ""}`}
 											>
 												<polyline points="6 9 12 15 18 9"></polyline>
 											</svg>
@@ -312,7 +312,7 @@ export default function StoreApplicationsList({ userId }: { userId: string }) {
 										</div>
 									</td>
 								</tr>
-								{expandedApplicationId === app.application_id && (
+								{expandedApplicationId === app.store_application_id && (
 									<tr>
 										<td
 											colSpan={5}

@@ -63,7 +63,7 @@ export default function AdminStoreApplicationsList() {
 
 	const handleApprove = async (application: StoreApplication) => {
 		if (processingId) return; // Prevent multiple simultaneous operations
-		setProcessingId(application.application_id);
+		setProcessingId(application.store_application_id);
 
 		try {
 			const supabase = createClient();
@@ -72,7 +72,7 @@ export default function AdminStoreApplicationsList() {
 			const { error: updateError } = await supabase
 				.from("store_applications")
 				.update({ status: 1, updated_at: new Date().toISOString() })
-				.eq("application_id", application.application_id);
+				.eq("store_application_id", application.store_application_id);
 
 			if (updateError) throw updateError;
 
@@ -122,7 +122,7 @@ export default function AdminStoreApplicationsList() {
 
 	const handleReject = async (application: StoreApplication) => {
 		if (processingId) return; // Prevent multiple simultaneous operations
-		setProcessingId(application.application_id);
+		setProcessingId(application.store_application_id);
 
 		try {
 			const supabase = createClient();
@@ -131,7 +131,7 @@ export default function AdminStoreApplicationsList() {
 			const { error } = await supabase
 				.from("store_applications")
 				.update({ status: 2, updated_at: new Date().toISOString() })
-				.eq("application_id", application.application_id);
+				.eq("store_application_id", application.store_application_id);
 
 			if (error) throw error;
 
@@ -262,9 +262,9 @@ export default function AdminStoreApplicationsList() {
 					{applications.map((app) => (
 						<>
 							<tr
-								key={app.application_id}
-								className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === app.application_id ? "bg-gray-50" : ""}`}
-								onClick={() => toggleExpand(app.application_id)}
+								key={app.store_application_id}
+								className={`hover:bg-gray-50 cursor-pointer ${expandedApplicationId === app.store_application_id ? "bg-gray-50" : ""}`}
+								onClick={() => toggleExpand(app.store_application_id)}
 							>
 								<td className="px-6 py-4 whitespace-nowrap">
 									<div className="text-sm font-medium text-gray-900 flex items-center">
@@ -277,7 +277,7 @@ export default function AdminStoreApplicationsList() {
 											fill="none"
 											stroke="currentColor"
 											strokeWidth="2"
-											className={`ml-2 transition-transform ${expandedApplicationId === app.application_id ? "rotate-180" : ""}`}
+											className={`ml-2 transition-transform ${expandedApplicationId === app.store_application_id ? "rotate-180" : ""}`}
 										>
 											<polyline points="6 9 12 15 18 9"></polyline>
 										</svg>
@@ -310,7 +310,7 @@ export default function AdminStoreApplicationsList() {
 												size="sm"
 												className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
 												onClick={() => handleApprove(app)}
-												disabled={processingId === app.application_id}
+												disabled={processingId === app.store_application_id}
 											>
 												승인
 											</Button>
@@ -319,7 +319,7 @@ export default function AdminStoreApplicationsList() {
 												size="sm"
 												className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
 												onClick={() => handleReject(app)}
-												disabled={processingId === app.application_id}
+												disabled={processingId === app.store_application_id}
 											>
 												거절
 											</Button>
@@ -327,7 +327,7 @@ export default function AdminStoreApplicationsList() {
 									)}
 								</td>
 							</tr>
-							{expandedApplicationId === app.application_id && (
+							{expandedApplicationId === app.store_application_id && (
 								<tr>
 									<td
 										colSpan={6}

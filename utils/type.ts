@@ -10,7 +10,7 @@ export interface User {
 
 // 1-1. STORE_APPLICATIONS
 export interface StoreApplication {
-	application_id: string;
+	store_application_id: string;
 	user_id: string;
 	business_name: string;
 	owner_name: string;
