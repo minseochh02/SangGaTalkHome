@@ -5,6 +5,7 @@ import { Store, Product } from "@/utils/type";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import HtmlContent from "@/components/HtmlContent";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const supabase = createClient();
@@ -90,7 +91,8 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
             created_at,
             updated_at,
             markdown_content,
-            categories:category_id(category_id, category_name)
+            categories:category_id(category_id, category_name),
+            store_wallet_address
           `
 					)
 					.eq("store_id", storeId)
@@ -739,6 +741,68 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							)}
 						</ul>
 					</div>
+
+					{/* Wallet QR Code - Add after Business Details */}
+					{store.store_wallet_address && (
+						<div className="bg-white rounded-xl shadow-md p-6">
+							<h2 className="text-xl font-bold mb-4 flex items-center">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="20"
+									height="20"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									className="mr-2 text-primary"
+								>
+									<rect width="20" height="16" x="2" y="4" rx="2"></rect>
+									<path d="M16 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"></path>
+									<path d="M6 10h4"></path>
+									<path d="M6 14h4"></path>
+								</svg>
+								결제 정보
+							</h2>
+							<div className="flex flex-col items-center space-y-4">
+								<div className="p-3 bg-white rounded-lg shadow-sm border">
+									<QRCodeSVG
+										value={store.store_wallet_address}
+										size={180}
+										level="H"
+										includeMargin={true}
+									/>
+								</div>
+								<div className="text-center">
+									<p className="text-sm text-gray-500 mb-1">지갑 주소</p>
+									<p className="text-xs font-mono bg-gray-50 p-2 rounded-md break-all">
+										{store.store_wallet_address}
+									</p>
+									<button
+										onClick={() => {
+											navigator.clipboard.writeText(store.store_wallet_address);
+											alert("지갑 주소가 클립보드에 복사되었습니다.");
+										}}
+										className="mt-2 text-sm text-primary hover:text-primary/80 flex items-center justify-center mx-auto"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="14"
+											height="14"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											className="mr-1"
+										>
+											<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+											<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+										</svg>
+										주소 복사하기
+									</button>
+								</div>
+							</div>
+						</div>
+					)}
 
 					{/* Owner Actions - Only visible to store owner */}
 					{isOwner && (

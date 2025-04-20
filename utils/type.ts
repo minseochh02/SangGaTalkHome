@@ -50,7 +50,7 @@ export interface Store {
 	owner_name: string;
 	email: string;
 	operating_hours: string;
-	// store_wallet_address: string; NOT YET IMPLEMENTED
+	store_wallet_address: string; 
 	// store_order_sheet_id: string; NOT YET IMPLEMENTED
 	location: string; // geography(Point,4326) format
 	latitude: number;
