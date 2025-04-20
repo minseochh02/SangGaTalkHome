@@ -33,8 +33,10 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		sgt_price: "",
 		category: "",
 		status: "1", // Default to active
-		delivery_fee: "",
-		special_delivery_fee: "",
+		won_delivery_fee: "",
+		won_special_delivery_fee: "",
+		sgt_delivery_fee: "",
+		sgt_special_delivery_fee: "",
 	});
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -265,6 +267,62 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		setFormData((prev) => ({ ...prev, special_delivery_fee: numericValue }));
 	};
 
+	// Format SGT delivery fee with commas and decimal places
+	const handleSgtDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+
+		// Allow only digits, commas, and a single decimal point
+		if (!/^[\d,]*\.?\d*$/.test(value) && value !== "") return;
+
+		// Split by decimal point
+		const parts = value.split(".");
+		const integerPart = parts[0].replace(/[^\d]/g, "");
+		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : "";
+
+		// Limit integer part to 10 digits and decimal part to 10 digits
+		if (integerPart.length > 10) return;
+		if (decimalPart.length > 10) {
+			decimalPart = decimalPart.substring(0, 10);
+		}
+
+		// Store the numeric value in formData
+		const numericValue = decimalPart
+			? `${integerPart}.${decimalPart}`
+			: value.includes(".")
+				? `${integerPart}.`
+				: integerPart;
+
+		setFormData((prev) => ({ ...prev, sgt_delivery_fee: numericValue }));
+	};
+
+	// Format SGT special delivery fee with commas and decimal places
+	const handleSgtSpecialDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+
+		// Allow only digits, commas, and a single decimal point
+		if (!/^[\d,]*\.?\d*$/.test(value) && value !== "") return;
+
+		// Split by decimal point
+		const parts = value.split(".");
+		const integerPart = parts[0].replace(/[^\d]/g, "");
+		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : "";
+
+		// Limit integer part to 10 digits and decimal part to 10 digits
+		if (integerPart.length > 10) return;
+		if (decimalPart.length > 10) {
+			decimalPart = decimalPart.substring(0, 10);
+		}
+
+		// Store the numeric value in formData
+		const numericValue = decimalPart
+			? `${integerPart}.${decimalPart}`
+			: value.includes(".")
+				? `${integerPart}.`
+				: integerPart;
+
+		setFormData((prev) => ({ ...prev, sgt_special_delivery_fee: numericValue }));
+	};
+
 	// Handle form submission
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -289,7 +347,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 		}
 
 		// Validate delivery fees if store allows SGT products
-		if (store.store_wallet_address && !formData.delivery_fee) {
+		if (store.store_wallet_address && !formData.won_delivery_fee && !formData.won_special_delivery_fee) {
 			toast({
 				title: "입력 오류",
 				description: "SGT 상품의 경우 배송비는 필수 입력 항목입니다.",
@@ -353,8 +411,10 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 					store_id: storeId,
 					status: parseInt(formData.status),
 					is_sgt_product: false, // Default to false, only admin can change this
-					delivery_fee: store.store_wallet_address && formData.delivery_fee ? parseInt(formData.delivery_fee) : null,
-					special_delivery_fee: store.store_wallet_address && formData.special_delivery_fee ? parseInt(formData.special_delivery_fee) : null,
+					won_delivery_fee: store.store_wallet_address && formData.won_delivery_fee ? parseInt(formData.won_delivery_fee) : null,
+					won_special_delivery_fee: store.store_wallet_address && formData.won_special_delivery_fee ? parseInt(formData.won_special_delivery_fee) : null,
+					sgt_delivery_fee: store.store_wallet_address && formData.sgt_delivery_fee ? formData.sgt_delivery_fee : null,
+					sgt_special_delivery_fee: store.store_wallet_address && formData.sgt_special_delivery_fee ? formData.sgt_special_delivery_fee : null,
 				})
 				.select();
 
@@ -540,15 +600,15 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 					{store.store_wallet_address && (
 						<>
 							<div className="space-y-2">
-								<Label htmlFor="delivery_fee">
+								<Label htmlFor="won_delivery_fee">
 									기본 배송비 (원) <span className="text-red-500">*</span>
 								</Label>
 								<Input
-									id="delivery_fee"
-									name="delivery_fee"
+									id="won_delivery_fee"
+									name="won_delivery_fee"
 									type="text"
 									inputMode="numeric"
-									value={formData.delivery_fee}
+									value={formData.won_delivery_fee}
 									onChange={handleDeliveryFeeChange}
 									placeholder="기본 배송비를 입력하세요"
 									required
@@ -559,20 +619,55 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 							</div>
 
 							<div className="space-y-2">
-								<Label htmlFor="special_delivery_fee">
+								<Label htmlFor="sgt_delivery_fee">
+									SGT 배송비 (토큰)
+								</Label>
+								<Input
+									id="sgt_delivery_fee"
+									name="sgt_delivery_fee"
+									type="text"
+									inputMode="decimal"
+									value={formData.sgt_delivery_fee}
+									onChange={handleSgtDeliveryFeeChange}
+									placeholder="SGT 배송비를 입력하세요"
+								/>
+								<p className="text-sm text-muted-foreground">
+									SGT 결제시 적용되는 배송비입니다.
+								</p>
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="won_special_delivery_fee">
 									도서산간 추가 배송비 (원)
 								</Label>
 								<Input
-									id="special_delivery_fee"
-									name="special_delivery_fee"
+									id="won_special_delivery_fee"
+									name="won_special_delivery_fee"
 									type="text"
 									inputMode="numeric"
-									value={formData.special_delivery_fee}
+									value={formData.won_special_delivery_fee}
 									onChange={handleSpecialDeliveryFeeChange}
 									placeholder="도서산간 추가 배송비를 입력하세요"
 								/>
 								<p className="text-sm text-muted-foreground">
 									제주도 및 도서산간 지역에 추가로 적용되는 배송비입니다.
+								</p>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="sgt_special_delivery_fee">
+									SGT 도서산간 추가 배송비 (토큰)
+								</Label>
+								<Input
+									id="sgt_special_delivery_fee"
+									name="sgt_special_delivery_fee"
+									type="text"
+									inputMode="decimal"
+									value={formData.sgt_special_delivery_fee}
+									onChange={handleSgtSpecialDeliveryFeeChange}
+									placeholder="SGT 도서산간 추가 배송비를 입력하세요"
+								/>	
+								<p className="text-sm text-muted-foreground">
+									SGT 결제시 적용되는 도서산간 추가 배송비입니다.
 								</p>
 							</div>
 						</>
