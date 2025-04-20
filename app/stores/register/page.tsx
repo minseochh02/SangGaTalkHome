@@ -7,7 +7,7 @@ import { Category } from "@/utils/type";
 import { toast } from "sonner";
 import Image from "next/image";
 import { v4 as uuidv4 } from "uuid";
-import AddressPopup from "@/app/components/AddressPopup";
+import AddressPopup from "@/components/AddressPopup";
 
 interface FormData {
 	business_name: string;
@@ -87,7 +87,7 @@ export default function StoreRegistration() {
 				const supabase = createClient();
 				const { data, error } = await supabase
 					.from("categories")
-					.select("category_id, category_name, description")
+					.select("category_id, category_name, description, created_at, updated_at")
 					.order("category_name");
 
 				if (error) {

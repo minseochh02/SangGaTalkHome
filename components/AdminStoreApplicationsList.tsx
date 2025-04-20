@@ -46,7 +46,7 @@ export default function AdminStoreApplicationsList() {
 			const supabase = createClient();
 			const { data, error } = await supabase
 				.from("categories")
-				.select("category_id, category_name");
+				.select("category_id, category_name, created_at, updated_at");
 
 			if (error) throw error;
 			setCategories(data || []);

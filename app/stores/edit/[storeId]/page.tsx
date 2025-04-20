@@ -17,7 +17,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import AddressPopup from "@/app/components/AddressPopup";
+import AddressPopup from "@/components/AddressPopup";
 
 interface EditStoreFormProps {
 	storeId: string;

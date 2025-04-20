@@ -4,16 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-interface CouponFormData {
-  name: string;
-  description: string;
-  warning: string;
-  expiry_date: string;
-  radius_meters: number;
-  max_claims: number | null;
-  is_active: boolean;
-}
+import { CouponFormData } from "@/utils/type";
 
 export default function CouponCreateContent({ storeId }: { storeId: string }) {
   const router = useRouter();

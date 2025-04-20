@@ -3,18 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-
-interface Coupon {
-  id: string;
-  name: string;
-  description: string | null;
-  warning: string | null;
-  expiry_date: string;
-  radius_meters: number;
-  max_claims: number | null;
-  is_active: boolean;
-  created_at: string;
-}
+import { Coupon } from "@/utils/type";
 
 export default function CouponListContent({ storeId }: { storeId: string }) {
   const supabase = createClient();
@@ -144,7 +133,7 @@ export default function CouponListContent({ storeId }: { storeId: string }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {coupons.map((coupon) => (
             <div
-              key={coupon.id}
+              key={coupon.coupon_id}
               className={`bg-white rounded-xl shadow-md overflow-hidden ${
                 !coupon.is_active || isExpired(coupon.expiry_date)
                   ? "opacity-70"
@@ -246,12 +235,12 @@ export default function CouponListContent({ storeId }: { storeId: string }) {
               </div>
 
               <div className="px-6 py-3 bg-gray-50 flex justify-between">
-                <Link href={`/stores/${storeId}/coupons/${coupon.id}`}>
+                <Link href={`/stores/${storeId}/coupons/${coupon.coupon_id}`}>
                   <button className="text-primary text-sm hover:underline">
                     상세보기
                   </button>
                 </Link>
-                <Link href={`/stores/${storeId}/coupons/${coupon.id}/edit`}>
+                <Link href={`/stores/${storeId}/coupons/${coupon.coupon_id}/edit`}>
                   <button className="text-primary text-sm hover:underline">
                     수정하기
                   </button>

@@ -23,7 +23,7 @@ export default function CategoriesStoresContent() {
 				const supabase = createClient();
 				const { data, error } = await supabase
 					.from("categories")
-					.select("category_id, category_name, description")
+					.select("category_id, category_name, description, created_at, updated_at")
 					.order("category_name");
 
 				if (error) {

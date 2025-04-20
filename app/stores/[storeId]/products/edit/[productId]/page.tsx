@@ -3,28 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { Store } from "@/utils/type";
+import { Store, Product } from "@/utils/type";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { formatSGTPrice } from "@/utils/formatters";
-
-interface Product {
-	product_id: string;
-	product_name: string;
-	description: string;
-	won_price: number;
-	sgt_price: number | null;
-	category: string;
-	image_url: string;
-	store_id: string;
-	is_sgt_product: boolean;
-	status: number;
-	created_at: string;
-	updated_at: string;
-}
 
 interface EditProductPageProps {
 	storeId: string;
