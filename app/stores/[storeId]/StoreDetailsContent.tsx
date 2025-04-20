@@ -880,6 +880,27 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 										쿠폰 관리
 									</button>
 								</Link>
+
+								<Link href={`/stores/${storeId}/orders`} className="w-full">
+									<button className="w-full px-4 py-3 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200 text-base font-medium flex items-center justify-center gap-2">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="18"
+											height="18"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											className="shrink-0"
+										>
+											<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
+											<rect width="6" height="4" x="9" y="3" rx="2"></rect>
+											<path d="M9 13h6"></path>
+											<path d="M9 17h6"></path>
+										</svg>
+										주문 관리
+									</button>
+								</Link>
 							</div>
 						</div>
 					)}
