@@ -255,6 +255,7 @@ export interface Exchange {
 	content?: string;
 	status: number; // 0: pending, 1: sgt_sent, 2: payment_complete, 3: canceled
 	created_at: string;
+	receiver_wallet_address?: string;
 }
 
 // categories
@@ -391,6 +392,7 @@ export interface Exchange {
 	content?: string;
 	status: number; // 0: pending, 1: sgt_sent, 2: payment_complete, 3: canceled
 	created_at: string;
+	receiver_wallet_address?: string;
 }
 
 export interface Notification {

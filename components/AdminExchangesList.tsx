@@ -270,6 +270,24 @@ export default function AdminExchangesList() {
 	const handleApproveWonToSgt = async (exchange: ExtendedExchange) => {
 		if (processingExchangeId) return; // Prevent multiple simultaneous operations
 
+		// Since pending exchanges don't have transactions yet, we need to get the receiver_wallet_address
+		let receiverWalletAddress = exchange.receiver_wallet_address;
+		
+		// If we don't have a receiver wallet address, prompt the admin to enter it
+		if (!receiverWalletAddress) {
+			const promptResult = window.prompt("수신자 지갑 주소를 입력하세요 (Wallet Address)", "");
+			if (!promptResult) {
+				// User cancelled the prompt
+				toast({
+					title: "취소됨",
+					description: "지갑 주소를 입력하지 않아 취소되었습니다.",
+					variant: "destructive",
+				});
+				return;
+			}
+			receiverWalletAddress = promptResult.trim();
+		}
+
 		try {
 			setProcessingExchangeId(exchange.exchange_id);
 			
@@ -281,7 +299,7 @@ export default function AdminExchangesList() {
 				},
 				body: JSON.stringify({
 					exchange_id: exchange.exchange_id,
-					receiver_wallet_address: exchange.receiver_wallet_address || '',
+					receiver_wallet_address: receiverWalletAddress,
 					sgt_amount: exchange.sgt_amount,
 					content: exchange.content || `원화로 SGT 구매 - ${exchange.exchange_id.substring(0, 8)}`,
 					created_at: exchange.created_at
@@ -496,9 +514,17 @@ export default function AdminExchangesList() {
 														{exchange.supplier_fee} SGT
 													</dd>
 												</div>
+												{exchange.receiver_wallet_address && (
+													<div>
+														<dt className="text-gray-500">수신자 지갑 주소</dt>
+														<dd className="font-medium break-all">
+															{exchange.receiver_wallet_address}
+														</dd>
+													</div>
+												)}
 											</dl>
 											
-											{exchange.status === 0 && exchange.transactionType === 3 && (
+											{exchange.status === 0 && (
 												<div className="mt-4 flex justify-end">
 													<Button 
 														onClick={(e) => {
@@ -513,7 +539,7 @@ export default function AdminExchangesList() {
 																<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
 																처리 중...
 															</>
-														) : "환전 승인"}
+														) : "환전 승인 (원화→SGT)"}
 													</Button>
 												</div>
 											)}
