@@ -9,6 +9,9 @@ import { ToastContainer } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+// Make sure to add SERVER_URL to your .env.local file:
+// NEXT_PUBLIC_SERVER_URL=http://localhost:8000 (or your actual server URL)
+
 export default function AdminExchangesPage() {
 	const supabase = createClient();
 	const router = useRouter();

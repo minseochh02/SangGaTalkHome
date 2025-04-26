@@ -16,6 +16,7 @@ interface ExtendedExchange extends Exchange {
 		rate: number;
 	};
 	transactionType?: number;
+	receiver_wallet_address?: string;
 }
 
 export default function AdminExchangesList() {
@@ -23,6 +24,7 @@ export default function AdminExchangesList() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [expandedExchangeId, setExpandedExchangeId] = useState<string | null>(null);
+	const [processingExchangeId, setProcessingExchangeId] = useState<string | null>(null);
 
 	useEffect(() => {
 		fetchExchanges();
@@ -47,7 +49,8 @@ export default function AdminExchangesList() {
 					supplier_fee,
 					content,
 					status,
-					created_at
+					created_at,
+					receiver_wallet_address
 				`)
 				.order("created_at", { ascending: false });
 
@@ -138,11 +141,11 @@ export default function AdminExchangesList() {
 		if (transactionIds.length > 0) {
 			const { data: transactions, error } = await supabase
 				.from("transactions")
-				.select("transaction_id, type")
+				.select("transaction_id, type, receiver_wallet_address")
 				.in("transaction_id", transactionIds);
 
 			if (!error && transactions) {
-				// Create a map for quick lookup
+				// Create maps for quick lookup
 				const transactionMap = transactions.reduce(
 					(map, transaction) => {
 						map[transaction.transaction_id] = transaction.type;
@@ -151,10 +154,25 @@ export default function AdminExchangesList() {
 					{} as Record<string, number>
 				);
 
-				// Add transaction type to exchanges
+				const receiverMap = transactions.reduce(
+					(map, transaction) => {
+						if (transaction.receiver_wallet_address) {
+							map[transaction.transaction_id] = transaction.receiver_wallet_address;
+						}
+						return map;
+					},
+					{} as Record<string, string>
+				);
+
+				// Add transaction type and receiver wallet address to exchanges
 				enhancedExchanges.forEach((exchange) => {
-					if (exchange.transaction_id && transactionMap[exchange.transaction_id]) {
-						exchange.transactionType = transactionMap[exchange.transaction_id];
+					if (exchange.transaction_id) {
+						if (transactionMap[exchange.transaction_id]) {
+							exchange.transactionType = transactionMap[exchange.transaction_id];
+						}
+						if (receiverMap[exchange.transaction_id]) {
+							exchange.receiver_wallet_address = receiverMap[exchange.transaction_id];
+						}
 					}
 				});
 			}
@@ -247,6 +265,53 @@ export default function AdminExchangesList() {
 			minimumFractionDigits: 0,
 			maximumFractionDigits: 0,
 		}).format(amount);
+	};
+
+	const handleApproveWonToSgt = async (exchange: ExtendedExchange) => {
+		if (processingExchangeId) return; // Prevent multiple simultaneous operations
+
+		try {
+			setProcessingExchangeId(exchange.exchange_id);
+			
+			// Call the backend API to approve the Won to SGT exchange
+			const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/transactions/approve-won-to-sgt`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					exchange_id: exchange.exchange_id,
+					receiver_wallet_address: exchange.receiver_wallet_address || '',
+					sgt_amount: exchange.sgt_amount,
+					content: exchange.content || `원화로 SGT 구매 - ${exchange.exchange_id.substring(0, 8)}`,
+					created_at: exchange.created_at
+				}),
+			});
+			
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.detail || 'Failed to approve exchange');
+			}
+			
+			// Refresh the exchanges list
+			await fetchExchanges();
+			
+			toast({
+				title: "환전 승인 완료",
+				description: `${exchange.sgt_amount} SGT가 지갑으로 전송되었습니다.`,
+				variant: "default",
+			});
+			
+		} catch (err) {
+			console.error("Error approving Won to SGT exchange:", err);
+			toast({
+				title: "오류",
+				description: `환전 승인에 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`,
+				variant: "destructive",
+			});
+		} finally {
+			setProcessingExchangeId(null);
+		}
 	};
 
 	if (isLoading) {
@@ -432,6 +497,26 @@ export default function AdminExchangesList() {
 													</dd>
 												</div>
 											</dl>
+											
+											{exchange.status === 0 && exchange.transactionType === 3 && (
+												<div className="mt-4 flex justify-end">
+													<Button 
+														onClick={(e) => {
+															e.stopPropagation();
+															handleApproveWonToSgt(exchange);
+														}} 
+														disabled={processingExchangeId === exchange.exchange_id}
+														className="ml-2"
+													>
+														{processingExchangeId === exchange.exchange_id ? (
+															<>
+																<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
+																처리 중...
+															</>
+														) : "환전 승인"}
+													</Button>
+												</div>
+											)}
 										</div>
 									</td>
 								</tr>
