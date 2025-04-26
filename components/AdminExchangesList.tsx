@@ -332,6 +332,49 @@ export default function AdminExchangesList() {
 		}
 	};
 
+	const handleCompleteSgtToWon = async (exchange: ExtendedExchange) => {
+		if (processingExchangeId) return; // Prevent multiple simultaneous operations
+
+		try {
+			setProcessingExchangeId(exchange.exchange_id);
+			
+			// Call the backend API to complete the SGT to Won exchange
+			const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/transactions/complete-sgt-to-won`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					exchange_id: exchange.exchange_id
+				}),
+			});
+			
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.detail || 'Failed to complete exchange');
+			}
+			
+			// Refresh the exchanges list
+			await fetchExchanges();
+			
+			toast({
+				title: "환전 완료",
+				description: "SGT → 원화 환전이 완료되었습니다.",
+				variant: "default",
+			});
+			
+		} catch (err) {
+			console.error("Error completing SGT to Won exchange:", err);
+			toast({
+				title: "오류",
+				description: `환전 완료에 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`,
+				variant: "destructive",
+			});
+		} finally {
+			setProcessingExchangeId(null);
+		}
+	};
+
 	if (isLoading) {
 		return (
 			<div className="flex justify-center items-center py-8">
@@ -540,6 +583,26 @@ export default function AdminExchangesList() {
 																처리 중...
 															</>
 														) : "환전 승인 (원화→SGT)"}
+													</Button>
+												</div>
+											)}
+
+											{exchange.status === 1 && exchange.transaction_id && (
+												<div className="mt-4 flex justify-end">
+													<Button 
+														onClick={(e) => {
+															e.stopPropagation();
+															handleCompleteSgtToWon(exchange);
+														}} 
+														disabled={processingExchangeId === exchange.exchange_id}
+														className="ml-2"
+													>
+														{processingExchangeId === exchange.exchange_id ? (
+															<>
+																<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
+																처리 중...
+															</>
+														) : "환전 완료 (SGT→원화)"}
 													</Button>
 												</div>
 											)}
