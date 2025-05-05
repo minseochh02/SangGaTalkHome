@@ -90,40 +90,49 @@ export default function AdminExchangesList() {
 
 			if (error) throw error;
 
-			console.log(data);
+			console.log("Initial Exchange Data:", data); // Renamed log for clarity
+			
 			// Step 2: Get transaction data for exchanges that have transaction IDs
 			const transactionIds = data
-			.filter(exchange => exchange.transaction_id)
-			.map(exchange => exchange.transaction_id);
+				.map(exchange => exchange.transaction_id) // Get all IDs
+				.filter(id => id !== null && id !== undefined); // Filter out null/undefined IDs
 			
-		  // Only query transactions if we have IDs to look up
-		  let transactionsMap = {};
-		  if (transactionIds.length > 0) {
-			const { data: transactionsData, error: transactionsError } = await supabase
-			  .from("transactions")
-			  .select("transaction_id, type, receiver_wallet_address")
-			  .in("transaction_id", transactionIds);
-			  
-			if (transactionsError) throw transactionsError;
+			console.log("Transaction IDs to Fetch:", transactionIds); // Log the IDs we're querying
 
-			console.log(transactionsData);
-			
-			// Create a map for quick lookup
-			transactionsMap = transactionsData.reduce((map: any, transaction: any) => {
-			  map[transaction.transaction_id] = transaction;
-			  return map;
-			}, {});
-		  }
-		  console.log(transactionsMap);
+			// Only query transactions if we have IDs to look up
+			let transactionsMap = {};
+			if (transactionIds.length > 0) {
+				const { data: transactionsData, error: transactionsError } = await supabase
+					.from("transactions")
+					.select("transaction_id, type, receiver_wallet_address")
+					.in("transaction_id", transactionIds);
+			  
+				if (transactionsError) {
+					console.error("Error fetching transactions separately:", transactionsError);
+					// Decide how to handle this error - maybe throw it, maybe continue without transaction data
+					throw transactionsError; // Re-throwing for now
+				}
+
+				console.log("Fetched Transactions Data:", transactionsData); // Log the result of the separate fetch
+				
+				// Create a map for quick lookup
+				transactionsMap = (transactionsData || []).reduce((map: any, transaction: any) => {
+					map[transaction.transaction_id] = transaction;
+					return map;
+				}, {});
+			}
+			console.log("Transactions Map:", transactionsMap); // Log the created map
 
 			// Transform the data to match your expected format
 			const transformedData = (data as unknown as JoinedExchangeData[])?.map(exchange => {
-				// Create our transformed exchange from the raw data
+				// Find the corresponding transaction from the map
+				const transactionDetails = exchange.transaction_id ? (transactionsMap as any)[exchange.transaction_id] : null;
+
 				const transformedExchange: ExtendedExchange = {
 					...exchange,
-					// Extract transactions data
-					transactionType: exchange.transactions?.[0]?.type,
-					receiver_wallet_address: exchange.transactions?.[0]?.receiver_wallet_address,
+					// Use data from the separately fetched transactions if available
+					transactionType: transactionDetails?.type ?? exchange.transactions?.[0]?.type, // Prioritize separate fetch
+					receiver_wallet_address: transactionDetails?.receiver_wallet_address ?? exchange.transactions?.[0]?.receiver_wallet_address,
 					
 					// Handle liquidSupplier from the joined data
 					liquidSupplier: exchange.liquid_suppliers ? {
@@ -149,6 +158,8 @@ export default function AdminExchangesList() {
 
 				return result;
 			});
+			
+			console.log("Final Transformed Data:", transformedData); // Log final data
 
 			setExchanges(transformedData || []);
 		} catch (err) {
