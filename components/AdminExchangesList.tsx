@@ -36,7 +36,27 @@ export default function AdminExchangesList() {
 
 		try {
 			const supabase = createClient();
-			// Fetch all exchanges with related information
+			
+			// Define a type for the joined data we'll get from Supabase
+			interface JoinedExchangeData extends Exchange {
+				transactions?: { 
+					transaction_id: string; 
+					type: number; 
+					receiver_wallet_address?: string 
+				}[];
+				liquid_suppliers?: { 
+					liquid_supplier_id: string; 
+					bank_name: string; 
+					bank_account_no: string 
+				};
+				policies?: { 
+					policy_id: string; 
+					title: string; 
+					rate: number 
+				};
+			}
+			
+			// Fetch all exchanges with related information including transactions
 			const { data, error } = await supabase
 				.from("exchanges")
 				.select(`
@@ -50,15 +70,61 @@ export default function AdminExchangesList() {
 					content,
 					status,
 					created_at,
-					receiver_wallet_address
+					transactions (
+						transaction_id,
+						type,
+						receiver_wallet_address
+					),
+					liquid_suppliers (
+						liquid_supplier_id,
+						bank_name,
+						bank_account_no
+					),
+					policies (
+						policy_id,
+						title,
+						rate
+					)
 				`)
 				.order("created_at", { ascending: false });
 
 			if (error) throw error;
 
-			// Enhance data with related information
-			const enhancedData = await enhanceExchangesWithRelatedData(data || []);
-			setExchanges(enhancedData);
+			// Transform the data to match your expected format
+			const transformedData = (data as unknown as JoinedExchangeData[])?.map(exchange => {
+				// Create our transformed exchange from the raw data
+				const transformedExchange: ExtendedExchange = {
+					...exchange,
+					// Extract transactions data
+					transactionType: exchange.transactions?.[0]?.type,
+					receiver_wallet_address: exchange.transactions?.[0]?.receiver_wallet_address,
+					
+					// Handle liquidSupplier from the joined data
+					liquidSupplier: exchange.liquid_suppliers ? {
+						liquid_supplier_id: exchange.liquid_suppliers.liquid_supplier_id,
+						bank_name: exchange.liquid_suppliers.bank_name,
+						bank_account_no: exchange.liquid_suppliers.bank_account_no
+					} : undefined,
+					
+					// Handle policy from the joined data
+					policy: exchange.policies ? {
+						policy_id: exchange.policies.policy_id,
+						title: exchange.policies.title,
+						rate: exchange.policies.rate
+					} : undefined
+				};
+
+				// Create clean result without the joined data properties
+				const result = { ...transformedExchange };
+				// Remove the joined properties using type assertion
+				delete (result as any).transactions;
+				delete (result as any).liquid_suppliers;
+				delete (result as any).policies;
+
+				return result;
+			});
+
+			setExchanges(transformedData || []);
 		} catch (err) {
 			console.error("Error fetching exchanges:", err);
 			setError("Failed to load exchanges");
@@ -66,169 +132,6 @@ export default function AdminExchangesList() {
 			setIsLoading(false);
 		}
 	};
-
-	// Enhance exchanges with related data
-	const enhanceExchangesWithRelatedData = async (
-		exchanges: Exchange[]
-	): Promise<ExtendedExchange[]> => {
-		const supabase = createClient();
-		const enhancedExchanges: ExtendedExchange[] = [...exchanges];
-
-		// Get all unique liquid supplier IDs and policy IDs
-		const supplierIds = Array.from(
-			new Set(exchanges.map((ex) => ex.liquid_supplier_id))
-		);
-		const policyIds = Array.from(
-			new Set(exchanges.map((ex) => ex.policy_id))
-		);
-		const transactionIds = Array.from(
-			new Set(exchanges.map((ex) => ex.transaction_id))
-		).filter(Boolean);
-
-		// Fetch all liquid suppliers
-		if (supplierIds.length > 0) {
-			const { data: suppliers, error } = await supabase
-				.from("liquid_suppliers")
-				.select("liquid_supplier_id, bank_name, bank_account_no")
-				.in("liquid_supplier_id", supplierIds);
-
-			if (!error && suppliers) {
-				// Create a map for quick lookup
-				const supplierMap = suppliers.reduce(
-					(map, supplier) => {
-						map[supplier.liquid_supplier_id] = supplier;
-						return map;
-					},
-					{} as Record<string, any>
-				);
-
-				// Add supplier info to exchanges
-				enhancedExchanges.forEach((exchange) => {
-					if (supplierMap[exchange.liquid_supplier_id]) {
-						exchange.liquidSupplier = supplierMap[exchange.liquid_supplier_id];
-					}
-				});
-			}
-		}
-
-		// Fetch all policies
-		if (policyIds.length > 0) {
-			const { data: policies, error } = await supabase
-				.from("policies")
-				.select("policy_id, title, rate")
-				.in("policy_id", policyIds);
-
-			if (!error && policies) {
-				// Create a map for quick lookup
-				const policyMap = policies.reduce(
-					(map, policy) => {
-						map[policy.policy_id] = policy;
-						return map;
-					},
-					{} as Record<string, any>
-				);
-
-				// Add policy info to exchanges
-				enhancedExchanges.forEach((exchange) => {
-					if (policyMap[exchange.policy_id]) {
-						exchange.policy = policyMap[exchange.policy_id];
-					}
-				});
-			}
-		}
-
-		// Fetch transaction types
-		if (transactionIds.length > 0) {
-			 // Now try to fetch the transactions with detailed error handling
-			 try {
-				console.log("Attempting to fetch transactions with IDs:", transactionIds);
-				
-				const { data: transactions, error } = await supabase
-				  .from("transactions")
-				  .select("transaction_id, type, receiver_wallet_address")
-				  .in("transaction_id", transactionIds);
-		  
-				console.log("Transactions fetch result:", transactions);
-				
-				if (error) {
-				  console.error("Transaction fetch error details:", error);
-				} else if (!transactions || transactions.length === 0) {
-				  console.warn("No transactions found despite having valid IDs. Attempting direct query for first ID...");
-				  
-				  // Try querying for just the first transaction ID directly
-				  if (transactionIds.length > 0) {
-					const singleResult = await supabase
-					  .from("transactions")
-					  .select("*")
-					  .eq("transaction_id", transactionIds[0]);
-					  
-					console.log(`Direct query for transaction_id '${transactionIds[0]}' result:`, singleResult);
-				  }
-				} else {
-				  // Create maps for quick lookup
-				  const transactionMap = transactions.reduce(
-					(map, transaction) => {
-					  map[transaction.transaction_id] = transaction.type;
-					  return map;
-					},
-					{} as Record<string, number>
-				  );
-		  
-				  const receiverMap = transactions.reduce(
-					(map, transaction) => {
-					  if (transaction.receiver_wallet_address) {
-						map[transaction.transaction_id] = transaction.receiver_wallet_address;
-					  }
-					  return map;
-					},
-					{} as Record<string, string>
-				  );
-		  
-				  // Add transaction type and receiver wallet address to exchanges
-				  enhancedExchanges.forEach((exchange) => {
-					if (exchange.transaction_id) {
-					  console.log(`Checking exchange ${exchange.exchange_id}, transaction_id: ${exchange.transaction_id}`);
-					  
-					  if (transactionMap[exchange.transaction_id] !== undefined) {
-						exchange.transactionType = transactionMap[exchange.transaction_id];
-						console.log(`  - Found transaction type: ${exchange.transactionType}`);
-					  } else {
-						console.log(`  - No matching transaction type found in map`);
-					  }
-					  
-					  if (receiverMap[exchange.transaction_id]) {
-						exchange.receiver_wallet_address = receiverMap[exchange.transaction_id];
-						console.log(`  - Found receiver address: ${exchange.receiver_wallet_address.substring(0, 10)}...`);
-					  } else {
-						console.log(`  - No matching receiver address found in map`);
-					  }
-					}
-				  });
-				}
-			  } catch (e) {
-				console.error("Exception during transaction fetching:", e);
-			  }
-			} else {
-			  console.log("No valid transaction IDs to fetch");
-			}
-		  
-			// Infer transaction types for exchanges without a transaction_id (as in your original code)
-			enhancedExchanges.forEach(exchange => {
-			  // Only infer if transactionType is still undefined
-			  if (exchange.transactionType === undefined) {
-				// If it's a pending exchange (status 0), it's likely a KRW → SGT exchange (user wants to buy SGT)
-				if (exchange.status === 0) {
-				  exchange.transactionType = 3; // KRW → SGT
-				} 
-				// If it has SGT sent status (status 1), it's likely an SGT → KRW exchange (user wants to sell SGT)
-				else if (exchange.status === 1) {
-				  exchange.transactionType = 2; // SGT → KRW
-				}
-			  }
-			});
-		  
-			return enhancedExchanges;
-		  };
 
 	const toggleExpand = (exchangeId: string) => {
 		if (expandedExchangeId === exchangeId) {
