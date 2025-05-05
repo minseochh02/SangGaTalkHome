@@ -4,13 +4,29 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminExchangesList from "@/components/AdminExchangesList";
 import { createClient } from "@/utils/supabase/client";
-import { User } from "@/utils/type";
+import { User, Exchange, Transaction } from "@/utils/type";
 import { ToastContainer } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 // Make sure to add SERVER_URL to your .env.local file:
 // NEXT_PUBLIC_SERVER_URL=http://localhost:8000 (or your actual server URL)
+
+// Define ExtendedExchange interface to match what's used in AdminExchangesList
+interface ExtendedExchange extends Exchange {
+	liquidSupplier?: {
+		liquid_supplier_id: string;
+		bank_name: string;
+		bank_account_no: string;
+	};
+	policy?: {
+		policy_id: string;
+		title: string;
+		rate: number;
+	};
+	transactionType?: number; // From Transaction type field
+	receiver_wallet_address?: string;
+}
 
 export default function AdminExchangesPage() {
 	const supabase = createClient();
