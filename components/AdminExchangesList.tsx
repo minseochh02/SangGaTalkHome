@@ -139,10 +139,14 @@ export default function AdminExchangesList() {
 
 		// Fetch transaction types
 		if (transactionIds.length > 0) {
+			console.log("Transaction IDs to fetch:", transactionIds);
 			const { data: transactions, error } = await supabase
 				.from("transactions")
 				.select("transaction_id, type, receiver_wallet_address")
 				.in("transaction_id", transactionIds);
+
+			console.log("Transactions fetched:", transactions);
+			console.log("Transactions fetch error:", error);
 
 			if (!error && transactions) {
 				// Create maps for quick lookup
@@ -153,6 +157,8 @@ export default function AdminExchangesList() {
 					},
 					{} as Record<string, number>
 				);
+
+				console.log("Transaction map created:", transactionMap);
 
 				const receiverMap = transactions.reduce(
 					(map, transaction) => {
@@ -167,7 +173,8 @@ export default function AdminExchangesList() {
 				// Add transaction type and receiver wallet address to exchanges
 				enhancedExchanges.forEach((exchange) => {
 					if (exchange.transaction_id) {
-						if (transactionMap[exchange.transaction_id]) {
+						console.log(`Exchange ${exchange.exchange_id} has transaction_id ${exchange.transaction_id}, type from map: ${transactionMap[exchange.transaction_id]}`);
+						if (transactionMap[exchange.transaction_id] !== undefined) {
 							exchange.transactionType = transactionMap[exchange.transaction_id];
 						}
 						if (receiverMap[exchange.transaction_id]) {
@@ -177,6 +184,21 @@ export default function AdminExchangesList() {
 				});
 			}
 		}
+
+		// Infer transaction types for exchanges without transaction_id based on status and buttons shown
+		enhancedExchanges.forEach(exchange => {
+			// If transactionType is still undefined, try to infer it
+			if (exchange.transactionType === undefined) {
+				// For pending exchanges (status 0), assume KRW → SGT (type 3) since we show "환전 승인 (원화→SGT)" button
+				if (exchange.status === 0) {
+					exchange.transactionType = 3; // KRW → SGT
+				} 
+				// For exchanges with SGT sent (status 1), assume SGT → KRW (type 2) since we show "환전 완료 (SGT→원화)" button
+				else if (exchange.status === 1) {
+					exchange.transactionType = 2; // SGT → KRW
+				}
+			}
+		});
 
 		return enhancedExchanges;
 	};
