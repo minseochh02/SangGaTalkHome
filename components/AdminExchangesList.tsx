@@ -90,31 +90,8 @@ export default function AdminExchangesList() {
 
 			if (error) throw error;
 
-			 // Step 2: Get transaction data for exchanges that have transaction IDs
-			 const transactionIds = data
-			 .filter(exchange => exchange.transaction_id)
-			 .map(exchange => exchange.transaction_id);
+			console.log(data);
 
-			 console.log(transactionIds);
-			 
-			 // Only query transactions if we have IDs to look up
-			 let transactionsMap = {};
-			 if (transactionIds.length > 0) {
-			   const { data: transactionsData, error: transactionsError } = await supabase
-				 .from("transactions")
-				 .select("*")
-				 .in("transaction_id", transactionIds);
-				 
-			   if (transactionsError) throw transactionsError;
-			   
-			   // Create a map for quick lookup
-			   transactionsMap = transactionsData.reduce((map: any, transaction: any) => {
-				 map[transaction.transaction_id] = transaction;
-				 return map;
-			   }, {});
-			 }
-
-			 console.log(transactionsMap);
 			// Transform the data to match your expected format
 			const transformedData = (data as unknown as JoinedExchangeData[])?.map(exchange => {
 				// Create our transformed exchange from the raw data
