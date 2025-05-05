@@ -70,7 +70,7 @@ export default function AdminExchangesList() {
 					content,
 					status,
 					created_at,
-					transactions:transaction_id (
+					transactions!exchanges_transaction_id_fkey!inner (
 						transaction_id,
 						type,
 						receiver_wallet_address
