@@ -185,37 +185,17 @@ export default function AdminExchangesList() {
 			}
 		}
 
-		// Infer transaction types for exchanges without transaction_id based on status and buttons shown
+		// Only infer transaction types for exchanges without a transaction_id
 		enhancedExchanges.forEach(exchange => {
-			// If transactionType is still undefined, try to infer it
+			// Only infer if transactionType is still undefined
 			if (exchange.transactionType === undefined) {
-				// Better logic to determine exchange type based on the actual data
-				// For KRW → SGT, the customer pays won, receives SGT
-				// For SGT → KRW, the customer sends SGT, receives won
-				
-				// If exchange has content that includes KRW→SGT keywords
-				if (exchange.content && 
-					(exchange.content.includes('원화') || 
-					 exchange.content.includes('KRW') || 
-					 exchange.content.toLowerCase().includes('krw'))) {
+				// If it's a pending exchange (status 0), it's likely a KRW → SGT exchange (user wants to buy SGT)
+				if (exchange.status === 0) {
 					exchange.transactionType = 3; // KRW → SGT
-				}
-				// If the amount is significantly higher in won than SGT, it's likely KRW → SGT
-				else if (exchange.won_amount > exchange.sgt_amount * 100) {
-					exchange.transactionType = 3; // KRW → SGT
-				}
-				// If it's a pending exchange with no transaction yet, default to KRW → SGT
-				else if (exchange.status === 0 && !exchange.transaction_id) {
-					exchange.transactionType = 3; // KRW → SGT
-				}
-				// For exchanges with SGT sent status, assume SGT → KRW
+				} 
+				// If it has SGT sent status (status 1), it's likely an SGT → KRW exchange (user wants to sell SGT)
 				else if (exchange.status === 1) {
 					exchange.transactionType = 2; // SGT → KRW
-				}
-				// Default case if none of the above apply
-				else {
-					console.log(`Could not infer type for exchange ${exchange.exchange_id}, defaulting to type 3`);
-					exchange.transactionType = 3; // Default to KRW → SGT
 				}
 			}
 		});
