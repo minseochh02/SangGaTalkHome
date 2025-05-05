@@ -42,36 +42,82 @@ export default function AdminExchangesList({ filterTransactionType }: AdminExcha
 
 		try {
 			const supabase = createClient();
-			// Fetch all exchanges with related information
-			const { data, error } = await supabase
-				.from("exchanges")
-				.select(`
-					exchange_id,
-					transaction_id,
-					liquid_supplier_id,
-					policy_id,
-					sgt_amount,
-					won_amount,
-					supplier_fee,
-					content,
-					status,
-					created_at,
-					receiver_wallet_address
-				`)
-				.order("created_at", { ascending: false });
-
-			if (error) throw error;
-
-			// Enhance data with related information
-			const enhancedData = await enhanceExchangesWithRelatedData(data || []);
-
-			// Filter data if filterTransactionType prop is provided
-			const filteredData = filterTransactionType
-				? enhancedData.filter(ex => ex.transactionType === filterTransactionType)
-				: enhancedData;
-
-			console.log(`Found ${enhancedData.length} total exchanges, ${filteredData.length} match filter type ${filterTransactionType}`);
-			setExchanges(filteredData);
+			
+			// If filtering by transaction type, we do a two-step process
+			// 1. First, find all transaction_ids with the specified type
+			// 2. Then, fetch exchanges that have those transaction_ids
+			if (filterTransactionType) {
+				// Step 1: Get transaction IDs with the specified type
+				const { data: transactionData, error: transactionError } = await supabase
+					.from("transactions")
+					.select("transaction_id")
+					.eq("type", filterTransactionType);
+				
+				if (transactionError) throw transactionError;
+				
+				// If no transactions match, return empty array
+				if (!transactionData || transactionData.length === 0) {
+					console.log(`No transactions found with type: ${filterTransactionType}`);
+					setExchanges([]);
+					setIsLoading(false);
+					return;
+				}
+				
+				// Extract transaction IDs
+				const transactionIds = transactionData.map(t => t.transaction_id);
+				console.log(`Found ${transactionIds.length} transactions with type ${filterTransactionType}`);
+				
+				// Step 2: Get exchanges with matching transaction IDs
+				const { data: exchangeData, error: exchangeError } = await supabase
+					.from("exchanges")
+					.select(`
+						exchange_id,
+						transaction_id,
+						liquid_supplier_id,
+						policy_id,
+						sgt_amount,
+						won_amount,
+						supplier_fee,
+						content,
+						status,
+						created_at,
+						receiver_wallet_address
+					`)
+					.in("transaction_id", transactionIds)
+					.order("created_at", { ascending: false });
+				
+				if (exchangeError) throw exchangeError;
+				
+				// Enhance data and set state
+				const enhancedData = await enhanceExchangesWithRelatedData(exchangeData || []);
+				console.log(`Found ${enhancedData.length} exchanges matching transaction type ${filterTransactionType}`);
+				setExchanges(enhancedData);
+			} else {
+				// No filter, fetch all exchanges
+				const { data, error } = await supabase
+					.from("exchanges")
+					.select(`
+						exchange_id,
+						transaction_id,
+						liquid_supplier_id,
+						policy_id,
+						sgt_amount,
+						won_amount,
+						supplier_fee,
+						content,
+						status,
+						created_at,
+						receiver_wallet_address
+					`)
+					.order("created_at", { ascending: false });
+				
+				if (error) throw error;
+				
+				// Enhance data and set state
+				const enhancedData = await enhanceExchangesWithRelatedData(data || []);
+				console.log(`Found ${enhancedData.length} total exchanges (no filter)`);
+				setExchanges(enhancedData);
+			}
 		} catch (err) {
 			console.error("Error fetching exchanges:", err);
 			setError("Failed to load exchanges");
