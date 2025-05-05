@@ -238,6 +238,12 @@ export default function AdminExchangesList() {
 						KRW → SGT
 					</span>
 				);
+			case 4:
+				return (
+					<span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+						SGT TVL
+					</span>
+				);
 			default:
 				return (
 					<span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
