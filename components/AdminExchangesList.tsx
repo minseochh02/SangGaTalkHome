@@ -94,6 +94,8 @@ export default function AdminExchangesList() {
 			 const transactionIds = data
 			 .filter(exchange => exchange.transaction_id)
 			 .map(exchange => exchange.transaction_id);
+
+			 console.log(transactionIds);
 			 
 			 // Only query transactions if we have IDs to look up
 			 let transactionsMap = {};
