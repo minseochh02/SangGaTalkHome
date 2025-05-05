@@ -19,7 +19,12 @@ interface ExtendedExchange extends Exchange {
 	receiver_wallet_address?: string;
 }
 
-export default function AdminExchangesList() {
+// Define props for the component
+interface AdminExchangesListProps {
+	filterTransactionType?: number; // Optional prop to filter by transaction type
+}
+
+export default function AdminExchangesList({ filterTransactionType }: AdminExchangesListProps) {
 	const [exchanges, setExchanges] = useState<ExtendedExchange[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -58,7 +63,13 @@ export default function AdminExchangesList() {
 
 			// Enhance data with related information
 			const enhancedData = await enhanceExchangesWithRelatedData(data || []);
-			setExchanges(enhancedData);
+
+			// Filter data if filterTransactionType prop is provided
+			const filteredData = filterTransactionType
+				? enhancedData.filter(ex => ex.transactionType === filterTransactionType)
+				: enhancedData;
+
+			setExchanges(filteredData);
 		} catch (err) {
 			console.error("Error fetching exchanges:", err);
 			setError("Failed to load exchanges");
