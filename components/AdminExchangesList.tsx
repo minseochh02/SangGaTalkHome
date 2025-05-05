@@ -100,7 +100,7 @@ export default function AdminExchangesList() {
 			 if (transactionIds.length > 0) {
 			   const { data: transactionsData, error: transactionsError } = await supabase
 				 .from("transactions")
-				 .select("transaction_id, type, receiver_wallet_address")
+				 .select("*")
 				 .in("transaction_id", transactionIds);
 				 
 			   if (transactionsError) throw transactionsError;
