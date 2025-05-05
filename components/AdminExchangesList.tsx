@@ -403,6 +403,63 @@ export default function AdminExchangesList() {
 		}
 	};
 
+	const handleProcessSgtBurn = async (exchange: ExtendedExchange) => {
+		if (processingExchangeId) return; // Prevent multiple simultaneous operations
+		
+		// Ensure we have a sender wallet address (which was the receiver in the original transaction)
+		if (!exchange.receiver_wallet_address) {
+			toast({
+				title: "오류",
+				description: "송신자 지갑 주소를 찾을 수 없습니다.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		try {
+			setProcessingExchangeId(exchange.exchange_id);
+			
+			// Call the backend API to process the SGT burn
+			const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/transactions/process-sgt-burn`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					exchange_id: exchange.exchange_id,
+					sender_wallet_address: exchange.receiver_wallet_address,
+					sgt_amount: exchange.sgt_amount,
+					content: `SGT 소각 처리 - ${exchange.exchange_id.substring(0, 8)}`,
+					created_at: exchange.created_at
+				}),
+			});
+			
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.detail || 'Failed to process SGT burn');
+			}
+			
+			// Refresh the exchanges list
+			await fetchExchanges();
+			
+			toast({
+				title: "SGT 소각 완료",
+				description: `${exchange.sgt_amount} SGT가 성공적으로 소각되었습니다.`,
+				variant: "default",
+			});
+			
+		} catch (err) {
+			console.error("Error processing SGT burn:", err);
+			toast({
+				title: "오류",
+				description: `SGT 소각에 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`,
+				variant: "destructive",
+			});
+		} finally {
+			setProcessingExchangeId(null);
+		}
+	};
+
 	if (isLoading) {
 		return (
 			<div className="flex justify-center items-center py-8">
@@ -617,21 +674,41 @@ export default function AdminExchangesList() {
 
 											{exchange.status === 1 && exchange.transaction_id && (
 												<div className="mt-4 flex justify-end">
-													<Button 
-														onClick={(e) => {
-															e.stopPropagation();
-															handleCompleteSgtToWon(exchange);
-														}} 
-														disabled={processingExchangeId === exchange.exchange_id}
-														className="ml-2"
-													>
-														{processingExchangeId === exchange.exchange_id ? (
-															<>
-																<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
-																처리 중...
-															</>
-														) : "환전 완료 (SGT→원화)"}
-													</Button>
+													{exchange.transactionType === 2 ? (
+														// For SGT → KRW transactions, show the burn button
+														<Button 
+															onClick={(e) => {
+																e.stopPropagation();
+																handleProcessSgtBurn(exchange);
+															}} 
+															disabled={processingExchangeId === exchange.exchange_id}
+															className="ml-2"
+														>
+															{processingExchangeId === exchange.exchange_id ? (
+																<>
+																	<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
+																	처리 중...
+																</>
+															) : "SGT 소각 처리"}
+														</Button>
+													) : (
+														// For other transaction types, show the original completion button
+														<Button 
+															onClick={(e) => {
+																e.stopPropagation();
+																handleCompleteSgtToWon(exchange);
+															}} 
+															disabled={processingExchangeId === exchange.exchange_id}
+															className="ml-2"
+														>
+															{processingExchangeId === exchange.exchange_id ? (
+																<>
+																	<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
+																	처리 중...
+																</>
+															) : "환전 완료 (SGT→원화)"}
+														</Button>
+													)}
 												</div>
 											)}
 										</div>
