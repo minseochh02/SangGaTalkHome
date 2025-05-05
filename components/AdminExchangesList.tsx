@@ -33,11 +33,12 @@ export default function AdminExchangesList({ filterTransactionType }: AdminExcha
 
 	useEffect(() => {
 		fetchExchanges();
-	}, []);
+	}, [filterTransactionType]);
 
 	const fetchExchanges = async () => {
 		setIsLoading(true);
 		setError(null);
+		console.log("Fetching exchanges with filter type:", filterTransactionType);
 
 		try {
 			const supabase = createClient();
@@ -69,6 +70,7 @@ export default function AdminExchangesList({ filterTransactionType }: AdminExcha
 				? enhancedData.filter(ex => ex.transactionType === filterTransactionType)
 				: enhancedData;
 
+			console.log(`Found ${enhancedData.length} total exchanges, ${filteredData.length} match filter type ${filterTransactionType}`);
 			setExchanges(filteredData);
 		} catch (err) {
 			console.error("Error fetching exchanges:", err);
@@ -412,7 +414,9 @@ export default function AdminExchangesList({ filterTransactionType }: AdminExcha
 	if (exchanges.length === 0) {
 		return (
 			<div className="text-center py-4 text-gray-500">
-				교환 내역이 없습니다.
+				{filterTransactionType === 2 ? 
+					"SGT → 원화 환전 내역이 없습니다." : 
+					"교환 내역이 없습니다."}
 			</div>
 		);
 	}
