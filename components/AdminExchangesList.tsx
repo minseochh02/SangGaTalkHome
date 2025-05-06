@@ -37,13 +37,16 @@ export default function AdminExchangesList() {
 		try {
 			const supabase = createClient();
 			
-			// Temporary test: Fetch all transactions
+			// Temporary test: Fetch transactions matching the successful log query
+			const testWalletAddress = "2shS2QNKmoY3nmvJ1Y8oJ1xr3nhqdsPEBcoNxSi1sZZU"; // Address from the log
 			const { data: allTransactions, error: allTransactionsError } = await supabase
 				.from("transactions")
-				.select("*");
+				.select("*")
+				.or(`sender_wallet_address.eq.${testWalletAddress},receiver_wallet_address.eq.${testWalletAddress}`)
+				.order("completed_at", { ascending: false }); // Assuming completed_at exists, adjust if needed
 			
 			if (allTransactionsError) {
-				console.error("Error fetching ALL transactions (test query):", allTransactionsError);
+				console.error("Error fetching specific transactions (test query):", allTransactionsError);
 			} else {
 				console.log("Test Query - All Transactions Data:", allTransactions);
 			}
