@@ -37,17 +37,6 @@ export default function AdminExchangesList() {
 		try {
 			const supabase = createClient();
 			
-			// Temporary test: Fetch all transactions
-			const { data: allTransactions, error: allTransactionsError } = await supabase
-				.from("transactions")
-				.select("*");
-			
-			if (allTransactionsError) {
-				console.error("Error fetching ALL transactions (test query):", allTransactionsError);
-			} else {
-				console.log("Test Query - All Transactions Data:", allTransactions);
-			}
-			
 			// Define a type for the joined data we'll get from Supabase
 			interface JoinedExchangeData extends Exchange {
 				transactions?: { 
