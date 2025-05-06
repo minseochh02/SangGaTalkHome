@@ -4,7 +4,8 @@ import { FaAndroid, FaDownload } from "react-icons/fa";
 export default function DownloadPage() {
 	// const apkUrl =
 	// 	"https://github.com/minseochh02/sanggawalletapk/releases/download/v0.1.0-alpha/app-release.apk";
-	const apkUrl = "https://github.com/minseochh02/sanggawalletapk/releases/download/v0.1.1/app-release.apk";
+	// const apkUrl = "https://github.com/minseochh02/sanggawalletapk/releases/download/v0.1.1/app-release.apk";
+	const apkUrl = "https://github.com/minseochh02/sanggawalletapk/releases/download/v0.1.2/app-release.apk";
 
 	return (
 		<div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
