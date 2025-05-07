@@ -36,27 +36,7 @@ export default function AdminExchangesList() {
 
 		try {
 			const supabase = createClient();
-			
-			// Define a type for the joined data we'll get from Supabase
-			interface JoinedExchangeData extends Exchange {
-				transactions?: { 
-					transaction_id: string; 
-					type: number; 
-					receiver_wallet_address?: string 
-				}[];
-				liquid_suppliers?: { 
-					liquid_supplier_id: string; 
-					bank_name: string; 
-					bank_account_no: string 
-				};
-				policies?: { 
-					policy_id: string; 
-					title: string; 
-					rate: number 
-				};
-			}
-			
-			// Fetch all exchanges with related information including transactions
+			// Fetch all exchanges with related information
 			const { data, error } = await supabase
 				.from("exchanges")
 				.select(`
@@ -70,104 +50,135 @@ export default function AdminExchangesList() {
 					content,
 					status,
 					created_at,
-					transactions (
-						transaction_id,
-						type,
-						receiver_wallet_address
-					),
-					liquid_suppliers (
-						liquid_supplier_id,
-						bank_name,
-						bank_account_no
-					),
-					policies (
-						policy_id,
-						title,
-						rate
-					)
+					receiver_wallet_address
 				`)
 				.order("created_at", { ascending: false });
 
 			if (error) throw error;
 
-			console.log("Initial Exchange Data:", data); // Renamed log for clarity
-			
-			// Step 2: Get transaction data for exchanges that have transaction IDs
-			const transactionIds = data
-				.map(exchange => exchange.transaction_id) // Get all IDs
-				.filter(id => id !== null && id !== undefined); // Filter out null/undefined IDs
-			
-			console.log("Transaction IDs to Fetch:", transactionIds); // Log the IDs we're querying
-
-			// Only query transactions if we have IDs to look up
-			let transactionsMap = {};
-			if (transactionIds.length > 0) {
-				const { data: transactionsData, error: transactionsError } = await supabase
-					.from("transactions")
-					.select("transaction_id, type, receiver_wallet_address")
-					.in("transaction_id", transactionIds);
-			  
-				if (transactionsError) {
-					console.error("Error fetching transactions separately:", transactionsError);
-					// Decide how to handle this error - maybe throw it, maybe continue without transaction data
-					throw transactionsError; // Re-throwing for now
-				}
-
-				console.log("Fetched Transactions Data:", transactionsData); // Log the result of the separate fetch
-				
-				// Create a map for quick lookup
-				transactionsMap = (transactionsData || []).reduce((map: any, transaction: any) => {
-					map[transaction.transaction_id] = transaction;
-					return map;
-				}, {});
-			}
-			console.log("Transactions Map:", transactionsMap); // Log the created map
-
-			// Transform the data to match your expected format
-			const transformedData = (data as unknown as JoinedExchangeData[])?.map(exchange => {
-				// Find the corresponding transaction from the map
-				const transactionDetails = exchange.transaction_id ? (transactionsMap as any)[exchange.transaction_id] : null;
-
-				const transformedExchange: ExtendedExchange = {
-					...exchange,
-					// Use data from the separately fetched transactions if available
-					transactionType: transactionDetails?.type ?? exchange.transactions?.[0]?.type, // Prioritize separate fetch
-					receiver_wallet_address: transactionDetails?.receiver_wallet_address ?? exchange.transactions?.[0]?.receiver_wallet_address,
-					
-					// Handle liquidSupplier from the joined data
-					liquidSupplier: exchange.liquid_suppliers ? {
-						liquid_supplier_id: exchange.liquid_suppliers.liquid_supplier_id,
-						bank_name: exchange.liquid_suppliers.bank_name,
-						bank_account_no: exchange.liquid_suppliers.bank_account_no
-					} : undefined,
-					
-					// Handle policy from the joined data
-					policy: exchange.policies ? {
-						policy_id: exchange.policies.policy_id,
-						title: exchange.policies.title,
-						rate: exchange.policies.rate
-					} : undefined
-				};
-
-				// Create clean result without the joined data properties
-				const result = { ...transformedExchange };
-				// Remove the joined properties using type assertion
-				delete (result as any).transactions;
-				delete (result as any).liquid_suppliers;
-				delete (result as any).policies;
-
-				return result;
-			});
-			
-			console.log("Final Transformed Data:", transformedData); // Log final data
-
-			setExchanges(transformedData || []);
+			// Enhance data with related information
+			const enhancedData = await enhanceExchangesWithRelatedData(data || []);
+			setExchanges(enhancedData);
 		} catch (err) {
 			console.error("Error fetching exchanges:", err);
 			setError("Failed to load exchanges");
 		} finally {
 			setIsLoading(false);
 		}
+	};
+
+	// Enhance exchanges with related data
+	const enhanceExchangesWithRelatedData = async (
+		exchanges: Exchange[]
+	): Promise<ExtendedExchange[]> => {
+		const supabase = createClient();
+		const enhancedExchanges: ExtendedExchange[] = [...exchanges];
+
+		// Get all unique liquid supplier IDs and policy IDs
+		const supplierIds = Array.from(
+			new Set(exchanges.map((ex) => ex.liquid_supplier_id))
+		);
+		const policyIds = Array.from(
+			new Set(exchanges.map((ex) => ex.policy_id))
+		);
+		const transactionIds = Array.from(
+			new Set(exchanges.map((ex) => ex.transaction_id))
+		).filter(Boolean);
+
+		// Fetch all liquid suppliers
+		if (supplierIds.length > 0) {
+			const { data: suppliers, error } = await supabase
+				.from("liquid_suppliers")
+				.select("liquid_supplier_id, bank_name, bank_account_no")
+				.in("liquid_supplier_id", supplierIds);
+
+			if (!error && suppliers) {
+				// Create a map for quick lookup
+				const supplierMap = suppliers.reduce(
+					(map, supplier) => {
+						map[supplier.liquid_supplier_id] = supplier;
+						return map;
+					},
+					{} as Record<string, any>
+				);
+
+				// Add supplier info to exchanges
+				enhancedExchanges.forEach((exchange) => {
+					if (supplierMap[exchange.liquid_supplier_id]) {
+						exchange.liquidSupplier = supplierMap[exchange.liquid_supplier_id];
+					}
+				});
+			}
+		}
+
+		// Fetch all policies
+		if (policyIds.length > 0) {
+			const { data: policies, error } = await supabase
+				.from("policies")
+				.select("policy_id, title, rate")
+				.in("policy_id", policyIds);
+
+			if (!error && policies) {
+				// Create a map for quick lookup
+				const policyMap = policies.reduce(
+					(map, policy) => {
+						map[policy.policy_id] = policy;
+						return map;
+					},
+					{} as Record<string, any>
+				);
+
+				// Add policy info to exchanges
+				enhancedExchanges.forEach((exchange) => {
+					if (policyMap[exchange.policy_id]) {
+						exchange.policy = policyMap[exchange.policy_id];
+					}
+				});
+			}
+		}
+
+		// Fetch transaction types
+		if (transactionIds.length > 0) {
+			const { data: transactions, error } = await supabase
+				.from("transactions")
+				.select("transaction_id, type, receiver_wallet_address")
+				.in("transaction_id", transactionIds);
+
+			if (!error && transactions) {
+				// Create maps for quick lookup
+				const transactionMap = transactions.reduce(
+					(map, transaction) => {
+						map[transaction.transaction_id] = transaction.type;
+						return map;
+					},
+					{} as Record<string, number>
+				);
+
+				const receiverMap = transactions.reduce(
+					(map, transaction) => {
+						if (transaction.receiver_wallet_address) {
+							map[transaction.transaction_id] = transaction.receiver_wallet_address;
+						}
+						return map;
+					},
+					{} as Record<string, string>
+				);
+
+				// Add transaction type and receiver wallet address to exchanges
+				enhancedExchanges.forEach((exchange) => {
+					if (exchange.transaction_id) {
+						if (transactionMap[exchange.transaction_id]) {
+							exchange.transactionType = transactionMap[exchange.transaction_id];
+						}
+						if (receiverMap[exchange.transaction_id]) {
+							exchange.receiver_wallet_address = receiverMap[exchange.transaction_id];
+						}
+					}
+				});
+			}
+		}
+
+		return enhancedExchanges;
 	};
 
 	const toggleExpand = (exchangeId: string) => {
@@ -225,12 +236,6 @@ export default function AdminExchangesList() {
 				return (
 					<span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
 						KRW → SGT
-					</span>
-				);
-			case 4:
-				return (
-					<span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-						SGT TVL
 					</span>
 				);
 			default:
@@ -363,63 +368,6 @@ export default function AdminExchangesList() {
 			toast({
 				title: "오류",
 				description: `환전 완료에 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`,
-				variant: "destructive",
-			});
-		} finally {
-			setProcessingExchangeId(null);
-		}
-	};
-
-	const handleProcessSgtBurn = async (exchange: ExtendedExchange) => {
-		if (processingExchangeId) return; // Prevent multiple simultaneous operations
-		
-		// Ensure we have a sender wallet address (which was the receiver in the original transaction)
-		if (!exchange.receiver_wallet_address) {
-			toast({
-				title: "오류",
-				description: "송신자 지갑 주소를 찾을 수 없습니다.",
-				variant: "destructive",
-			});
-			return;
-		}
-
-		try {
-			setProcessingExchangeId(exchange.exchange_id);
-			
-			// Call the backend API to process the SGT burn
-			const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/transactions/process-sgt-burn`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					exchange_id: exchange.exchange_id,
-					sender_wallet_address: exchange.receiver_wallet_address,
-					sgt_amount: exchange.sgt_amount,
-					content: `SGT 소각 처리 - ${exchange.exchange_id.substring(0, 8)}`,
-					created_at: exchange.created_at
-				}),
-			});
-			
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.detail || 'Failed to process SGT burn');
-			}
-			
-			// Refresh the exchanges list
-			await fetchExchanges();
-			
-			toast({
-				title: "SGT 소각 완료",
-				description: `${exchange.sgt_amount} SGT가 성공적으로 소각되었습니다.`,
-				variant: "default",
-			});
-			
-		} catch (err) {
-			console.error("Error processing SGT burn:", err);
-			toast({
-				title: "오류",
-				description: `SGT 소각에 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`,
 				variant: "destructive",
 			});
 		} finally {
@@ -641,41 +589,21 @@ export default function AdminExchangesList() {
 
 											{exchange.status === 1 && exchange.transaction_id && (
 												<div className="mt-4 flex justify-end">
-													{exchange.transactionType === 2 ? (
-														// For SGT → KRW transactions, show the burn button
-														<Button 
-															onClick={(e) => {
-																e.stopPropagation();
-																handleProcessSgtBurn(exchange);
-															}} 
-															disabled={processingExchangeId === exchange.exchange_id}
-															className="ml-2"
-														>
-															{processingExchangeId === exchange.exchange_id ? (
-																<>
-																	<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
-																	처리 중...
-																</>
-															) : "SGT 소각 처리"}
-														</Button>
-													) : (
-														// For other transaction types, show the original completion button
-														<Button 
-															onClick={(e) => {
-																e.stopPropagation();
-																handleCompleteSgtToWon(exchange);
-															}} 
-															disabled={processingExchangeId === exchange.exchange_id}
-															className="ml-2"
-														>
-															{processingExchangeId === exchange.exchange_id ? (
-																<>
-																	<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
-																	처리 중...
-																</>
-															) : "환전 완료 (SGT→원화)"}
-														</Button>
-													)}
+													<Button 
+														onClick={(e) => {
+															e.stopPropagation();
+															handleCompleteSgtToWon(exchange);
+														}} 
+														disabled={processingExchangeId === exchange.exchange_id}
+														className="ml-2"
+													>
+														{processingExchangeId === exchange.exchange_id ? (
+															<>
+																<span className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></span>
+																처리 중...
+															</>
+														) : "환전 완료 (SGT→원화)"}
+													</Button>
 												</div>
 											)}
 										</div>
