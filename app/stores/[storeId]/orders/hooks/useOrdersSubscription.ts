@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { Order, OrderItem, Product } from "@/utils/type";
-
-type ExtendedOrder = Order & {
-  items?: (OrderItem & {
-    product?: Product
-  })[];
-  customer_name?: string;
-};
+import { Order, OrderItem, Product, ExtendedOrder } from "@/utils/type";
 
 interface UseOrdersSubscriptionProps {
   storeId: string;
   onNewOrder?: (order: ExtendedOrder) => void;
   onOrderUpdate?: (order: ExtendedOrder) => void;
+}
+
+// Define a more specific type for the order item as returned by Supabase
+interface OrderItemWithProduct {
+  order_items_id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  won_price: number;
+  sgt_price: number;
+  created_at: string;
+  products: {
+    store_id: string;
+    [key: string]: any;
+  };
 }
 
 export default function useOrdersSubscription({
@@ -60,9 +68,9 @@ export default function useOrdersSubscription({
                 return;
               }
               
-              // Check if any of the items are from this store
+              // Check if any of the items are from this store using a type-safe approach
               const storeItems = orderItemsData?.filter(
-                item => item.products?.store_id === storeId
+                item => item?.products && typeof item.products === 'object' && 'store_id' in item.products && item.products.store_id === storeId
               );
               
               if (!storeItems || storeItems.length === 0) {
@@ -123,9 +131,9 @@ export default function useOrdersSubscription({
                 return;
               }
               
-              // Check if any of the items are from this store
+              // Check if any of the items are from this store using a type-safe approach
               const storeItems = orderItemsData?.filter(
-                item => item.products?.store_id === storeId
+                item => item?.products && typeof item.products === 'object' && 'store_id' in item.products && item.products.store_id === storeId
               );
               
               if (!storeItems || storeItems.length === 0) {

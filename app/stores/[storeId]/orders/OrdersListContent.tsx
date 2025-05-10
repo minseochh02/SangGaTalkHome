@@ -8,16 +8,7 @@ import OrderFilters from "./components/OrderFilters";
 import NewOrderNotification from "./components/NewOrderNotification";
 import useOrdersData from "./hooks/useOrdersData";
 import useOrdersSubscription from "./hooks/useOrdersSubscription";
-import { Order, OrderItem, Product } from "@/utils/type";
-
-type ExtendedOrder = Order & {
-  items?: (OrderItem & {
-    product?: Product
-  })[];
-  customer_name?: string;
-  customer_email?: string;
-  customer_phone?: string;
-};
+import { Order, OrderItem, Product, ExtendedOrder } from "@/utils/type";
 
 export default function OrdersListContent({ storeId }: { storeId: string }) {
   const supabase = createClient();

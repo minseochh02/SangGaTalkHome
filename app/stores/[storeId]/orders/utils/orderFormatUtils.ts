@@ -1,4 +1,4 @@
-import { ExtendedOrder, OrderItem, Product } from "@/utils/type";
+import { OrderItem, Product, ExtendedOrder } from "@/utils/type";
 
 export const formatOrderId = (orderId: string): string => {
   return orderId.substring(0, 8) + "...";

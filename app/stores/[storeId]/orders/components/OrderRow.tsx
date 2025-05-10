@@ -2,17 +2,10 @@ import React from "react";
 import OrderStatusBadge from "./OrderStatusBadge";
 import OrderDetails from "./OrderDetails";
 import { formatOrderId, formatRelativeTime, formatPrice, isNewOrder } from "../utils/orderFormatUtils";
-import { Order, OrderItem, Product } from "@/utils/type";
-
-type ExtendedOrderItem = OrderItem & {
-  product?: Product;
-};
+import { Order, OrderItem, Product, ExtendedOrder } from "@/utils/type";
 
 interface OrderRowProps {
-  order: Order & {
-    items?: ExtendedOrderItem[];
-    customer_name?: string;
-  };
+  order: ExtendedOrder;
   isExpanded: boolean;
   onToggleExpand: () => void;
   updateOrderStatus: (orderId: string, newStatus: number) => Promise<void>;

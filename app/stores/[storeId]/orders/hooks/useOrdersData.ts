@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { Order, OrderItem, Product } from "@/utils/type";
-
-type ExtendedOrder = Order & {
-  items?: (OrderItem & {
-    product?: Product
-  })[];
-  customer_name?: string;
-};
+import { Order, OrderItem, Product, ExtendedOrder } from "@/utils/type";
 
 interface UseOrdersDataResult {
   orders: ExtendedOrder[];

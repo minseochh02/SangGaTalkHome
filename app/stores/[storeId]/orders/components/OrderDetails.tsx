@@ -1,16 +1,10 @@
 import React from "react";
 import OrderActions from "./OrderActions";
 import { formatPrice } from "../utils/orderFormatUtils";
-import { Order, OrderItem, Product } from "@/utils/type";
-
-type ExtendedOrderItem = OrderItem & {
-  product?: Product;
-};
+import { Order, OrderItem, Product, ExtendedOrder } from "@/utils/type";
 
 interface OrderDetailsProps {
-  order: Order & {
-    items?: ExtendedOrderItem[];
-  };
+  order: ExtendedOrder;
   updateOrderStatus: (orderId: string, newStatus: number) => Promise<void>;
 }
 
