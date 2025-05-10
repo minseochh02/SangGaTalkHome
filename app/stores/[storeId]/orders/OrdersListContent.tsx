@@ -6,6 +6,7 @@ import Link from "next/link";
 import OrderRow from "./components/OrderRow";
 import OrderFilters from "./components/OrderFilters";
 import NewOrderNotification from "./components/NewOrderNotification";
+import ProductStatsDashboard from "./components/ProductStatsDashboard";
 import useOrdersData from "./hooks/useOrdersData";
 import useOrdersSubscription from "./hooks/useOrdersSubscription";
 import { Order, OrderItem, Product, ExtendedOrder } from "@/utils/type";
@@ -121,6 +122,9 @@ export default function OrdersListContent({ storeId }: { storeId: string }) {
           ← 스토어 페이지로 돌아가기
         </Link>
       </div>
+      
+      {/* Add Product Statistics Dashboard */}
+      <ProductStatsDashboard storeId={storeId} />
 
       {orders.length === 0 ? (
         <div className="text-center py-16">
