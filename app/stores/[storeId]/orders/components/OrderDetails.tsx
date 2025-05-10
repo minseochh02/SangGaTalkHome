@@ -9,9 +9,12 @@ interface OrderDetailsProps {
 }
 
 export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsProps) {
-  const totalItemsCount = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-  const totalProductPrice = order.items?.reduce((sum, item) => sum + (item.quantity * item.sgt_price), 0) || 0;
-  const totalProductWonPrice = order.items?.reduce((sum, item) => sum + (item.quantity * item.won_price), 0) || 0;
+  // Add null checks for items array
+  const items = order.items || [];
+  
+  const totalItemsCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const totalProductPrice = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.sgt_price || 0)), 0);
+  const totalProductWonPrice = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.won_price || 0)), 0);
 
   return (
     <td colSpan={6} className="px-6 py-4 bg-gray-50">
@@ -21,7 +24,7 @@ export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsP
           <div className="md:col-span-2">
             <h3 className="font-medium mb-3">주문 상품 ({totalItemsCount}개)</h3>
             <div className="space-y-4">
-              {order.items?.map(item => (
+              {items.map(item => (
                 <div 
                   key={item.order_items_id} 
                   className="flex items-center gap-4 pb-2 border-b border-gray-100"
@@ -36,12 +39,12 @@ export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsP
                   <div className="flex-1">
                     <p className="font-medium">{item.product?.product_name || '삭제된 상품'}</p>
                     <p className="text-sm text-gray-500">
-                      {item.quantity}개 × {formatPrice(item.sgt_price)} SGT ({formatPrice(item.won_price)}원)
+                      {item.quantity || 0}개 × {formatPrice(item.sgt_price)} SGT ({formatPrice(item.won_price)}원)
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">{formatPrice(item.sgt_price * item.quantity)} SGT</p>
-                    <p className="text-sm text-gray-500">{formatPrice(item.won_price * item.quantity)}원</p>
+                    <p className="font-medium">{formatPrice((item.sgt_price || 0) * (item.quantity || 0))} SGT</p>
+                    <p className="text-sm text-gray-500">{formatPrice((item.won_price || 0) * (item.quantity || 0))}원</p>
                   </div>
                 </div>
               ))}
@@ -79,7 +82,7 @@ export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsP
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-gray-600">고객명</span>
-                  <span className="font-medium">{order.customer_name}</span>
+                  <span className="font-medium">{order.customer_name || '알 수 없음'}</span>
                 </div>
                 {order.customer_wallet && (
                   <div className="flex flex-col">
@@ -89,7 +92,7 @@ export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsP
                 )}
                 <div className="flex justify-between mt-2 pt-1 border-t border-gray-100">
                   <span className="text-gray-600">주문일시</span>
-                  <span className="font-medium">{formatDateTime(order.created_at)}</span>
+                  <span className="font-medium">{order.created_at ? formatDateTime(order.created_at) : '-'}</span>
                 </div>
               </div>
             </div>
@@ -98,7 +101,7 @@ export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsP
               <h3 className="font-medium mb-2 pb-1 border-b">배송 정보</h3>
               <div className="flex flex-col">
                 <span className="text-gray-600 mb-1">배송지</span>
-                <span className="font-medium text-sm">{order.shipping_address}</span>
+                <span className="font-medium text-sm">{order.shipping_address || '정보 없음'}</span>
               </div>
             </div>
             
