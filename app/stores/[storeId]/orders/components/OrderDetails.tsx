@@ -17,7 +17,7 @@ export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsP
   const totalProductWonPrice = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.won_price || 0)), 0);
 
   return (
-    <td colSpan={6} className="px-6 py-4 bg-gray-50">
+    <td colSpan={7} className="px-6 py-4 bg-gray-50">
       <div className="border-t border-gray-200 pt-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left column: Order Items */}

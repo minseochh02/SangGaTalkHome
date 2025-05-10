@@ -34,7 +34,17 @@ export default function OrderRow({
           {formatRelativeTime(order.created_at)}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-          {order.recipient_name || order.customer_name || '알 수 없음'}
+          {order.customer_name || '알 수 없음'}
+          {order.customer_wallet && (
+            <p className="text-xs text-gray-400 truncate max-w-[150px]" title={order.customer_wallet}>
+              {order.customer_wallet.substring(0, 8)}...
+            </p>
+          )}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {order.recipient_name && (
+            <p className="font-medium">{order.recipient_name}</p>
+          )}
           {order.phone_number && (
             <p className="text-xs text-gray-400">{order.phone_number}</p>
           )}
