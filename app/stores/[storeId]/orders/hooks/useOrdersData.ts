@@ -11,6 +11,24 @@ interface UseOrdersDataResult {
   updateOrderStatus: (orderId: string, newStatus: number) => Promise<void>;
 }
 
+// Define interfaces for the Supabase response data
+interface OrderItemWithProduct {
+  order_items_id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  won_price: number;
+  sgt_price: number;
+  created_at: string;
+  products: {
+    product_id: string;
+    product_name: string;
+    image_url: string | null;
+    store_id: string;
+    description?: string;
+  } | null;
+}
+
 export default function useOrdersData(
   storeId: string,
   userId: string | null
@@ -51,7 +69,7 @@ export default function useOrdersData(
       }
 
       // Fetch orders for this store
-      const { data: orderItemsData, error: orderItemsError } = await supabase
+      const { data, error: orderItemsError } = await supabase
         .from("order_items")
         .select(`
           order_items_id,
@@ -68,6 +86,8 @@ export default function useOrdersData(
       if (orderItemsError) {
         throw orderItemsError;
       }
+
+      const orderItemsData = data as unknown as OrderItemWithProduct[];
 
       if (!orderItemsData || orderItemsData.length === 0) {
         setOrders([]);
@@ -94,7 +114,19 @@ export default function useOrdersData(
 
       // Combine orders with their items
       const extendedOrders: ExtendedOrder[] = ordersData.map(order => {
-        const orderItems = orderItemsData.filter(item => item.order_id === order.order_id);
+        // Filter items for this order and transform the products field to product field
+        const orderItems = orderItemsData
+          .filter(item => item.order_id === order.order_id)
+          .map(item => {
+            return {
+              ...item,
+              // Transform products (plural) to product (singular) to match component expectations
+              product: item.products,
+              // Keep products for backward compatibility
+              products: item.products
+            };
+          });
+
         return {
           ...order,
           items: orderItems,
