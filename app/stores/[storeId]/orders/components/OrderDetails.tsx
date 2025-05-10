@@ -1,5 +1,6 @@
 import React from "react";
 import OrderActions from "./OrderActions";
+import ReceiptToggleButton from "./ReceiptToggleButton";
 import { formatPrice, formatDateTime } from "../utils/orderFormatUtils";
 import { Order, OrderItem, Product, ExtendedOrder } from "@/utils/type";
 
@@ -102,6 +103,20 @@ export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsP
               <div className="flex flex-col">
                 <span className="text-gray-600 mb-1">배송지</span>
                 <span className="font-medium text-sm">{order.shipping_address || '정보 없음'}</span>
+              </div>
+            </div>
+            
+            <div className="bg-white p-3 rounded border border-gray-200">
+              <h3 className="font-medium mb-2 pb-1 border-b">영수증 설정</h3>
+              <div className="flex flex-col">
+                <ReceiptToggleButton 
+                  orderId={order.order_id} 
+                  initialReceiptEnabled={order.generate_receipt} 
+                  className="mt-1" 
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  영수증 활성화 시 고객은 주문 완료 후 영수증을 발급받을 수 있습니다.
+                </p>
               </div>
             </div>
             
