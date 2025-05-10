@@ -92,7 +92,8 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
             updated_at,
             markdown_content,
             categories:category_id(category_id, category_name),
-            store_wallet_address
+            store_wallet_address,
+            kiosk_key
           `
 					)
 					.eq("store_id", storeId)
@@ -800,6 +801,42 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 										주소 복사하기
 									</button>
 								</div>
+							</div>
+						</div>
+					)}
+
+					{/* Kiosk QR Code Section - Only visible to store owner */}
+					{store.kiosk_key && (
+						<div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+							<h3 className="text-lg font-medium text-primary mb-3 flex items-center">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="18"
+									height="18"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									className="mr-2"
+								>
+									<path d="M15 5v14"></path>
+									<path d="M5 10h14"></path>
+									<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"></path>
+								</svg>
+								키오스크 접속 코드
+							</h3>
+							<div className="flex flex-col items-center space-y-3">
+								<div className="p-3 bg-white rounded-lg shadow-sm border">
+									<QRCodeSVG
+										value={store.kiosk_key}
+										size={180}
+										level="H"
+										includeMargin={true}
+									/>
+								</div>
+								<p className="text-sm text-gray-600 text-center">
+									이 QR 코드는 스토어의 키오스크 모드에 접속하기 위한 코드입니다. 스캔 시 키오스크 모드로 진입합니다.
+								</p>
 							</div>
 						</div>
 					)}
