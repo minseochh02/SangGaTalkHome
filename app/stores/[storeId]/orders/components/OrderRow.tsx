@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import OrderStatusBadge from "./OrderStatusBadge";
 import OrderDetails from "./OrderDetails";
 import { formatOrderId, formatRelativeTime, formatPrice, isNewOrder } from "../utils/orderFormatUtils";
@@ -9,13 +10,15 @@ interface OrderRowProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   updateOrderStatus: (orderId: string, newStatus: number) => Promise<void>;
+  storeId: string;
 }
 
 export default function OrderRow({ 
   order, 
   isExpanded, 
   onToggleExpand,
-  updateOrderStatus
+  updateOrderStatus,
+  storeId
 }: OrderRowProps) {
   const isNew = isNewOrder(order.created_at);
   
@@ -43,12 +46,20 @@ export default function OrderRow({
           <OrderStatusBadge status={order.status} />
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-          <button 
-            onClick={onToggleExpand}
-            className="text-primary hover:underline mr-3"
-          >
-            {isExpanded ? '접기' : '상세보기'}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button 
+              onClick={onToggleExpand}
+              className="text-primary hover:underline"
+            >
+              {isExpanded ? '접기' : '간략보기'}
+            </button>
+            <Link 
+              href={`/stores/${storeId}/orders/${order.order_id}`}
+              className="text-primary hover:underline"
+            >
+              상세보기
+            </Link>
+          </div>
         </td>
       </tr>
       {isExpanded && (

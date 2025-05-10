@@ -149,6 +149,7 @@ export default function OrdersListContent({ storeId }: { storeId: string }) {
                     isExpanded={expandedOrderId === order.order_id}
                     onToggleExpand={() => toggleExpandOrder(order.order_id)}
                     updateOrderStatus={updateOrderStatus}
+                    storeId={storeId}
                   />
                 ))}
             </tbody>
