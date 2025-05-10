@@ -103,6 +103,20 @@ export default function OrderDetails({ order, updateOrderStatus }: OrderDetailsP
                 <span className="text-gray-600 mb-1">배송지</span>
                 <span className="font-medium text-sm">{order.shipping_address || '정보 없음'}</span>
               </div>
+              
+              {order.recipient_name && (
+                <div className="flex flex-col mt-2 pt-2 border-t border-gray-100">
+                  <span className="text-gray-600 mb-1">받는 사람</span>
+                  <span className="font-medium text-sm">{order.recipient_name}</span>
+                </div>
+              )}
+              
+              {order.phone_number && (
+                <div className="flex flex-col mt-2">
+                  <span className="text-gray-600 mb-1">연락처</span>
+                  <span className="font-medium text-sm">{order.phone_number}</span>
+                </div>
+              )}
             </div>
             
             <OrderActions 

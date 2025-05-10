@@ -10,5 +10,7 @@ declare module "@/utils/type" {
     customer_email?: string;
     customer_phone?: string;
     customer_wallet?: string;
+    recipient_name?: string;
+    phone_number?: string;
   }
 } 

@@ -97,6 +97,8 @@ export interface Order {
 	sgt_shipping_cost: number;
 	won_shipping_cost: number;
 	shipping_address: string;
+	recipient_name?: string;
+	phone_number?: string;
 	status: number; // 0: pending, 1: completed, 2: other statuses
 	created_at: string;
 	updated_at: string;

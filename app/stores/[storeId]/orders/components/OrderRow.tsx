@@ -34,7 +34,10 @@ export default function OrderRow({
           {formatRelativeTime(order.created_at)}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-          {order.customer_name || '알 수 없음'}
+          {order.recipient_name || order.customer_name || '알 수 없음'}
+          {order.phone_number && (
+            <p className="text-xs text-gray-400">{order.phone_number}</p>
+          )}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           {formatPrice(order.sgt_total)} SGT

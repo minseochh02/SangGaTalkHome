@@ -102,7 +102,18 @@ export default function useOrdersData(
       const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
         .select(`
-          *,
+          order_id,
+          wallet_id,
+          sgt_total,
+          won_total,
+          sgt_shipping_cost,
+          won_shipping_cost,
+          shipping_address,
+          recipient_name,
+          phone_number,
+          status,
+          created_at,
+          updated_at,
           wallets:wallet_id(wallet_id, wallet_name)
         `)
         .in("order_id", orderIds)
@@ -113,28 +124,52 @@ export default function useOrdersData(
       }
 
       // Combine orders with their items
-      const extendedOrders: ExtendedOrder[] = ordersData.map(order => {
+      const extendedOrders = ordersData.map(order => {
         // Filter items for this order and transform the products field to product field
         const orderItems = orderItemsData
           .filter(item => item.order_id === order.order_id)
           .map(item => {
+            // Use a two-step casting approach
             return {
-              ...item,
-              // Transform products (plural) to product (singular) to match component expectations
-              product: item.products,
-              // Keep products for backward compatibility
-              products: item.products
+              order_items_id: item.order_items_id,
+              order_id: item.order_id,
+              product_id: item.product_id,
+              quantity: item.quantity,
+              won_price: item.won_price,
+              sgt_price: item.sgt_price,
+              created_at: item.created_at,
+              // Add the product with safe type casting
+              product: item.products as unknown as Product,
             };
           });
 
-        return {
-          ...order,
-          items: orderItems,
-          customer_name: order.wallets?.wallet_name || '알 수 없음'
+        // Create the extended order with explicit properties
+        const extendedOrder = {
+          order_id: order.order_id,
+          wallet_id: order.wallet_id,
+          sgt_total: order.sgt_total,
+          won_total: order.won_total,
+          sgt_shipping_cost: order.sgt_shipping_cost,
+          won_shipping_cost: order.won_shipping_cost,
+          shipping_address: order.shipping_address,
+          status: order.status,
+          created_at: order.created_at,
+          updated_at: order.updated_at,
+          // Add customer information
+          customer_name: order.wallets && typeof order.wallets === 'object' ? 
+            (order.wallets as any).wallet_name || '알 수 없음' : 
+            '알 수 없음',
+          // Include recipient info
+          recipient_name: order.recipient_name,
+          phone_number: order.phone_number,
+          // Include items array
+          items: orderItems
         };
+
+        return extendedOrder;
       });
 
-      setOrders(extendedOrders);
+      setOrders(extendedOrders as ExtendedOrder[]);
     } catch (err) {
       console.error("Error fetching orders:", err);
       setError("주문 정보를 불러오는 중 오류가 발생했습니다.");
