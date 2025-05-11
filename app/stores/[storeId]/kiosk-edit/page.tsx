@@ -24,14 +24,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// Fix the props interface to match Next.js App Router requirements
-type PageProps = {
-  params: {
-    storeId: string;
-  };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
-
 // Define interface for product with kiosk specific properties
 interface KioskProduct extends Product {
   kiosk_order?: number;
@@ -116,8 +108,7 @@ const SortableProductItem = ({
   );
 };
 
-export default function KioskEditPage({ params }: PageProps) {
-  const { storeId } = params;
+function KioskEditContent({ storeId }: { storeId: string }) {
   const supabase = createClient();
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
@@ -665,4 +656,15 @@ export default function KioskEditPage({ params }: PageProps) {
       </section>
     </div>
   );
+}
+
+export default async function KioskEditPage({
+  params,
+}: {
+  params: Promise<{ storeId: string }>;
+}) {
+  const resolvedParams = await params;
+  const { storeId } = resolvedParams;
+  
+  return <KioskEditContent storeId={storeId} />;
 } 
