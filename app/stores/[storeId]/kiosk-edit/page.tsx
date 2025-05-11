@@ -240,7 +240,7 @@ const SortableProductItem = ({
 }: { 
   product: KioskProduct, 
   isKioskProduct?: boolean,
-  onToggleSoldOut: (productId: number, currentStatus: boolean) => void,
+  onToggleSoldOut: (productId: string | number, currentStatus: boolean) => void,
   onEditProduct: (product: KioskProduct) => void
 }) => {
   const {
@@ -332,7 +332,7 @@ const SortableProductItem = ({
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              onToggleSoldOut(Number(product.product_id), !!product.is_sold_out);
+              onToggleSoldOut(product.product_id, !!product.is_sold_out);
             }}
             className={`px-2 py-1 text-xs font-medium rounded ${isSoldOut 
               ? 'bg-red-100 text-red-700 hover:bg-red-200' 
@@ -794,7 +794,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     // For now we don't need to reorder available products, but we could add that here
   };
 
-  const handleToggleSoldOut = async (productId: number, currentStatus: boolean) => {
+  const handleToggleSoldOut = async (productId: string | number, currentStatus: boolean) => {
     try {
       const newStatus = !currentStatus;
       
@@ -816,7 +816,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       // Update local state
       setAllProducts(prevProducts => 
         prevProducts.map(product => 
-          Number(product.product_id) === productId 
+          product.product_id === productId 
             ? { ...product, is_sold_out: newStatus } 
             : product
         )
@@ -824,7 +824,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       
       setKioskProducts(prevProducts => 
         prevProducts.map(product => 
-          Number(product.product_id) === productId 
+          product.product_id === productId 
             ? { ...product, is_sold_out: newStatus } 
             : product
         )
