@@ -186,7 +186,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 		}
 	};
 
-	if (loading) {
+	if (loading || isAuthLoading) {
 		return (
 			<div className="container mx-auto py-16 px-4">
 				<div className="flex justify-center items-center min-h-[50vh]">
@@ -978,6 +978,67 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 					</div>
 				</div>
 			</div>
+
+			{/* Store Owner Section */}
+			{isOwner && (
+				<div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-r-lg shadow-md mb-8">
+					<h2 className="text-2xl font-bold text-yellow-700 mb-4">
+						사장님 전용 정보
+					</h2>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<div>
+							<h3 className="text-xl font-semibold text-gray-700 mb-3 flex justify-between items-center">
+								<span>키오스크 QR 코드</span>
+								{store?.kiosk_key && (
+									<Link
+										href={`/stores/${storeId}/kiosk-edit`}
+										className="ml-4 px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
+									>
+										키오스크 설정 수정
+									</Link>
+								)}
+							</h3>
+							{store?.kiosk_key ? (
+								<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
+									<QRCodeSVG value={store.kiosk_key} size={180} />
+									<p className="mt-3 text-sm text-gray-600">
+										Sanggawallet 앱으로 스캔하여 키오스크 모드를 활성화하세요.
+									</p>
+								</div>
+							) : (
+								<p className="text-gray-600">
+									키오스크 QR 코드가 아직 설정되지 않았습니다. (관리자에게 문의)
+								</p>
+							)}
+						</div>
+						<div>
+							<h3 className="text-xl font-semibold text-gray-700 mb-3">
+								스토어 지갑 주소
+							</h3>
+							{store?.store_wallet_address ? (
+								<div className="bg-white p-4 rounded-lg shadow">
+									<p className="text-sm text-gray-800 break-all">
+										{store.store_wallet_address}
+									</p>
+									<button
+										onClick={() => {
+											navigator.clipboard.writeText(
+												store.store_wallet_address || ""
+											);
+											alert("지갑 주소가 복사되었습니다!");
+										}}
+										className="mt-3 px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
+									>
+										주소 복사
+									</button>
+								</div>
+							) : (
+								<p className="text-gray-600">지갑 주소가 없습니다.</p>
+							)}
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
