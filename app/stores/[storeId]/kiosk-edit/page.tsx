@@ -13,7 +13,10 @@ import {
   useSensors,
   DragEndEvent,
   DragOverlay,
-  DragStartEvent
+  DragStartEvent,
+  DragOverEvent,
+  useDraggable,
+  useDroppable
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -43,12 +46,20 @@ const SortableProductItem = ({
     listeners,
     setNodeRef,
     transform,
-    transition
-  } = useSortable({ id: isKioskProduct ? `kiosk-${product.product_id}` : product.product_id.toString() });
+    transition,
+    isDragging
+  } = useSortable({ 
+    id: isKioskProduct ? `kiosk-${product.product_id}` : product.product_id.toString(),
+    data: {
+      product,
+      isKioskProduct
+    }
+  });
   
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition
+    transition,
+    opacity: isDragging ? 0.5 : 1
   };
 
   const formatPrice = (price: number | null): string => {
@@ -62,7 +73,7 @@ const SortableProductItem = ({
       style={style}
       {...attributes} 
       {...listeners}
-      className={`mb-2 p-3 rounded-lg border bg-white border-gray-200 cursor-move`}
+      className={`mb-2 p-3 rounded-lg border bg-white border-gray-200 cursor-move ${isDragging ? 'z-50' : ''}`}
     >
       <div className="flex items-center gap-3">
         {isKioskProduct && (
@@ -108,6 +119,43 @@ const SortableProductItem = ({
   );
 };
 
+// Create a droppable container component
+const DroppableContainer = ({ 
+  id, 
+  items, 
+  children, 
+  className 
+}: { 
+  id: string; 
+  items: string[]; 
+  children: React.ReactNode; 
+  className?: string;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: {
+      type: 'container',
+      accepts: items
+    }
+  });
+
+  const isHighlighted = isOver;
+  const highlightClass = isHighlighted 
+    ? id === 'kioskProducts' 
+      ? 'bg-green-50 border-green-300' 
+      : 'bg-blue-50 border-blue-300' 
+    : 'bg-white border-gray-200';
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      className={`min-h-[400px] p-2 rounded-lg border transition-colors duration-200 ${highlightClass} ${className || ''}`}
+    >
+      {children}
+    </div>
+  );
+};
+
 function KioskEditContent({ storeId }: { storeId: string }) {
   const supabase = createClient();
   const [store, setStore] = useState<Store | null>(null);
@@ -125,6 +173,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   // DnD state
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeProduct, setActiveProduct] = useState<KioskProduct | null>(null);
+  const [currentContainer, setCurrentContainer] = useState<string | null>(null);
 
   // Kiosk Settings States
   const [dineInEnabled, setDineInEnabled] = useState(false);
@@ -133,7 +182,11 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
   // Setup DnD sensors
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -298,10 +351,17 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    setActiveId(active.id as string);
+    const id = String(active.id);
+    setActiveId(id);
+    
+    // Set the current container (either availableProducts or kioskProducts)
+    if (id.startsWith('kiosk-')) {
+      setCurrentContainer('kioskProducts');
+    } else {
+      setCurrentContainer('availableProducts');
+    }
     
     // Find the active product
-    const id = String(active.id);
     let product;
     
     if (id.startsWith('kiosk-')) {
@@ -318,22 +378,65 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     }
   };
 
+  // Track drag over containers
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    
+    // Exit if not dragging over anything
+    if (!over) return;
+    
+    const containerId = over.id.toString();
+    
+    // If over a different container than the one we started from, update current container
+    if ((containerId === 'availableProducts' || containerId === 'kioskProducts') && 
+        containerId !== currentContainer) {
+      setCurrentContainer(containerId);
+    }
+  };
+
   // Handle drag end event
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (!over) {
+      // Reset states
       setActiveId(null);
       setActiveProduct(null);
+      setCurrentContainer(null);
       return;
     }
     
     const activeId = String(active.id);
     const overId = String(over.id);
     
-    // Handle drag between containers
-    if (activeId.startsWith('kiosk-') && !overId.startsWith('kiosk-')) {
-      // Moving from kiosk to available (removing from kiosk)
+    // Handle drop into container
+    if (overId === 'availableProducts' || overId === 'kioskProducts') {
+      handleContainerDrop(activeId, overId);
+    }
+    // Handle drop onto another item
+    else {
+      // Determine which container we're in based on the over id
+      const containerType = overId.startsWith('kiosk-') ? 'kioskProducts' : 'availableProducts';
+      
+      if (containerType !== currentContainer) {
+        // Moving between containers
+        handleContainerDrop(activeId, containerType);
+      } else {
+        // Reordering within the same container
+        handleReorder(activeId, overId, containerType);
+      }
+    }
+    
+    // Reset states
+    setActiveId(null);
+    setActiveProduct(null);
+    setCurrentContainer(null);
+  };
+
+  // Helper function to handle drops between containers
+  const handleContainerDrop = (activeId: string, containerId: string) => {
+    // Moving from kiosk to available
+    if (activeId.startsWith('kiosk-') && containerId === 'availableProducts') {
       const productId = activeId.replace('kiosk-', '');
       const movedProduct = kioskProducts.find(p => p.product_id.toString() === productId);
       
@@ -349,9 +452,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         
         setKioskProducts(updatedKioskProducts);
       }
-    } 
-    else if (!activeId.startsWith('kiosk-') && overId.startsWith('kiosk-')) {
-      // Moving from available to kiosk (adding to kiosk)
+    }
+    // Moving from available to kiosk
+    else if (!activeId.startsWith('kiosk-') && containerId === 'kioskProducts') {
       const availableProducts = allProducts.filter(p => 
         !kioskProducts.some(kp => kp.product_id.toString() === p.product_id.toString())
       );
@@ -359,31 +462,21 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       const movedProduct = availableProducts.find(p => p.product_id.toString() === activeId);
       
       if (movedProduct) {
-        const insertIndex = kioskProducts.findIndex(p => 
-          `kiosk-${p.product_id}` === overId
-        );
-        
-        // Create a copy of kiosk products
-        const newKioskProducts = [...kioskProducts];
-        
-        // Insert the moved product at the appropriate position
-        newKioskProducts.splice(insertIndex >= 0 ? insertIndex : newKioskProducts.length, 0, {
+        // Add to the end of kiosk products
+        const newKioskProducts = [...kioskProducts, {
           ...movedProduct,
           is_kiosk_enabled: true,
-          kiosk_order: insertIndex >= 0 ? insertIndex : newKioskProducts.length
-        });
+          kiosk_order: kioskProducts.length
+        }];
         
-        // Update kiosk order for all products
-        const updatedKioskProducts = newKioskProducts.map((product, index) => ({
-          ...product,
-          kiosk_order: index
-        }));
-        
-        setKioskProducts(updatedKioskProducts);
+        setKioskProducts(newKioskProducts);
       }
     }
-    else if (activeId.startsWith('kiosk-') && overId.startsWith('kiosk-')) {
-      // Reordering within kiosk products
+  };
+
+  // Helper function to handle reordering within a container
+  const handleReorder = (activeId: string, overId: string, containerId: string) => {
+    if (containerId === 'kioskProducts') {
       const activeIndex = kioskProducts.findIndex(
         p => `kiosk-${p.product_id}` === activeId
       );
@@ -403,10 +496,8 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         
         setKioskProducts(updatedKioskProducts);
       }
-    }
-    
-    setActiveId(null);
-    setActiveProduct(null);
+    } 
+    // For now we don't need to reorder available products, but we could add that here
   };
 
   if (loading) {
@@ -547,6 +638,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
             <div className="flex flex-col lg:flex-row gap-6">
@@ -557,7 +649,10 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                   <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
                 </div>
                 
-                <div className="min-h-[400px] p-2 rounded-lg border bg-white border-gray-200">
+                <DroppableContainer 
+                  id="availableProducts" 
+                  items={availableProducts.map(p => p.product_id.toString())}
+                >
                   {availableProducts.length === 0 ? (
                     <div className="flex justify-center items-center h-32 text-gray-400">
                       모든 상품이 키오스크에 추가되었습니다.
@@ -575,7 +670,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                       ))}
                     </SortableContext>
                   )}
-                </div>
+                </DroppableContainer>
               </div>
 
               {/* Kiosk Products Column */}
@@ -585,7 +680,10 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                   <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
                 </div>
                 
-                <div className="min-h-[400px] p-2 rounded-lg border bg-white border-gray-200">
+                <DroppableContainer 
+                  id="kioskProducts" 
+                  items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
+                >
                   {kioskProducts.length === 0 ? (
                     <div className="flex justify-center items-center h-32 text-gray-400">
                       키오스크에 표시할 상품을 추가하세요.
@@ -604,7 +702,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                       ))}
                     </SortableContext>
                   )}
-                </div>
+                </DroppableContainer>
               </div>
             </div>
 
