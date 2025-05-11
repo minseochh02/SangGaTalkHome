@@ -300,10 +300,30 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
   const handleSaveKioskOptions = async () => {
     if (!isOwner) return;
-    // Save kiosk service options
-    console.log('Saving kiosk settings:', { storeId, dineInEnabled, takeoutEnabled, deliveryEnabled });
-    alert('서비스 옵션이 저장되었습니다! (현재는 프론트엔드에만 저장됩니다)');
-    // Later, this will update Supabase
+    
+    try {
+      console.log('Saving kiosk settings:', { storeId, dineInEnabled, takeoutEnabled, deliveryEnabled });
+      
+      // Update the store record in Supabase
+      const { error } = await supabase
+        .from('stores')
+        .update({
+          kiosk_dine_in_enabled: dineInEnabled,
+          kiosk_takeout_enabled: takeoutEnabled,
+          kiosk_delivery_enabled: deliveryEnabled,
+          updated_at: new Date().toISOString()
+        })
+        .eq('store_id', storeId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      alert('서비스 옵션이 성공적으로 저장되었습니다.');
+    } catch (err) {
+      console.error('Error saving kiosk options:', err);
+      alert('서비스 옵션 저장 중 오류가 발생했습니다.');
+    }
   };
 
   const handleSaveKioskProducts = async () => {
@@ -312,34 +332,50 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     
     try {
       console.log('Saving kiosk product settings:', kioskProducts);
-
-      // In a real implementation, you would update the database
-      // For each product in kioskProducts, update is_kiosk_enabled=true and set kiosk_order
-      // For products not in kioskProducts, set is_kiosk_enabled=false
       
-      // Example of batch update (if your database supports it):
-      /*
+      // First, update all products in kioskProducts with is_kiosk_enabled=true and their kiosk_order
       for (let i = 0; i < kioskProducts.length; i++) {
         const product = kioskProducts[i];
-        await supabase
+        const { error } = await supabase
           .from('products')
           .update({ 
             is_kiosk_enabled: true,
             kiosk_order: i 
           })
           .eq('product_id', product.product_id);
+          
+        if (error) {
+          console.error(`Error updating product ${product.product_id}:`, error);
+        }
       }
       
       // Disable products not in kioskProducts
       const kioskProductIds = kioskProducts.map(p => p.product_id);
-      await supabase
-        .from('products')
-        .update({ is_kiosk_enabled: false })
-        .eq('store_id', storeId)
-        .not('product_id', 'in', kioskProductIds);
-      */
       
-      alert('키오스크 상품 설정이 저장되었습니다! (현재는 프론트엔드에만 저장됩니다)');
+      if (kioskProductIds.length > 0) {
+        // Only run this query if there are kiosk products to exclude
+        const { error } = await supabase
+          .from('products')
+          .update({ is_kiosk_enabled: false })
+          .eq('store_id', storeId)
+          .not('product_id', 'in', `(${kioskProductIds.join(',')})`);
+          
+        if (error) {
+          console.error('Error disabling other products:', error);
+        }
+      } else {
+        // If no products are enabled for kiosk, disable all products for this store
+        const { error } = await supabase
+          .from('products')
+          .update({ is_kiosk_enabled: false })
+          .eq('store_id', storeId);
+          
+        if (error) {
+          console.error('Error disabling all products:', error);
+        }
+      }
+      
+      alert('키오스크 상품 설정이 성공적으로 저장되었습니다.');
     } catch (err) {
       console.error('Error saving kiosk products:', err);
       alert('상품 설정 저장 중 오류가 발생했습니다.');
