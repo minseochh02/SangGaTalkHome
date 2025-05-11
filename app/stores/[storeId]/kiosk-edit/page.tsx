@@ -5,12 +5,12 @@ import { createClient } from '@/utils/supabase/client';
 import { Store } from '@/utils/type';
 import Link from 'next/link';
 
-// Updated props type definition
+// Fix the props interface to match Next.js App Router requirements
 interface PageProps {
-  params: {
-    storeId: string;
+  params: { 
+    storeId: string 
   };
-  // searchParams?: { [key: string]: string | string[] | undefined }; // Example for searchParams if needed
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 export default function KioskEditPage({ params }: PageProps) {
@@ -22,7 +22,7 @@ export default function KioskEditPage({ params }: PageProps) {
   const [isOwner, setIsOwner] = useState(false);
   const [user, setUser] = useState<any>(null); // Using any for user for now
 
-  // Kiosk Settings States
+  // Kiosk Settings States (will be expanded later)
   const [dineInEnabled, setDineInEnabled] = useState(false);
   const [takeoutEnabled, setTakeoutEnabled] = useState(false);
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
@@ -32,6 +32,7 @@ export default function KioskEditPage({ params }: PageProps) {
       setLoading(true);
       setError(null);
 
+      // Fetch user first
       const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
       if (userError) {
         console.error('Error fetching user:', userError);
@@ -47,9 +48,10 @@ export default function KioskEditPage({ params }: PageProps) {
         return;
       }
 
+      // Fetch store details
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
-        .select('*, user_id, kiosk_dine_in_enabled, kiosk_takeout_enabled, kiosk_delivery_enabled')
+        .select('*, user_id, kiosk_dine_in_enabled, kiosk_takeout_enabled, kiosk_delivery_enabled') // Assuming these columns exist or will be added
         .eq('store_id', storeId)
         .single();
 
@@ -68,11 +70,13 @@ export default function KioskEditPage({ params }: PageProps) {
       
       setStore(storeData as Store);
 
+      // Check ownership
       if (storeData.user_id !== authUser.id) {
         setError('이 스토어의 설정을 수정할 권한이 없습니다.');
         setIsOwner(false);
       } else {
         setIsOwner(true);
+        // Initialize toggle states from fetched store data (if available)
         setDineInEnabled(storeData.kiosk_dine_in_enabled || false);
         setTakeoutEnabled(storeData.kiosk_takeout_enabled || false);
         setDeliveryEnabled(storeData.kiosk_delivery_enabled || false);
@@ -85,9 +89,26 @@ export default function KioskEditPage({ params }: PageProps) {
 
   const handleSaveChanges = async () => {
     if (!isOwner) return;
+    // Placeholder for save logic
     console.log('Saving kiosk settings:', { storeId, dineInEnabled, takeoutEnabled, deliveryEnabled });
     alert('설정이 저장되었습니다! (현재는 프론트엔드에만 저장됩니다)');
     // Later, this will update Supabase
+    // Example: 
+    /*
+    const { error: updateError } = await supabase
+      .from('stores')
+      .update({
+        kiosk_dine_in_enabled: dineInEnabled,
+        kiosk_takeout_enabled: takeoutEnabled,
+        kiosk_delivery_enabled: deliveryEnabled,
+      })
+      .eq('store_id', storeId);
+    if (updateError) {
+      alert('Error saving settings: ' + updateError.message);
+    } else {
+      alert('Settings saved successfully!');
+    }
+    */
   };
 
   if (loading) {
@@ -110,6 +131,7 @@ export default function KioskEditPage({ params }: PageProps) {
   }
 
   if (!isOwner) {
+    // This case should ideally be caught by the error state, but as a fallback:
     return (
       <div className="container mx-auto p-6 min-h-screen flex flex-col items-center justify-center text-center">
         <p className="text-red-500 text-xl mb-4">🚫 접근 권한 없음</p>
