@@ -400,3 +400,29 @@ export interface Notification {
 	read: boolean;
 	metadata?: any;
 }
+
+export interface KioskOrder {
+	kiosk_order_id: string; // UUID
+	store_id: string; // UUID
+	order_type: 'kiosk_dine_in' | 'kiosk_takeout' | 'kiosk_delivery';
+	total_amount: number;
+	status: 'completed' | 'pending_payment' | 'cancelled';
+	created_at: string; // ISO date string
+	user_id?: string; // UUID, optional
+	notes?: string; // optional
+	// Relations
+	store?: Store;
+	items?: KioskOrderItem[];
+}
+
+export interface KioskOrderItem {
+	kiosk_order_item_id: string; // UUID
+	kiosk_order_id: string; // UUID
+	product_id: string; // UUID
+	quantity: number;
+	price_at_purchase: number;
+	created_at: string; // ISO date string
+	// Relations
+	product?: Product;
+	order?: KioskOrder;
+}

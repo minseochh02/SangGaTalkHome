@@ -27,6 +27,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Dialog, Transition } from '@headlessui/react';
+import KioskSalesHistory from './KioskSalesHistory';
 
 // Define interface for product with kiosk specific properties
 interface KioskProduct extends Product {
@@ -934,228 +935,197 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   );
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <header className="mb-8">
-        <Link href={`/stores/${storeId}`} className="text-blue-500 hover:underline inline-flex items-center mb-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-          스토어 상세로 돌아가기
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-800">키오스크 설정: {store?.store_name}</h1>
-      </header>
-
-      {/* Service Option Toggles */}
-      <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-6">서비스 옵션 활성화</h2>
-        <div className="space-y-6">
-          {/* Dine-in Toggle */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-800">매장 내 식사</h3>
-              <p className="text-sm text-gray-500">키오스크에서 매장 내 식사 옵션을 제공합니다.</p>
-            </div>
-            <button
-              onClick={() => setDineInEnabled(!dineInEnabled)}
-              className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                dineInEnabled ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                  dineInEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Takeout Toggle */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-800">포장 (가져가기)</h3>
-              <p className="text-sm text-gray-500">키오스크에서 포장 옵션을 제공합니다.</p>
-            </div>
-            <button
-              onClick={() => setTakeoutEnabled(!takeoutEnabled)}
-              className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                takeoutEnabled ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                  takeoutEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Delivery Toggle */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-800">배달</h3>
-              <p className="text-sm text-gray-500">키오스크에서 배달 옵션을 제공합니다. (추가 설정 필요할 수 있음)</p>
-            </div>
-            <button
-              onClick={() => setDeliveryEnabled(!deliveryEnabled)}
-              className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                deliveryEnabled ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                  deliveryEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-        <div className="mt-8 text-right">
-          <button 
-            onClick={handleSaveKioskOptions}
-            className="px-6 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
-          >
-            서비스 옵션 저장
-          </button>
-        </div>
-      </section>
-
-      {/* Product Drag and Drop Section */}
-      <section className="mt-12 bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-6">키오스크 상품 관리</h2>
-        <p className="text-gray-600 mb-6">
-          상품을 드래그하여 키오스크에 표시할 상품을 선택하고 순서를 조정하세요. 왼쪽의 상품 목록에서 오른쪽 키오스크 메뉴로 상품을 끌어다 놓으세요.
-          각 상품의 품절 상태를 변경하거나 상품 정보를 수정할 수 있습니다.
-        </p>
-        
-        {loadingProducts ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <DndContext 
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="flex flex-col lg:flex-row gap-6">
-              {/* Available Products Column */}
-              <div className="flex-1">
-                <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
-                  <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
-                </div>
-                
-                <DroppableContainer 
-                  id="availableProducts" 
-                  items={availableProducts.map(p => p.product_id.toString())}
-                >
-                  {availableProducts.length === 0 ? (
-                    <div className="flex justify-center items-center h-32 text-gray-400">
-                      모든 상품이 키오스크에 추가되었습니다.
-                    </div>
-                  ) : (
-                    <SortableContext
-                      items={availableProducts.map(p => p.product_id.toString())}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {availableProducts.map(product => (
-                        <SortableProductItem 
-                          key={product.product_id} 
-                          product={product}
-                          onToggleSoldOut={handleToggleSoldOut}
-                          onEditProduct={handleEditProduct}
-                        />
-                      ))}
-                    </SortableContext>
-                  )}
-                </DroppableContainer>
+    <div className="container mx-auto py-6">
+      <h1 className="text-2xl font-bold mb-6">키오스크 편집</h1>
+      
+      {/* Main content area */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        {/* Service Option Toggles */}
+        <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">서비스 옵션 활성화</h2>
+          <div className="space-y-6">
+            {/* Dine-in Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800">매장 내 식사</h3>
+                <p className="text-sm text-gray-500">키오스크에서 매장 내 식사 옵션을 제공합니다.</p>
               </div>
-
-              {/* Kiosk Products Column */}
-              <div className="flex-1">
-                <div className="bg-green-50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
-                  <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
-                </div>
-                
-                <DroppableContainer 
-                  id="kioskProducts" 
-                  items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
-                >
-                  {kioskProducts.length === 0 ? (
-                    <div className="flex justify-center items-center h-32 text-gray-400">
-                      키오스크에 표시할 상품을 추가하세요.
-                    </div>
-                  ) : (
-                    <SortableContext
-                      items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {kioskProducts.map((product) => (
-                        <SortableProductItem 
-                          key={`kiosk-${product.product_id}`} 
-                          product={product} 
-                          isKioskProduct={true}
-                          onToggleSoldOut={handleToggleSoldOut}
-                          onEditProduct={handleEditProduct}
-                        />
-                      ))}
-                    </SortableContext>
-                  )}
-                </DroppableContainer>
-              </div>
+              <button
+                onClick={() => setDineInEnabled(!dineInEnabled)}
+                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  dineInEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    dineInEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
-            {/* Drag overlay for visual feedback */}
-            <DragOverlay>
-              {activeProduct && (
-                <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
-                  <div className="flex items-center gap-3">
-                    {activeProduct.image_url ? (
-                      <img 
-                        src={activeProduct.image_url} 
-                        alt={activeProduct.product_name}
-                        className="w-12 h-12 object-cover rounded"
+            {/* Takeout Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800">포장 (가져가기)</h3>
+                <p className="text-sm text-gray-500">키오스크에서 포장 옵션을 제공합니다.</p>
+              </div>
+              <button
+                onClick={() => setTakeoutEnabled(!takeoutEnabled)}
+                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  takeoutEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    takeoutEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Delivery Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800">배달</h3>
+                <p className="text-sm text-gray-500">키오스크에서 배달 옵션을 제공합니다. (추가 설정 필요할 수 있음)</p>
+              </div>
+              <button
+                onClick={() => setDeliveryEnabled(!deliveryEnabled)}
+                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  deliveryEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    deliveryEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+          <div className="mt-8 text-right">
+            <button 
+              onClick={handleSaveKioskOptions}
+              className="px-6 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+            >
+              서비스 옵션 저장
+            </button>
+          </div>
+        </section>
+      </div>
+      
+      {/* Drag and drop section */}
+      <div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
+        >
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Available Products Column */}
+            <div className="flex-1">
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
+                <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
+              </div>
+              
+              <DroppableContainer 
+                id="availableProducts" 
+                items={availableProducts.map(p => p.product_id.toString())}
+              >
+                {availableProducts.length === 0 ? (
+                  <div className="flex justify-center items-center h-32 text-gray-400">
+                    모든 상품이 키오스크에 추가되었습니다.
+                  </div>
+                ) : (
+                  <SortableContext
+                    items={availableProducts.map(p => p.product_id.toString())}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {availableProducts.map(product => (
+                      <SortableProductItem 
+                        key={product.product_id} 
+                        product={product}
+                        onToggleSoldOut={handleToggleSoldOut}
+                        onEditProduct={handleEditProduct}
                       />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                        No Image
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <h4 className="font-medium">{activeProduct.product_name}</h4>
-                      <div className="flex text-sm gap-2">
-                        <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
-                        {activeProduct.sgt_price && (
-                          <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
-                        )}
-                      </div>
+                    ))}
+                  </SortableContext>
+                )}
+              </DroppableContainer>
+            </div>
+
+            {/* Kiosk Products Column */}
+            <div className="flex-1">
+              <div className="bg-green-50 p-4 rounded-lg mb-4">
+                <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
+                <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
+              </div>
+              
+              <DroppableContainer 
+                id="kioskProducts" 
+                items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
+              >
+                {kioskProducts.length === 0 ? (
+                  <div className="flex justify-center items-center h-32 text-gray-400">
+                    키오스크에 표시할 상품을 추가하세요.
+                  </div>
+                ) : (
+                  <SortableContext
+                    items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {kioskProducts.map((product) => (
+                      <SortableProductItem 
+                        key={`kiosk-${product.product_id}`} 
+                        product={product} 
+                        isKioskProduct={true}
+                        onToggleSoldOut={handleToggleSoldOut}
+                        onEditProduct={handleEditProduct}
+                      />
+                    ))}
+                  </SortableContext>
+                )}
+              </DroppableContainer>
+            </div>
+          </div>
+
+          {/* Drag overlay for visual feedback */}
+          <DragOverlay>
+            {activeProduct && (
+              <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
+                <div className="flex items-center gap-3">
+                  {activeProduct.image_url ? (
+                    <img 
+                      src={activeProduct.image_url} 
+                      alt={activeProduct.product_name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                      No Image
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h4 className="font-medium">{activeProduct.product_name}</h4>
+                    <div className="flex text-sm gap-2">
+                      <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
+                      {activeProduct.sgt_price && (
+                        <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-        )}
-        
-        <div className="mt-8 text-right">
-          <button 
-            onClick={handleSaveKioskProducts}
-            disabled={savingProducts || loadingProducts}
-            className={`px-6 py-2 ${
-              savingProducts || loadingProducts 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-green-500 hover:bg-green-600'
-            } text-white font-semibold rounded-lg transition-colors shadow-sm`}
-          >
-            {savingProducts ? '저장 중...' : '키오스크 상품 저장'}
-          </button>
-        </div>
-      </section>
-
-      {/* Product Edit Modal */}
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      </div>
+      
+      {/* Modal for product editing */}
       <ProductEditModal 
         isOpen={isEditModalOpen}
         product={editingProduct}
@@ -1165,6 +1135,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         }}
         onSave={handleSaveEditedProduct}
       />
+      
+      {/* Kiosk Sales History Section */}
+      <KioskSalesHistory storeId={storeId} />
     </div>
   );
 }
