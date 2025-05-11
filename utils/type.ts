@@ -52,6 +52,9 @@ export interface Store {
 	operating_hours: string;
 	store_wallet_address: string; 
 	kiosk_key?: string; // Encrypted hash key for kiosk access
+	kiosk_dine_in_enabled?: boolean; // Whether dine-in option is enabled in kiosk
+	kiosk_takeout_enabled?: boolean; // Whether takeout option is enabled in kiosk
+	kiosk_delivery_enabled?: boolean; // Whether delivery option is enabled in kiosk
 	// store_order_sheet_id: string; NOT YET IMPLEMENTED
 	location: string; // geography(Point,4326) format
 	latitude: number;
@@ -87,6 +90,8 @@ export interface Product {
 	deleted_at: string | null;
 	status: number; // 0: active, 1: not_active, 2: soft_delete
 	markdown_content?: string | null;
+	is_kiosk_enabled?: boolean; // Whether this product is enabled in kiosk
+	kiosk_order?: number; // The order of this product in kiosk
 }
 
 // 1-2-2. ORDERS
@@ -282,21 +287,6 @@ export interface Notification {
 	read: boolean;
 	metadata?: any;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export interface FavoriteStore {
 	favorite_store_id: string;
