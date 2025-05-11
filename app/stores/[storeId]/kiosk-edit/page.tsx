@@ -4,12 +4,30 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Store, Product } from '@/utils/type';
 import Link from 'next/link';
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DroppableStateSnapshot, DraggableProvided, DraggableStateSnapshot } from 'react-beautiful-dnd';
+import { 
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Fix the props interface to match Next.js App Router requirements
-interface PageProps {
-  params: { 
-    storeId: string 
+type PageProps = {
+  params: {
+    storeId: string;
   };
   searchParams?: { [key: string]: string | string[] | undefined };
 }
@@ -19,6 +37,84 @@ interface KioskProduct extends Product {
   kiosk_order?: number;
   is_kiosk_enabled?: boolean;
 }
+
+// Define a component for sortable product items
+const SortableProductItem = ({ 
+  product, 
+  isKioskProduct = false 
+}: { 
+  product: KioskProduct, 
+  isKioskProduct?: boolean 
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition
+  } = useSortable({ id: isKioskProduct ? `kiosk-${product.product_id}` : product.product_id.toString() });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition
+  };
+
+  const formatPrice = (price: number | null): string => {
+    if (price === null) return "0";
+    return price.toLocaleString();
+  };
+  
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style}
+      {...attributes} 
+      {...listeners}
+      className={`mb-2 p-3 rounded-lg border bg-white border-gray-200 cursor-move`}
+    >
+      <div className="flex items-center gap-3">
+        {isKioskProduct && (
+          <div className="text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+        )}
+        {product.image_url ? (
+          <img 
+            src={product.image_url} 
+            alt={product.product_name}
+            className="w-12 h-12 object-cover rounded"
+          />
+        ) : (
+          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+            No Image
+          </div>
+        )}
+        <div className="flex-1">
+          <h4 className="font-medium">{product.product_name}</h4>
+          <div className="flex text-sm gap-2">
+            <span className="text-gray-600">{formatPrice(product.won_price)}원</span>
+            {product.sgt_price && (
+              <span className="text-blue-600">{formatPrice(product.sgt_price)} SGT</span>
+            )}
+          </div>
+        </div>
+        {isKioskProduct ? (
+          <div className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">
+            #{product.kiosk_order !== undefined ? product.kiosk_order + 1 : '?'}
+          </div>
+        ) : (
+          <div className="text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function KioskEditPage({ params }: PageProps) {
   const { storeId } = params;
@@ -34,11 +130,23 @@ export default function KioskEditPage({ params }: PageProps) {
   const [kioskProducts, setKioskProducts] = useState<KioskProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [savingProducts, setSavingProducts] = useState(false);
+  
+  // DnD state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeProduct, setActiveProduct] = useState<KioskProduct | null>(null);
 
   // Kiosk Settings States
   const [dineInEnabled, setDineInEnabled] = useState(false);
   const [takeoutEnabled, setTakeoutEnabled] = useState(false);
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
+
+  // Setup DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Helper function to format price with commas
   const formatPrice = (price: number | null): string => {
@@ -196,88 +304,118 @@ export default function KioskEditPage({ params }: PageProps) {
     }
   };
 
+  // Handle drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveId(active.id as string);
+    
+    // Find the active product
+    const id = String(active.id);
+    let product;
+    
+    if (id.startsWith('kiosk-')) {
+      // It's a kiosk product
+      const productId = id.replace('kiosk-', '');
+      product = kioskProducts.find(p => p.product_id.toString() === productId);
+    } else {
+      // It's an available product
+      product = allProducts.find(p => p.product_id.toString() === id);
+    }
+    
+    if (product) {
+      setActiveProduct(product);
+    }
+  };
+
   // Handle drag end event
-  const onDragEnd = (result: DropResult) => {
-    const { source, destination } = result;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
     
-    // Dropped outside a droppable area
-    if (!destination) return;
-    
-    // Moving within the available products list
-    if (source.droppableId === 'availableProducts' && destination.droppableId === 'availableProducts') {
-      const newAvailableProducts = Array.from(allProducts.filter(p => !kioskProducts.some(kp => kp.product_id === p.product_id)));
-      const [movedItem] = newAvailableProducts.splice(source.index, 1);
-      newAvailableProducts.splice(destination.index, 0, movedItem);
-      
-      // Update allProducts to maintain the new order for available products
-      const newAllProducts = [
-        ...newAvailableProducts,
-        ...kioskProducts
-      ];
-      
-      setAllProducts(newAllProducts);
+    if (!over) {
+      setActiveId(null);
+      setActiveProduct(null);
+      return;
     }
     
-    // Moving within the kiosk products list
-    else if (source.droppableId === 'kioskProducts' && destination.droppableId === 'kioskProducts') {
-      const newKioskProducts = Array.from(kioskProducts);
-      const [movedItem] = newKioskProducts.splice(source.index, 1);
-      newKioskProducts.splice(destination.index, 0, movedItem);
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    
+    // Handle drag between containers
+    if (activeId.startsWith('kiosk-') && !overId.startsWith('kiosk-')) {
+      // Moving from kiosk to available (removing from kiosk)
+      const productId = activeId.replace('kiosk-', '');
+      const movedProduct = kioskProducts.find(p => p.product_id.toString() === productId);
       
-      // Update kiosk order for all products in the list
-      const updatedKioskProducts = newKioskProducts.map((product, index) => ({
-        ...product,
-        kiosk_order: index
-      }));
+      if (movedProduct) {
+        // Remove from kiosk products
+        const newKioskProducts = kioskProducts.filter(p => p.product_id.toString() !== productId);
+        
+        // Update kiosk order for remaining products
+        const updatedKioskProducts = newKioskProducts.map((product, index) => ({
+          ...product,
+          kiosk_order: index
+        }));
+        
+        setKioskProducts(updatedKioskProducts);
+      }
+    } 
+    else if (!activeId.startsWith('kiosk-') && overId.startsWith('kiosk-')) {
+      // Moving from available to kiosk (adding to kiosk)
+      const availableProducts = allProducts.filter(p => 
+        !kioskProducts.some(kp => kp.product_id.toString() === p.product_id.toString())
+      );
       
-      setKioskProducts(updatedKioskProducts);
+      const movedProduct = availableProducts.find(p => p.product_id.toString() === activeId);
+      
+      if (movedProduct) {
+        const insertIndex = kioskProducts.findIndex(p => 
+          `kiosk-${p.product_id}` === overId
+        );
+        
+        // Create a copy of kiosk products
+        const newKioskProducts = [...kioskProducts];
+        
+        // Insert the moved product at the appropriate position
+        newKioskProducts.splice(insertIndex >= 0 ? insertIndex : newKioskProducts.length, 0, {
+          ...movedProduct,
+          is_kiosk_enabled: true,
+          kiosk_order: insertIndex >= 0 ? insertIndex : newKioskProducts.length
+        });
+        
+        // Update kiosk order for all products
+        const updatedKioskProducts = newKioskProducts.map((product, index) => ({
+          ...product,
+          kiosk_order: index
+        }));
+        
+        setKioskProducts(updatedKioskProducts);
+      }
+    }
+    else if (activeId.startsWith('kiosk-') && overId.startsWith('kiosk-')) {
+      // Reordering within kiosk products
+      const activeIndex = kioskProducts.findIndex(
+        p => `kiosk-${p.product_id}` === activeId
+      );
+      const overIndex = kioskProducts.findIndex(
+        p => `kiosk-${p.product_id}` === overId
+      );
+      
+      if (activeIndex !== overIndex) {
+        // Reorder the products
+        const newKioskProducts = arrayMove(kioskProducts, activeIndex, overIndex);
+        
+        // Update kiosk order for all products
+        const updatedKioskProducts = newKioskProducts.map((product, index) => ({
+          ...product,
+          kiosk_order: index
+        }));
+        
+        setKioskProducts(updatedKioskProducts);
+      }
     }
     
-    // Moving from available to kiosk
-    else if (source.droppableId === 'availableProducts' && destination.droppableId === 'kioskProducts') {
-      const availableProducts = allProducts.filter(p => !kioskProducts.some(kp => kp.product_id === p.product_id));
-      const movedItem = availableProducts[source.index];
-      
-      // Add to kiosk products at the correct position
-      const newKioskProducts = Array.from(kioskProducts);
-      newKioskProducts.splice(destination.index, 0, {
-        ...movedItem,
-        is_kiosk_enabled: true,
-        kiosk_order: destination.index
-      });
-      
-      // Update kiosk order for all products in the list
-      const updatedKioskProducts = newKioskProducts.map((product, index) => ({
-        ...product,
-        kiosk_order: index
-      }));
-      
-      setKioskProducts(updatedKioskProducts);
-    }
-    
-    // Moving from kiosk to available
-    else if (source.droppableId === 'kioskProducts' && destination.droppableId === 'availableProducts') {
-      // Remove from kiosk products
-      const newKioskProducts = Array.from(kioskProducts);
-      const [movedItem] = newKioskProducts.splice(source.index, 1);
-      
-      // Update kiosk order for remaining products
-      const updatedKioskProducts = newKioskProducts.map((product, index) => ({
-        ...product,
-        kiosk_order: index
-      }));
-      
-      // Add back to all products (with is_kiosk_enabled set to false)
-      const updatedMovedItem = {
-        ...movedItem,
-        is_kiosk_enabled: false,
-        kiosk_order: null
-      };
-      
-      // This change doesn't require updating the allProducts array since it already includes all products
-      
-      setKioskProducts(updatedKioskProducts);
-    }
+    setActiveId(null);
+    setActiveProduct(null);
   };
 
   if (loading) {
@@ -414,7 +552,12 @@ export default function KioskEditPage({ params }: PageProps) {
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
-          <DragDropContext onDragEnd={onDragEnd}>
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Available Products Column */}
               <div className="flex-1">
@@ -423,71 +566,25 @@ export default function KioskEditPage({ params }: PageProps) {
                   <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
                 </div>
                 
-                <Droppable droppableId="availableProducts">
-                  {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className={`min-h-[400px] p-2 rounded-lg border ${
-                        snapshot.isDraggingOver ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
-                      }`}
-                    >
-                      {availableProducts.length === 0 ? (
-                        <div className="flex justify-center items-center h-32 text-gray-400">
-                          모든 상품이 키오스크에 추가되었습니다.
-                        </div>
-                      ) : (
-                        availableProducts.map((product, index) => (
-                          <Draggable 
-                            key={product.product_id} 
-                            draggableId={product.product_id.toString()} 
-                            index={index}
-                          >
-                            {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`mb-2 p-3 rounded-lg border ${
-                                  snapshot.isDragging ? 'bg-blue-50 border-blue-300 shadow-md' : 'bg-white border-gray-200'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  {product.image_url ? (
-                                    <img 
-                                      src={product.image_url} 
-                                      alt={product.product_name}
-                                      className="w-12 h-12 object-cover rounded"
-                                    />
-                                  ) : (
-                                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                                      No Image
-                                    </div>
-                                  )}
-                                  <div className="flex-1">
-                                    <h4 className="font-medium">{product.product_name}</h4>
-                                    <div className="flex text-sm gap-2">
-                                      <span className="text-gray-600">{formatPrice(product.won_price)}원</span>
-                                      {product.sgt_price && (
-                                        <span className="text-blue-600">{formatPrice(product.sgt_price)} SGT</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="text-gray-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))
-                      )}
-                      {provided.placeholder}
+                <div className="min-h-[400px] p-2 rounded-lg border bg-white border-gray-200">
+                  {availableProducts.length === 0 ? (
+                    <div className="flex justify-center items-center h-32 text-gray-400">
+                      모든 상품이 키오스크에 추가되었습니다.
                     </div>
+                  ) : (
+                    <SortableContext
+                      items={availableProducts.map(p => p.product_id.toString())}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {availableProducts.map(product => (
+                        <SortableProductItem 
+                          key={product.product_id} 
+                          product={product} 
+                        />
+                      ))}
+                    </SortableContext>
                   )}
-                </Droppable>
+                </div>
               </div>
 
               {/* Kiosk Products Column */}
@@ -497,77 +594,59 @@ export default function KioskEditPage({ params }: PageProps) {
                   <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
                 </div>
                 
-                <Droppable droppableId="kioskProducts">
-                  {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className={`min-h-[400px] p-2 rounded-lg border ${
-                        snapshot.isDraggingOver ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
-                      }`}
-                    >
-                      {kioskProducts.length === 0 ? (
-                        <div className="flex justify-center items-center h-32 text-gray-400">
-                          키오스크에 표시할 상품을 추가하세요.
-                        </div>
-                      ) : (
-                        kioskProducts.map((product, index) => (
-                          <Draggable 
-                            key={product.product_id} 
-                            draggableId={`kiosk-${product.product_id}`} 
-                            index={index}
-                          >
-                            {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`mb-2 p-3 rounded-lg border ${
-                                  snapshot.isDragging ? 'bg-green-50 border-green-300 shadow-md' : 'bg-white border-gray-200'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="text-gray-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                  {product.image_url ? (
-                                    <img 
-                                      src={product.image_url} 
-                                      alt={product.product_name}
-                                      className="w-12 h-12 object-cover rounded"
-                                    />
-                                  ) : (
-                                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                                      No Image
-                                    </div>
-                                  )}
-                                  <div className="flex-1">
-                                    <h4 className="font-medium">{product.product_name}</h4>
-                                    <div className="flex text-sm gap-2">
-                                      <span className="text-gray-600">{formatPrice(product.won_price)}원</span>
-                                      {product.sgt_price && (
-                                        <span className="text-blue-600">{formatPrice(product.sgt_price)} SGT</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">
-                                    #{index + 1}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))
-                      )}
-                      {provided.placeholder}
+                <div className="min-h-[400px] p-2 rounded-lg border bg-white border-gray-200">
+                  {kioskProducts.length === 0 ? (
+                    <div className="flex justify-center items-center h-32 text-gray-400">
+                      키오스크에 표시할 상품을 추가하세요.
                     </div>
+                  ) : (
+                    <SortableContext
+                      items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {kioskProducts.map((product) => (
+                        <SortableProductItem 
+                          key={`kiosk-${product.product_id}`} 
+                          product={product} 
+                          isKioskProduct={true}
+                        />
+                      ))}
+                    </SortableContext>
                   )}
-                </Droppable>
+                </div>
               </div>
             </div>
-          </DragDropContext>
+
+            {/* Drag overlay for visual feedback */}
+            <DragOverlay>
+              {activeProduct && (
+                <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
+                  <div className="flex items-center gap-3">
+                    {activeProduct.image_url ? (
+                      <img 
+                        src={activeProduct.image_url} 
+                        alt={activeProduct.product_name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                        No Image
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h4 className="font-medium">{activeProduct.product_name}</h4>
+                      <div className="flex text-sm gap-2">
+                        <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
+                        {activeProduct.sgt_price && (
+                          <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         )}
         
         <div className="mt-8 text-right">
