@@ -92,6 +92,7 @@ export interface Product {
 	markdown_content?: string | null;
 	is_kiosk_enabled?: boolean; // Whether this product is enabled in kiosk
 	kiosk_order?: number; // The order of this product in kiosk
+	is_sold_out?: boolean; // Indicates if the product is sold out
 }
 
 // 1-2-2. ORDERS
