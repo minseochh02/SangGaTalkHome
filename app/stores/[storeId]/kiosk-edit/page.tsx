@@ -76,7 +76,7 @@ const ProductEditModal = ({
       product_name: name,
       description,
       sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
-      won_price: wonPrice ? parseFloat(wonPrice) : null,
+      won_price: wonPrice ? parseFloat(wonPrice) : 0,
       image_url: imageUrl,
     };
     
@@ -816,7 +816,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       // Update local state
       setAllProducts(prevProducts => 
         prevProducts.map(product => 
-          product.product_id === productId 
+          Number(product.product_id) === productId 
             ? { ...product, is_sold_out: newStatus } 
             : product
         )
@@ -824,7 +824,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       
       setKioskProducts(prevProducts => 
         prevProducts.map(product => 
-          product.product_id === productId 
+          Number(product.product_id) === productId 
             ? { ...product, is_sold_out: newStatus } 
             : product
         )
