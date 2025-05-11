@@ -426,3 +426,16 @@ export interface KioskOrderItem {
 	product?: Product;
 	order?: KioskOrder;
 }
+
+export interface KioskSession {
+	kiosk_session_id: string; // UUID
+	store_id: string; // UUID
+	device_number: number; // Assigned device number (1, 2, 3, etc.)
+	device_identifier: string; // Unique identifier for the device
+	created_at: string; // ISO date string
+	last_active_at: string; // ISO date string
+	expired_at: string; // ISO date string
+	status: 'active' | 'expired' | 'disconnected';
+	// Relations
+	store?: Store;
+}

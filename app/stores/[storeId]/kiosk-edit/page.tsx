@@ -28,6 +28,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Dialog, Transition } from '@headlessui/react';
 import KioskSalesHistory from './KioskSalesHistory';
+import KioskActiveSessions from './KioskActiveSessions';
 
 // Define interface for product with kiosk specific properties
 interface KioskProduct extends Product {
@@ -1138,6 +1139,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       
       {/* Kiosk Sales History Section */}
       <KioskSalesHistory storeId={storeId} />
+      
+      {/* Active Kiosk Sessions Section */}
+      <KioskActiveSessions storeId={storeId} />
     </div>
   );
 }
