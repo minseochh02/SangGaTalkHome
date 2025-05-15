@@ -321,7 +321,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   };
 
   // Handle drag end event
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (!over) {
@@ -332,24 +332,44 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       return;
     }
     
-    const activeId = String(active.id);
-    const overId = String(over.id);
+    const activeIdString = String(active.id);
+    const overIdString = String(over.id);
     
+    let kioskConfigChanged = false;
+
     // Handle drop into container
-    if (overId === 'availableProducts' || overId === 'kioskProducts') {
-      handleContainerDrop(activeId, overId);
+    if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
+      // Check if a change actually occurred that requires saving
+      const previousKioskProducts = [...kioskProducts];
+      handleContainerDrop(activeIdString, overIdString);
+      // Compare previousKioskProducts with the new kioskProducts state to see if a save is needed.
+      // This comparison needs to be robust, checking length and item order/ids.
+      // For simplicity now, we assume a change if a drop occurred into/out of kioskProducts.
+      if (overIdString === 'kioskProducts' || (activeIdString.startsWith('kiosk-') && overIdString === 'availableProducts')) {
+        kioskConfigChanged = true;
+      }
     }
     // Handle drop onto another item
     else {
-      // Determine which container we're in based on the over id
-      const containerType = overId.startsWith('kiosk-') ? 'kioskProducts' : 'availableProducts';
+      const containerType = overIdString.startsWith('kiosk-') ? 'kioskProducts' : 'availableProducts';
       
       if (containerType !== currentContainer) {
         // Moving between containers
-        handleContainerDrop(activeId, containerType);
+        const previousKioskProducts = [...kioskProducts];
+        handleContainerDrop(activeIdString, containerType);
+        if (containerType === 'kioskProducts' || activeIdString.startsWith('kiosk-')){
+            kioskConfigChanged = true;
+        }
       } else {
         // Reordering within the same container
-        handleReorder(activeId, overId, containerType);
+        if (containerType === 'kioskProducts') {
+            const previousKioskProductsOrder = kioskProducts.map(p => p.product_id);
+            handleReorder(activeIdString, overIdString, containerType);
+            const currentKioskProductsOrder = kioskProducts.map(p => p.product_id);
+            if (JSON.stringify(previousKioskProductsOrder) !== JSON.stringify(currentKioskProductsOrder)) {
+                kioskConfigChanged = true;
+            }
+        }
       }
     }
     
@@ -357,6 +377,12 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     setActiveId(null);
     setActiveProduct(null);
     setCurrentContainer(null);
+
+    // If the kiosk configuration changed, save it
+    if (kioskConfigChanged && isOwner) {
+      console.log('[KioskEditPage] Kiosk configuration changed by D&D, auto-saving...');
+      await handleSaveKioskProducts();
+    }
   };
 
   // Helper function to handle drops between containers
