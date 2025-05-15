@@ -131,6 +131,11 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
                       <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                         {getOrderTypeLabel(order.order_type)}
                       </span>
+                      {order.device_number !== null && order.device_number !== undefined && (
+                        <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                          단말기 {order.device_number}번
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center">
                       <span className="mr-4 font-bold">{Number(order.total_amount).toLocaleString()}원</span>
@@ -142,6 +147,16 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
                   <Disclosure.Panel className="px-4 pt-2 pb-4 text-sm text-gray-500">
                     {expandedOrderItems[order.kiosk_order_id] ? (
                       <div className="mt-2">
+                        <div className="mb-2 text-gray-600">
+                          {order.device_number !== null && order.device_number !== undefined && (
+                            <span className="inline-block mr-3">
+                              <span className="font-semibold">키오스크 단말기:</span> {order.device_number}번
+                            </span>
+                          )}
+                          <span className="inline-block">
+                            <span className="font-semibold">주문 유형:</span> {getOrderTypeLabel(order.order_type)}
+                          </span>
+                        </div>
                         <table className="min-w-full border-collapse">
                           <thead>
                             <tr className="border-b">

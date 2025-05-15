@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS kiosk_orders (
   store_id UUID NOT NULL REFERENCES stores(store_id) ON DELETE CASCADE,
   order_type TEXT NOT NULL CHECK (order_type IN ('kiosk_dine_in', 'kiosk_takeout', 'kiosk_delivery')),
   total_amount NUMERIC NOT NULL,
+  device_number INTEGER,
   status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending_payment', 'cancelled')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   user_id UUID REFERENCES users(user_id),
@@ -18,6 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_kiosk_orders_created_at ON kiosk_orders(created_a
 
 -- Add table comment
 COMMENT ON TABLE kiosk_orders IS 'Stores orders made through the kiosk feature';
+COMMENT ON COLUMN kiosk_orders.device_number IS 'The kiosk device number from which the order was placed';
 
 -- Create kiosk_order_items table
 CREATE TABLE IF NOT EXISTS kiosk_order_items (

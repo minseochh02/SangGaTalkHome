@@ -408,6 +408,7 @@ export interface KioskOrder {
 	total_amount: number;
 	status: 'completed' | 'pending_payment' | 'cancelled';
 	created_at: string; // ISO date string
+	device_number?: number | null; // Kiosk device number, optional
 	user_id?: string; // UUID, optional
 	notes?: string; // optional
 	// Relations

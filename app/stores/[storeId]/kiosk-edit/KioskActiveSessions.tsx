@@ -11,7 +11,6 @@ interface KioskActiveSessionsProps {
 export default function KioskActiveSessions({ storeId }: KioskActiveSessionsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [sessions, setSessions] = useState<KioskSession[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0); // Used to trigger refreshes
   const supabase = createClient();
 
   useEffect(() => {
@@ -40,16 +39,62 @@ export default function KioskActiveSessions({ storeId }: KioskActiveSessionsProp
     }
 
     if (storeId) {
-      fetchSessions();
+      fetchSessions(); // Initial fetch
+
+      // Set up Supabase real-time subscription
+      const channel = supabase
+        .channel(`kiosk-sessions-store-${storeId}`)
+        .on(
+          'postgres_changes',
+          { 
+            event: '*', // Listen to INSERT, UPDATE, DELETE
+            schema: 'public', 
+            table: 'kiosk_sessions',
+            filter: `store_id=eq.${storeId}` // Filter for the current store
+          },
+          (payload) => {
+            console.log('Kiosk session change received!', payload);
+            const newSession = payload.new as KioskSession;
+            const oldSession = payload.old as KioskSession;
+
+            if (payload.eventType === 'INSERT') {
+              if (newSession.status === 'active') {
+                setSessions((prevSessions) => 
+                  [...prevSessions, newSession].sort((a, b) => (a.device_number || 0) - (b.device_number || 0))
+                );
+              }
+            } else if (payload.eventType === 'UPDATE') {
+              setSessions((prevSessions) =>
+                prevSessions.map((session) =>
+                  session.kiosk_session_id === newSession.kiosk_session_id ? newSession : session
+                ).filter(session => session.status === 'active') // Keep only active sessions in this list
+                 .sort((a, b) => (a.device_number || 0) - (b.device_number || 0))
+              );
+            } else if (payload.eventType === 'DELETE') {
+              setSessions((prevSessions) =>
+                prevSessions.filter((session) => session.kiosk_session_id !== oldSession.kiosk_session_id)
+              );
+            }
+          }
+        )
+        .subscribe((status, err) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('Subscribed to kiosk_sessions changes for store:', storeId);
+          }
+          if (status === 'CHANNEL_ERROR') {
+            console.error(`Realtime channel error for store ${storeId}:`, err);
+          }
+          if (status === 'TIMED_OUT') {
+            console.warn(`Realtime subscription timed out for store ${storeId}`);
+          }
+        });
       
-      // Set up interval to refresh the sessions list every 30 seconds
-      const interval = setInterval(() => {
-        setRefreshKey(prev => prev + 1);
-      }, 30000);
-      
-      return () => clearInterval(interval);
+      // Clean up subscription on component unmount
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [storeId, refreshKey]);
+  }, [storeId, supabase]); // Add supabase to dependency array
 
   // Function to format dates
   const formatDate = (dateString: string) => {
@@ -88,7 +133,7 @@ export default function KioskActiveSessions({ storeId }: KioskActiveSessionsProp
       }
 
       // Refresh the list
-      setRefreshKey(prev => prev + 1);
+      // setRefreshKey(prev => prev + 1); // No longer needed, real-time updates handle this
       alert('키오스크 세션이 종료되었습니다.');
     } catch (error) {
       console.error('Failed to disconnect session:', error);
@@ -113,8 +158,18 @@ export default function KioskActiveSessions({ storeId }: KioskActiveSessionsProp
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">활성 키오스크 단말기</h2>
         <button 
-          onClick={() => setRefreshKey(prev => prev + 1)}
+          onClick={() => { /* Manual refresh could still be kept if desired, but not essential for real-time */ 
+            // Forcibly re-fetch if needed:
+            // setIsLoading(true);
+            // supabase.from('kiosk_sessions').select('*').eq('store_id', storeId).eq('status', 'active').order('device_number', { ascending: true })
+            //   .then(({ data, error }) => {
+            //     if (error) console.error('Manual refresh error', error);
+            //     else setSessions(data || []);
+            //     setIsLoading(false);
+            //   });
+          }}
           className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm flex items-center"
+          title="실시간으로 자동 업데이트됩니다." // Inform user it's real-time
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

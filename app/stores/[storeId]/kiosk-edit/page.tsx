@@ -29,388 +29,18 @@ import { CSS } from '@dnd-kit/utilities';
 import { Dialog, Transition } from '@headlessui/react';
 import KioskSalesHistory from './KioskSalesHistory';
 import KioskActiveSessions from './KioskActiveSessions';
-
-// Define interface for product with kiosk specific properties
-interface KioskProduct extends Product {
-  kiosk_order?: number;
-  is_kiosk_enabled?: boolean;
-  is_sold_out?: boolean;
-}
+import ProductEditModal from './ProductEditModal';
+import SortableProductItem from './SortableProductItem';
+import DroppableContainer from './DroppableContainer';
 
 // Product Edit Modal Component
-const ProductEditModal = ({ 
-  isOpen, 
-  product, 
-  onClose, 
-  onSave 
-}: { 
-  isOpen: boolean; 
-  product: KioskProduct | null;
-  onClose: () => void;
-  onSave: (updatedProduct: KioskProduct) => void;
-}) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [sgtPrice, setSgtPrice] = useState<string>('');
-  const [wonPrice, setWonPrice] = useState<string>('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (product) {
-      setName(product.product_name || '');
-      setDescription(product.description || '');
-      setSgtPrice(product.sgt_price ? product.sgt_price.toString() : '');
-      setWonPrice(product.won_price ? product.won_price.toString() : '');
-      setImageUrl(product.image_url || '');
-    }
-  }, [product]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!product) return;
-    
-    setIsSaving(true);
-    
-    const updatedProduct: KioskProduct = {
-      ...product,
-      product_name: name,
-      description,
-      sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
-      won_price: wonPrice ? parseFloat(wonPrice) : 0,
-      image_url: imageUrl,
-    };
-    
-    onSave(updatedProduct);
-    
-    // Reset the saving state - the parent component will close the modal on success
-    setIsSaving(false);
-  };
-
-  return (
-    <Transition show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/30" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 shadow-xl transition-all">
-                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                  상품 정보 수정
-                </Dialog.Title>
-                
-                <form onSubmit={handleSubmit}>
-                  <div className="space-y-4">
-                    {/* Product Name */}
-                    <div>
-                      <label htmlFor="product-name" className="block text-sm font-medium text-gray-700">
-                        상품명
-                      </label>
-                      <input
-                        type="text"
-                        id="product-name"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    
-                    {/* Description */}
-                    <div>
-                      <label htmlFor="product-description" className="block text-sm font-medium text-gray-700">
-                        설명
-                      </label>
-                      <textarea
-                        id="product-description"
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                      />
-                    </div>
-                    
-                    {/* Prices */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="product-sgt-price" className="block text-sm font-medium text-gray-700">
-                          SGT 가격
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          id="product-sgt-price"
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
-                          value={sgtPrice}
-                          onChange={(e) => setSgtPrice(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="product-won-price" className="block text-sm font-medium text-gray-700">
-                          원화 가격
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          id="product-won-price"
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
-                          value={wonPrice}
-                          onChange={(e) => setWonPrice(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Image URL */}
-                    <div>
-                      <label htmlFor="product-image-url" className="block text-sm font-medium text-gray-700">
-                        이미지 URL
-                      </label>
-                      <input
-                        type="url"
-                        id="product-image-url"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                      />
-                      {imageUrl && (
-                        <div className="mt-2">
-                          <img 
-                            src={imageUrl} 
-                            alt="상품 이미지 미리보기" 
-                            className="h-20 w-20 object-cover rounded" 
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="mt-6 flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                      onClick={onClose}
-                      disabled={isSaving}
-                    >
-                      취소
-                    </button>
-                    <button
-                      type="submit"
-                      className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                      disabled={isSaving}
-                    >
-                      {isSaving ? '저장 중...' : '저장'}
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </div>
-      </Dialog>
-    </Transition>
-  );
-};
+// const ProductEditModal = ({...}) => { ... }; // <-- REMOVE THIS ENTIRE COMPONENT DEFINITION
 
 // Define a component for sortable product items
-const SortableProductItem = ({ 
-  product, 
-  isKioskProduct = false,
-  onToggleSoldOut,
-  onEditProduct
-}: { 
-  product: KioskProduct, 
-  isKioskProduct?: boolean,
-  onToggleSoldOut: (productId: string | number, currentStatus: boolean) => void,
-  onEditProduct: (product: KioskProduct) => void
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ 
-    id: isKioskProduct ? `kiosk-${product.product_id}` : product.product_id.toString(),
-    data: {
-      product,
-      isKioskProduct
-    }
-  });
-  
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1
-  };
-
-  const formatPrice = (price: number | null): string => {
-    if (price === null) return "0";
-    return price.toLocaleString();
-  };
-
-  const isSoldOut = product.is_sold_out === true;
-  
-  return (
-    <div 
-      ref={setNodeRef} 
-      style={style}
-      {...attributes} 
-      {...listeners}
-      className={`mb-2 p-3 rounded-lg border bg-white border-gray-200 cursor-move ${isDragging ? 'z-50' : ''} ${isSoldOut ? 'bg-gray-100' : ''}`}
-    >
-      <div className="relative flex items-center gap-3">
-        {isKioskProduct && (
-          <div className="text-gray-400">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-            </svg>
-          </div>
-        )}
-        
-        {product.image_url ? (
-          <div className="relative">
-            <img 
-              src={product.image_url} 
-              alt={product.product_name}
-              className={`w-12 h-12 object-cover rounded ${isSoldOut ? 'opacity-50' : ''}`}
-            />
-            {isSoldOut && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-sm">
-                  품절
-                </span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className={`w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs ${isSoldOut ? 'opacity-50' : ''}`}>
-            No Image
-            {isSoldOut && (
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-sm">
-                  품절
-                </span>
-              </span>
-            )}
-          </div>
-        )}
-        
-        <div className={`flex-1 ${isSoldOut ? 'opacity-50' : ''}`}>
-          <h4 className="font-medium">{product.product_name}</h4>
-          <div className="flex text-sm gap-2">
-            <span className="text-gray-600">{formatPrice(product.won_price)}원</span>
-            {product.sgt_price && (
-              <span className="text-blue-600">{formatPrice(product.sgt_price)} SGT</span>
-            )}
-          </div>
-        </div>
-        
-        {/* Action buttons */}
-        <div className="flex items-center space-x-2">
-          {/* Sold Out Toggle */}
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSoldOut(product.product_id, !!product.is_sold_out);
-            }}
-            className={`px-2 py-1 text-xs font-medium rounded ${isSoldOut 
-              ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            title={isSoldOut ? "판매 가능으로 변경" : "품절로 변경"}
-          >
-            {isSoldOut ? '품절 해제' : '품절'}
-          </button>
-          
-          {/* Edit Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditProduct(product);
-            }}
-            className="p-1 text-gray-500 hover:text-gray-800"
-            title="상품 정보 수정"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </button>
-        </div>
-
-        {isKioskProduct ? (
-          <div className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">
-            #{product.kiosk_order !== undefined ? product.kiosk_order + 1 : '?'}
-          </div>
-        ) : (
-          <div className="text-gray-400">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+// const SortableProductItem = ({...}) => { ... }; // <-- REMOVE THIS ENTIRE COMPONENT DEFINITION
 
 // Create a droppable container component
-const DroppableContainer = ({ 
-  id, 
-  items, 
-  children, 
-  className 
-}: { 
-  id: string; 
-  items: string[]; 
-  children: React.ReactNode; 
-  className?: string;
-}) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id,
-    data: {
-      type: 'container',
-      accepts: items
-    }
-  });
-
-  const isHighlighted = isOver;
-  const highlightClass = isHighlighted 
-    ? id === 'kioskProducts' 
-      ? 'bg-green-50 border-green-300' 
-      : 'bg-blue-50 border-blue-300' 
-    : 'bg-white border-gray-200';
-
-  return (
-    <div 
-      ref={setNodeRef} 
-      className={`min-h-[400px] p-2 rounded-lg border transition-colors duration-200 ${highlightClass} ${className || ''}`}
-    >
-      {children}
-    </div>
-  );
-};
+// const DroppableContainer = ({...}) => { ... }; // <-- REMOVE THIS ENTIRE COMPONENT DEFINITION
 
 function KioskEditContent({ storeId }: { storeId: string }) {
   const supabase = createClient();
@@ -421,19 +51,19 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   const [user, setUser] = useState<any>(null);
   
   // Product states
-  const [allProducts, setAllProducts] = useState<KioskProduct[]>([]);
-  const [kioskProducts, setKioskProducts] = useState<KioskProduct[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [kioskProducts, setKioskProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [savingProducts, setSavingProducts] = useState(false);
   
   // DnD state
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeProduct, setActiveProduct] = useState<KioskProduct | null>(null);
+  const [activeProduct, setActiveProduct] = useState<Product | null>(null);
   const [currentContainer, setCurrentContainer] = useState<string | null>(null);
 
   // Product Edit Modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<KioskProduct | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Kiosk Settings States
   const [dineInEnabled, setDineInEnabled] = useState(false);
@@ -538,7 +168,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         return;
       }
 
-      const products = productsData as KioskProduct[];
+      const products = productsData as Product[];
       setAllProducts(products);
 
       // Filter products that are enabled for kiosk and sort by kiosk_order
@@ -839,12 +469,12 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     }
   };
 
-  const handleEditProduct = (product: KioskProduct) => {
+  const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEditedProduct = async (updatedProduct: KioskProduct) => {
+  const handleSaveEditedProduct = async (updatedProduct: Product) => {
     try {
       // Only include sgt_price if it's not null
       const updateData: any = {
