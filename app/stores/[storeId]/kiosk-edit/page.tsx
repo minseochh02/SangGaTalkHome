@@ -223,48 +223,47 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     try {
       console.log('[KioskEditPage] Saving kiosk product settings with list:', currentKioskProducts.map(p => ({id: p.product_id, name: p.product_name, order: p.kiosk_order })));
       
-      // Prepare batch updates for enabled products
-      const kioskProductUpdates = currentKioskProducts.map((product, index) => ({
-        product_id: product.product_id,
-        is_kiosk_enabled: true,
-        kiosk_order: index
-      }));
-      
-      // Get all product IDs for this store
-      const { data: allStoreProducts, error: allProductsError } = await supabase
-        .from('products')
-        .select('product_id')
-        .eq('store_id', storeId)
-        .eq('status', 1);
+      // Step 1: Enable and set order for kiosk products in one batch
+      if (currentKioskProducts.length > 0) {
+        const kioskProductIds = currentKioskProducts.map(p => p.product_id);
+        const kioskUpdates = currentKioskProducts.map((product, index) => {
+          return supabase
+            .from('products')
+            .update({ 
+              is_kiosk_enabled: true,
+              kiosk_order: index 
+            })
+            .eq('product_id', product.product_id);
+        });
         
-      if (allProductsError) {
-        console.error('Error fetching all product IDs:', allProductsError);
-        throw allProductsError;
+        // Execute all updates in parallel
+        await Promise.all(kioskUpdates);
       }
       
-      // Extract IDs to disable (all products not in currentKioskProducts)
+      // Step 2: Disable products not in currentKioskProducts in one query
       const kioskProductIds = currentKioskProducts.map(p => p.product_id);
-      const productsToDisable = allStoreProducts
-        .filter(p => !kioskProductIds.includes(p.product_id))
-        .map(p => ({
-          product_id: p.product_id,
-          is_kiosk_enabled: false
-        }));
       
-      // Combine updates into one array
-      const allUpdates = [...kioskProductUpdates, ...productsToDisable];
-      
-      if (allUpdates.length > 0) {
-        // Use a single UPSERT operation to update all products at once
+      if (kioskProductIds.length > 0) {
+        // Only run this query if there are kiosk products to exclude
         const { error } = await supabase
           .from('products')
-          .upsert(allUpdates, { 
-            onConflict: 'product_id',
-            ignoreDuplicates: false
-          });
+          .update({ is_kiosk_enabled: false })
+          .eq('store_id', storeId)
+          .not('product_id', 'in', `(${kioskProductIds.join(',')})`);
           
         if (error) {
-          console.error('Error in batch updating products:', error);
+          console.error('Error disabling other products:', error);
+          throw error;
+        }
+      } else {
+        // If no products are enabled for kiosk, disable all products for this store
+        const { error } = await supabase
+          .from('products')
+          .update({ is_kiosk_enabled: false })
+          .eq('store_id', storeId);
+          
+        if (error) {
+          console.error('Error disabling all products:', error);
           throw error;
         }
       }
