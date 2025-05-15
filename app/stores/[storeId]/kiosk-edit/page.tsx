@@ -216,52 +216,56 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     }
   };
 
-  const handleSaveKioskProducts = async () => {
+  const handleSaveKioskProducts = async (currentKioskProducts: Product[]) => {
     if (!isOwner) return;
     setSavingProducts(true);
     
     try {
-      console.log('Saving kiosk product settings:', kioskProducts);
+      console.log('[KioskEditPage] Saving kiosk product settings with list:', currentKioskProducts.map(p => ({id: p.product_id, name: p.product_name, order: p.kiosk_order })));
       
-      // First, update all products in kioskProducts with is_kiosk_enabled=true and their kiosk_order
-      for (let i = 0; i < kioskProducts.length; i++) {
-        const product = kioskProducts[i];
-        const { error } = await supabase
-          .from('products')
-          .update({ 
-            is_kiosk_enabled: true,
-            kiosk_order: i 
-          })
-          .eq('product_id', product.product_id);
-          
-        if (error) {
-          console.error(`Error updating product ${product.product_id}:`, error);
-        }
+      // Prepare batch updates for enabled products
+      const kioskProductUpdates = currentKioskProducts.map((product, index) => ({
+        product_id: product.product_id,
+        is_kiosk_enabled: true,
+        kiosk_order: index
+      }));
+      
+      // Get all product IDs for this store
+      const { data: allStoreProducts, error: allProductsError } = await supabase
+        .from('products')
+        .select('product_id')
+        .eq('store_id', storeId)
+        .eq('status', 1);
+        
+      if (allProductsError) {
+        console.error('Error fetching all product IDs:', allProductsError);
+        throw allProductsError;
       }
       
-      // Disable products not in kioskProducts
-      const kioskProductIds = kioskProducts.map(p => p.product_id);
+      // Extract IDs to disable (all products not in currentKioskProducts)
+      const kioskProductIds = currentKioskProducts.map(p => p.product_id);
+      const productsToDisable = allStoreProducts
+        .filter(p => !kioskProductIds.includes(p.product_id))
+        .map(p => ({
+          product_id: p.product_id,
+          is_kiosk_enabled: false
+        }));
       
-      if (kioskProductIds.length > 0) {
-        // Only run this query if there are kiosk products to exclude
+      // Combine updates into one array
+      const allUpdates = [...kioskProductUpdates, ...productsToDisable];
+      
+      if (allUpdates.length > 0) {
+        // Use a single UPSERT operation to update all products at once
         const { error } = await supabase
           .from('products')
-          .update({ is_kiosk_enabled: false })
-          .eq('store_id', storeId)
-          .not('product_id', 'in', `(${kioskProductIds.join(',')})`);
+          .upsert(allUpdates, { 
+            onConflict: 'product_id',
+            ignoreDuplicates: false
+          });
           
         if (error) {
-          console.error('Error disabling other products:', error);
-        }
-      } else {
-        // If no products are enabled for kiosk, disable all products for this store
-        const { error } = await supabase
-          .from('products')
-          .update({ is_kiosk_enabled: false })
-          .eq('store_id', storeId);
-          
-        if (error) {
-          console.error('Error disabling all products:', error);
+          console.error('Error in batch updating products:', error);
+          throw error;
         }
       }
       
@@ -336,15 +340,15 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     const overIdString = String(over.id);
     
     let kioskConfigChanged = false;
+    let finalKioskProductsForSave: Product[] = [...kioskProducts]; // Initialize with current state
 
     // Handle drop into container
     if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
-      // Check if a change actually occurred that requires saving
-      const previousKioskProducts = [...kioskProducts];
-      handleContainerDrop(activeIdString, overIdString);
-      // Compare previousKioskProducts with the new kioskProducts state to see if a save is needed.
-      // This comparison needs to be robust, checking length and item order/ids.
-      // For simplicity now, we assume a change if a drop occurred into/out of kioskProducts.
+      const updatedList = handleContainerDrop(activeIdString, overIdString);
+      if (updatedList) {
+        finalKioskProductsForSave = updatedList;
+      }
+      // A drop into/out of kioskProducts always signifies a change.
       if (overIdString === 'kioskProducts' || (activeIdString.startsWith('kiosk-') && overIdString === 'availableProducts')) {
         kioskConfigChanged = true;
       }
@@ -355,8 +359,10 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       
       if (containerType !== currentContainer) {
         // Moving between containers
-        const previousKioskProducts = [...kioskProducts];
-        handleContainerDrop(activeIdString, containerType);
+        const updatedList = handleContainerDrop(activeIdString, containerType);
+        if (updatedList) {
+          finalKioskProductsForSave = updatedList;
+        }
         if (containerType === 'kioskProducts' || activeIdString.startsWith('kiosk-')){
             kioskConfigChanged = true;
         }
@@ -364,10 +370,18 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         // Reordering within the same container
         if (containerType === 'kioskProducts') {
             const previousKioskProductsOrder = kioskProducts.map(p => p.product_id);
-            handleReorder(activeIdString, overIdString, containerType);
-            const currentKioskProductsOrder = kioskProducts.map(p => p.product_id);
-            if (JSON.stringify(previousKioskProductsOrder) !== JSON.stringify(currentKioskProductsOrder)) {
-                kioskConfigChanged = true;
+            const updatedList = handleReorder(activeIdString, overIdString, containerType);
+            if (updatedList) {
+              finalKioskProductsForSave = updatedList;
+              const currentKioskProductsOrder = updatedList.map(p => p.product_id);
+              if (JSON.stringify(previousKioskProductsOrder) !== JSON.stringify(currentKioskProductsOrder)) {
+                  kioskConfigChanged = true;
+              }
+            } else {
+              // If handleReorder returns null but it was a kioskProducts reorder,
+              // it implies no actual order change. We can compare orders if needed,
+              // but kioskConfigChanged might already be false or handleReorder should ensure it.
+              // For now, if updatedList is null, finalKioskProductsForSave remains as is.
             }
         }
       }
@@ -380,13 +394,15 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
     // If the kiosk configuration changed, save it
     if (kioskConfigChanged && isOwner) {
-      console.log('[KioskEditPage] Kiosk configuration changed by D&D, auto-saving...');
-      await handleSaveKioskProducts();
+      console.log('[KioskEditPage] Kiosk configuration changed by D&D, auto-saving with list:', finalKioskProductsForSave.map(p=>({id: p.product_id, name: p.product_name, order: p.kiosk_order })));
+      await handleSaveKioskProducts(finalKioskProductsForSave);
     }
   };
 
   // Helper function to handle drops between containers
-  const handleContainerDrop = (activeId: string, containerId: string) => {
+  // Returns the new kioskProducts list if it changed, otherwise null or original for chaining.
+  const handleContainerDrop = (activeId: string, containerId: string): Product[] | null => {
+    let newKioskStateForSave: Product[] | null = null;
     // Moving from kiosk to available
     if (activeId.startsWith('kiosk-') && containerId === 'availableProducts') {
       const productId = activeId.replace('kiosk-', '');
@@ -403,31 +419,36 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         }));
         
         setKioskProducts(updatedKioskProducts);
+        newKioskStateForSave = updatedKioskProducts;
       }
     }
     // Moving from available to kiosk
     else if (!activeId.startsWith('kiosk-') && containerId === 'kioskProducts') {
-      const availableProducts = allProducts.filter(p => 
+      const currentAvailableProducts = allProducts.filter(p => 
         !kioskProducts.some(kp => kp.product_id.toString() === p.product_id.toString())
       );
       
-      const movedProduct = availableProducts.find(p => p.product_id.toString() === activeId);
+      const movedProduct = currentAvailableProducts.find(p => p.product_id.toString() === activeId);
       
       if (movedProduct) {
         // Add to the end of kiosk products
-        const newKioskProducts = [...kioskProducts, {
+        const newKioskProductsList = [...kioskProducts, {
           ...movedProduct,
-          is_kiosk_enabled: true,
+          is_kiosk_enabled: true, // Explicitly set, though handleSave will do it too
           kiosk_order: kioskProducts.length
         }];
         
-        setKioskProducts(newKioskProducts);
+        setKioskProducts(newKioskProductsList);
+        newKioskStateForSave = newKioskProductsList;
       }
     }
+    return newKioskStateForSave; // Return the list that was set, or null if no relevant change
   };
 
   // Helper function to handle reordering within a container
-  const handleReorder = (activeId: string, overId: string, containerId: string) => {
+  // Returns the new kioskProducts list if it changed, otherwise null.
+  const handleReorder = (activeId: string, overId: string, containerId: string): Product[] | null => {
+    let newKioskStateForSave: Product[] | null = null;
     if (containerId === 'kioskProducts') {
       const activeIndex = kioskProducts.findIndex(
         p => `kiosk-${p.product_id}` === activeId
@@ -436,20 +457,22 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         p => `kiosk-${p.product_id}` === overId
       );
       
-      if (activeIndex !== overIndex) {
+      if (activeIndex !== overIndex && activeIndex !== -1 && overIndex !== -1) {
         // Reorder the products
-        const newKioskProducts = arrayMove(kioskProducts, activeIndex, overIndex);
+        const newKioskProductsList = arrayMove(kioskProducts, activeIndex, overIndex);
         
         // Update kiosk order for all products
-        const updatedKioskProducts = newKioskProducts.map((product, index) => ({
+        const updatedKioskProducts = newKioskProductsList.map((product, index) => ({
           ...product,
           kiosk_order: index
         }));
         
         setKioskProducts(updatedKioskProducts);
+        newKioskStateForSave = updatedKioskProducts;
       }
     } 
     // For now we don't need to reorder available products, but we could add that here
+    return newKioskStateForSave; // Return the list that was set, or null if no relevant change
   };
 
   const handleToggleSoldOut = async (productId: string | number, currentStatus: boolean) => {
