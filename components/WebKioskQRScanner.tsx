@@ -18,74 +18,138 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
   const router = useRouter();
   const html5QrcodeScannerRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = 'qr-reader';
+  const isMountedRef = useRef(true);
+  const scannerCleanupInProgress = useRef(false);
   const supabase = createClient();
 
+  // Initialize scanner when component mounts
   useEffect(() => {
-    // Initialize scanner when component mounts and modal is open
-    if (isOpen && !scannerInitialized) {
-      initializeScanner();
-    }
+    isMountedRef.current = true;
 
-    // Clean up scanner when component unmounts or modal closes
+    // Component cleanup function
     return () => {
-      if (html5QrcodeScannerRef.current) {
-        try {
-          html5QrcodeScannerRef.current.stop().then(() => {
-            console.log('Scanner stopped');
-            html5QrcodeScannerRef.current = null;
-            setScannerInitialized(false);
-          }).catch(err => {
-            console.error('Error stopping scanner:', err);
-          });
-        } catch (err) {
-          console.error('Error in scanner cleanup:', err);
-        }
-      }
+      isMountedRef.current = false;
+      cleanupScanner();
     };
+  }, []);
+
+  // Handle scanner initialization/cleanup when isOpen changes
+  useEffect(() => {
+    if (isOpen && !scannerInitialized && !scannerCleanupInProgress.current) {
+      // Delay initialization slightly to ensure DOM is ready
+      const timer = setTimeout(() => {
+        if (isMountedRef.current) {
+          initializeScanner();
+        }
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    } else if (!isOpen && scannerInitialized) {
+      cleanupScanner();
+    }
   }, [isOpen, scannerInitialized]);
 
-  const initializeScanner = async () => {
-    // Check if scanner element exists yet
-    const scannerElement = document.getElementById(scannerContainerId);
-    if (!scannerElement) {
-      // The element isn't ready yet, retry after a short delay
-      setTimeout(initializeScanner, 500);
-      return;
+  const cleanupScanner = async () => {
+    if (scannerCleanupInProgress.current) return;
+    
+    scannerCleanupInProgress.current = true;
+    
+    if (html5QrcodeScannerRef.current) {
+      try {
+        const scanner = html5QrcodeScannerRef.current;
+        
+        // Only stop if currently scanning
+        if (isScanning) {
+          await scanner.stop();
+          console.log('Scanner stopped successfully');
+        }
+        
+        // Reset state only if component is still mounted
+        if (isMountedRef.current) {
+          html5QrcodeScannerRef.current = null;
+          setScannerInitialized(false);
+          setIsScanning(false);
+        }
+      } catch (err) {
+        console.error('Error in scanner cleanup:', err);
+      } finally {
+        scannerCleanupInProgress.current = false;
+      }
+    } else {
+      scannerCleanupInProgress.current = false;
     }
+  };
 
+  const initializeScanner = async () => {
+    // Wait for DOM to be ready
+    const waitForElement = (ms = 100, maxAttempts = 20) => {
+      return new Promise<boolean>((resolve) => {
+        let attempts = 0;
+        
+        const checkElement = () => {
+          attempts++;
+          const element = document.getElementById(scannerContainerId);
+          
+          if (element) {
+            resolve(true);
+            return;
+          }
+          
+          if (attempts >= maxAttempts || !isMountedRef.current) {
+            resolve(false);
+            return;
+          }
+          
+          setTimeout(checkElement, ms);
+        };
+        
+        checkElement();
+      });
+    };
+    
+    const elementExists = await waitForElement();
+    if (!elementExists || !isMountedRef.current) return;
+    
     try {
-      if (!html5QrcodeScannerRef.current) {
+      if (!html5QrcodeScannerRef.current && isMountedRef.current) {
         const html5QrcodeScanner = new Html5Qrcode(scannerContainerId);
         html5QrcodeScannerRef.current = html5QrcodeScanner;
       }
 
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-      await html5QrcodeScannerRef.current.start(
-        { facingMode: "environment" },
-        config,
-        onScanSuccess,
-        onScanFailure
-      );
-      setIsScanning(true);
-      setScannerInitialized(true);
-      setError(null);
+      if (html5QrcodeScannerRef.current && isMountedRef.current) {
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        await html5QrcodeScannerRef.current.start(
+          { facingMode: "environment" },
+          config,
+          onScanSuccess,
+          onScanFailure
+        );
+        
+        if (isMountedRef.current) {
+          setIsScanning(true);
+          setScannerInitialized(true);
+          setError(null);
+        }
+      }
     } catch (err) {
       console.error('Error initializing QR scanner:', err);
-      setError('카메라를 활성화하지 못했습니다. 카메라 권한을 확인해주세요.');
+      if (isMountedRef.current) {
+        setError('카메라를 활성화하지 못했습니다. 카메라 권한을 확인해주세요.');
+      }
     }
   };
 
   const onScanSuccess = async (decodedText: string) => {
-    if (isLoading) return;
+    if (isLoading || !isMountedRef.current) return;
 
     try {
       setIsLoading(true);
       setIsScanning(false);
       
-      // When we successfully scan a QR code, stop the scanner
-      if (html5QrcodeScannerRef.current) {
-        await html5QrcodeScannerRef.current.stop();
-      }
+      // Safely stop the scanner
+      await cleanupScanner();
+      
+      if (!isMountedRef.current) return;
       
       console.log('QR Code scanned:', decodedText);
       
@@ -96,13 +160,11 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
         .eq('kiosk_key', decodedText)
         .single();
 
+      if (!isMountedRef.current) return;
+
       if (storeError || !storeData) {
         setError('유효하지 않은 키오스크 코드입니다.');
-        setTimeout(() => {
-          if (html5QrcodeScannerRef.current) {
-            initializeScanner();
-          }
-        }, 2000);
+        // Don't reinitialize scanner here, let the user close and reopen it
         return;
       }
 
@@ -111,16 +173,13 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
       router.push(`/kiosk/${storeData.store_id}`);
     } catch (err) {
       console.error('Error processing scanned QR code:', err);
-      setError('QR 코드 처리 중 오류가 발생했습니다.');
-      
-      // Restart scanner after error
-      setTimeout(() => {
-        if (html5QrcodeScannerRef.current) {
-          initializeScanner();
-        }
-      }, 2000);
+      if (isMountedRef.current) {
+        setError('QR 코드 처리 중 오류가 발생했습니다.');
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -140,7 +199,14 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
               키오스크 QR 코드 스캔
             </h3>
             <button
-              onClick={onClose}
+              onClick={() => {
+                // First stop the scanner, then close the modal
+                cleanupScanner().then(() => {
+                  if (isMountedRef.current) {
+                    onClose();
+                  }
+                });
+              }}
               className="text-gray-600 hover:text-gray-900 focus:outline-none"
               disabled={isLoading}
             >
