@@ -32,6 +32,7 @@ import KioskActiveSessions from './KioskActiveSessions';
 import ProductEditModal from './ProductEditModal';
 import SortableProductItem from './SortableProductItem';
 import DroppableContainer from './DroppableContainer';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Product Edit Modal Component
 // const ProductEditModal = ({...}) => { ... }; // <-- REMOVE THIS ENTIRE COMPONENT DEFINITION
@@ -619,6 +620,22 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       
       {/* Main content area */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
+        {/* Kiosk QR Code Section */}
+        <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">키오스크 QR 코드</h2>
+          <div className="flex flex-col items-center space-y-4">
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100 flex flex-col items-center">
+              <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/${storeId}`} size={200} />
+              <p className="mt-4 text-sm text-gray-600 text-center">
+                QR 코드를 스캔하여 웹 키오스크 모드에 바로 접속하세요.
+              </p>
+              <p className="mt-2 text-sm text-gray-500 text-center">
+                이 QR 코드는 웹 브라우저에서 스토어의 키오스크 모드에 바로 접속할 수 있는 링크입니다.
+              </p>
+            </div>
+          </div>
+        </section>
+        
         {/* Service Option Toggles */}
         <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold text-gray-700 mb-6">서비스 옵션 활성화</h2>

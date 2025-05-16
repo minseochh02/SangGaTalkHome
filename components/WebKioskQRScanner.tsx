@@ -258,23 +258,36 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
       
       // Try to parse as URL
       try {
-        const url = new URL(decodedText);
-        
-        // Check if the URL path contains "/kiosk/{storeId}"
-        const pathMatch = url.pathname.match(/\/kiosk\/([^\/]+)/);
-        if (pathMatch && pathMatch[1]) {
-          storeId = pathMatch[1];
-          console.log('Extracted storeId from URL:', storeId);
+        // Check if the text is a URL
+        if (decodedText.startsWith('http') || decodedText.includes('://')) {
+          const url = new URL(decodedText);
           
-          // Try to get key from query params
-          const keyParam = url.searchParams.get('key');
-          if (keyParam) {
-            kioskKey = keyParam;
-            console.log('Extracted key from URL query params:', kioskKey);
+          // Check if the URL path contains "/kiosk/{storeId}"
+          const pathMatch = url.pathname.match(/\/kiosk\/([^\/]+)/);
+          if (pathMatch && pathMatch[1]) {
+            storeId = pathMatch[1];
+            console.log('Extracted storeId from URL:', storeId);
+            
+            // Try to fetch the store information to get the kiosk key
+            const { data: storeData, error: storeError } = await supabase
+              .from('stores')
+              .select('kiosk_key')
+              .eq('store_id', storeId)
+              .single();
+            
+            if (!storeError && storeData && storeData.kiosk_key) {
+              // Use the kiosk key from the database
+              kioskKey = storeData.kiosk_key;
+              console.log('Retrieved kiosk key for store:', kioskKey);
+            } else {
+              // If we can't get the key, just use the storeId directly
+              console.log('Could not retrieve kiosk key, will navigate directly to store');
+            }
           }
         }
       } catch (urlError) {
-        console.log('Not a valid URL, treating as raw kiosk key');
+        console.log('Not a valid URL or error parsing:', urlError);
+        console.log('Treating as raw kiosk key');
       }
       
       // If we found a store ID in the URL, navigate directly
