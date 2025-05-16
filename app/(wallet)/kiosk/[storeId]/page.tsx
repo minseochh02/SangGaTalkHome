@@ -255,7 +255,8 @@ export default function KioskPage() {
       // This might not always run if the browser tab is closed abruptly
       if (sessionId) {
         // Use sendBeacon if available for more reliable disconnect on page unload
-        if (navigator.sendBeacon) {
+        const canUseSendBeacon = typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function';
+        if (canUseSendBeacon) {
           const formData = new FormData();
           formData.append('kiosk_session_id', sessionId);
           formData.append('status', 'disconnected');
