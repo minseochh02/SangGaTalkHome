@@ -480,7 +480,10 @@ export default function KioskPage() {
       {/* Header */}
       <header className="bg-red-600 text-white p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">{storeName}</h1>
+          <h1 className="text-xl font-bold">
+            {storeName}
+            {deviceNumber ? ` (단말기 ${deviceNumber}번)` : ''}
+          </h1>
           <div 
             className="relative cursor-pointer" 
             onClick={() => setShowCart(!showCart)}
