@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { SafeImage } from '@/components/ui/image';
 
 // Types for cart items
 interface CartItem {
@@ -45,66 +46,84 @@ export default function CheckoutPage() {
 
   // Load cart from localStorage and fetch store details
   useEffect(() => {
-    const loadCart = () => {
-      try {
-        const storedCart = localStorage.getItem(`kiosk-cart-${storeId}`);
-        if (storedCart) {
-          const parsedCart = JSON.parse(storedCart);
-          setCartItems(parsedCart);
-          // Calculate total
-          const total = parsedCart.reduce(
-            (sum: number, item: CartItem) => sum + (item.sgt_price * item.quantity), 0
-          );
-          setTotalAmount(total);
-        }
-      } catch (err) {
-        console.error('Error loading cart from localStorage:', err);
-        setError('장바구니를 불러오는데 실패했습니다.');
-      }
-    };
-
-    const fetchStoreDetails = async () => {
-      if (!storeId) return;
+    let isActive = true; // Track component mount state
+    
+    const initialize = async () => {
+      if (!isActive) return;
       
       try {
         setIsLoading(true);
         
-        // Fetch store data
-        const { data, error } = await supabase
-          .from('stores')
-          .select('store_name, kiosk_dine_in_enabled, kiosk_takeout_enabled, kiosk_delivery_enabled')
-          .eq('store_id', storeId)
-          .single();
-          
-        if (error) {
-          console.error('Error fetching store details:', error);
-          setError('스토어 정보를 불러오는데 실패했습니다.');
-        } else if (data) {
-          setStoreName(data.store_name);
-          setStoreOptions({
-            kiosk_dine_in_enabled: data.kiosk_dine_in_enabled,
-            kiosk_takeout_enabled: data.kiosk_takeout_enabled,
-            kiosk_delivery_enabled: data.kiosk_delivery_enabled
-          });
+        // Load cart data
+        try {
+          const storedCart = localStorage.getItem(`kiosk-cart-${storeId}`);
+          if (storedCart) {
+            const parsedCart = JSON.parse(storedCart);
+            if (isActive) {
+              setCartItems(parsedCart);
+              // Calculate total
+              const total = parsedCart.reduce(
+                (sum: number, item: CartItem) => sum + (item.sgt_price * item.quantity), 0
+              );
+              setTotalAmount(total);
+            }
+          }
+        } catch (err) {
+          console.error('Error loading cart from localStorage:', err);
+          if (isActive) {
+            setError('장바구니를 불러오는데 실패했습니다.');
+          }
         }
-      } catch (err) {
-        console.error('Error in fetchStoreDetails:', err);
-        setError('스토어 정보를 불러오는데 실패했습니다.');
+        
+        // Fetch store data if component is still mounted
+        if (isActive && storeId) {
+          try {
+            const { data, error } = await supabase
+              .from('stores')
+              .select('store_name, kiosk_dine_in_enabled, kiosk_takeout_enabled, kiosk_delivery_enabled')
+              .eq('store_id', storeId)
+              .single();
+              
+            if (error) {
+              console.error('Error fetching store details:', error);
+              if (isActive) setError('스토어 정보를 불러오는데 실패했습니다.');
+            } else if (data && isActive) {
+              setStoreName(data.store_name);
+              setStoreOptions({
+                kiosk_dine_in_enabled: data.kiosk_dine_in_enabled,
+                kiosk_takeout_enabled: data.kiosk_takeout_enabled,
+                kiosk_delivery_enabled: data.kiosk_delivery_enabled
+              });
+            }
+          } catch (err) {
+            console.error('Error in fetchStoreDetails:', err);
+            if (isActive) setError('스토어 정보를 불러오는데 실패했습니다.');
+          }
+        }
       } finally {
-        setIsLoading(false);
+        if (isActive) setIsLoading(false);
       }
     };
-
-    loadCart();
-    fetchStoreDetails();
-  }, [storeId]);
+    
+    initialize();
+    
+    return () => {
+      isActive = false; // Mark component as unmounted
+    };
+  }, [storeId]); // Only depend on storeId
 
   // Check for sold out items
   useEffect(() => {
+    if (cartItems.length === 0) return;
+    
+    let isActive = true;
+    let alreadyChecking = false;
+    
     const checkForSoldOutItems = async () => {
+      if (alreadyChecking || !isActive) return;
+      
+      alreadyChecking = true;
       try {
-        if (cartItems.length === 0) return;
-        
         // Get product IDs from cart
         const productIds = cartItems.map(item => item.product_id);
         
@@ -115,6 +134,8 @@ export default function CheckoutPage() {
           .in('product_id', productIds)
           .eq('is_sold_out', true);
           
+        if (!isActive) return;
+        
         if (data && data.length > 0) {
           // Some items are now sold out
           const soldOutNames = data.map(item => {
@@ -129,27 +150,36 @@ export default function CheckoutPage() {
             item => !data.some(soldOut => soldOut.product_id === item.product_id)
           );
           
-          setCartItems(updatedCart);
-          localStorage.setItem(`kiosk-cart-${storeId}`, JSON.stringify(updatedCart));
-          
-          // Recalculate total
-          const total = updatedCart.reduce(
-            (sum, item) => sum + (item.sgt_price * item.quantity), 0
-          );
-          setTotalAmount(total);
-          
-          // If cart is now empty, go back to kiosk page
-          if (updatedCart.length === 0) {
-            router.push(`/kiosk/${storeId}`);
+          if (isActive) {
+            setCartItems(updatedCart);
+            localStorage.setItem(`kiosk-cart-${storeId}`, JSON.stringify(updatedCart));
+            
+            // Recalculate total
+            const total = updatedCart.reduce(
+              (sum, item) => sum + (item.sgt_price * item.quantity), 0
+            );
+            setTotalAmount(total);
+            
+            // If cart is now empty, go back to kiosk page
+            if (updatedCart.length === 0) {
+              router.push(`/kiosk/${storeId}`);
+            }
           }
         }
       } catch (err) {
         console.error('Error checking sold out items:', err);
+      } finally {
+        alreadyChecking = false;
       }
     };
     
+    // Call once, don't set up a polling interval that could cause loops
     checkForSoldOutItems();
-  }, [cartItems, storeId, router]);
+    
+    return () => {
+      isActive = false;
+    };
+  }, [cartItems.length, storeId, router]); // Only depend on cartItems.length, not the entire cartItems array
 
   // Submit order with selected option
   const handleOrderSubmit = async (orderType: 'kiosk_dine_in' | 'kiosk_takeout' | 'kiosk_delivery') => {

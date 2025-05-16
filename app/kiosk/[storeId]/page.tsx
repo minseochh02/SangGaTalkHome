@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { SafeImage } from '@/components/ui/image';
 
 // Types
 interface Product {
@@ -208,33 +208,53 @@ export default function KioskPage() {
   
   // Initialize data
   useEffect(() => {
-    initKioskSession();
-    fetchStoreData();
-    loadCart();
+    let isActive = true; // Add mount state tracking
+    
+    const init = async () => {
+      if (!isActive) return;
+      await initKioskSession();
+      await fetchStoreData();
+      loadCart();
+    };
+    
+    init();
     
     // Set up a timed refresh to keep the session active
-    const refreshTimer = setInterval(() => {
-      if (sessionId) {
-        supabase
-          .from('kiosk_sessions')
-          .update({ 
-            last_active_at: new Date().toISOString(),
-            expired_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString() // 4 hours from now
-          })
-          .eq('kiosk_session_id', sessionId)
-          .then(({ error }) => {
-            if (error) console.error('Error refreshing session:', error);
-          });
-      }
-    }, 60000); // Refresh every minute
+    let refreshTimer: NodeJS.Timeout | null = null;
+    
+    const setupRefreshTimer = () => {
+      if (!isActive) return;
+      refreshTimer = setInterval(() => {
+        if (sessionId && isActive) {
+          supabase
+            .from('kiosk_sessions')
+            .update({ 
+              last_active_at: new Date().toISOString(),
+              expired_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString() // 4 hours from now
+            })
+            .eq('kiosk_session_id', sessionId)
+            .then(({ error }) => {
+              if (error) console.error('Error refreshing session:', error);
+            });
+        }
+      }, 60000); // Refresh every minute
+    };
+    
+    // Start timer slightly delayed to prevent race conditions
+    const timerSetupDelay = setTimeout(() => {
+      setupRefreshTimer();
+    }, 2000);
     
     // Cleanup function for session
     return () => {
-      clearInterval(refreshTimer);
+      isActive = false; // Mark component as unmounted
       
-      // Disconnect session on unmount
+      if (refreshTimer) clearInterval(refreshTimer);
+      clearTimeout(timerSetupDelay);
+      
+      // Disconnect session on unmount - use a fire-and-forget approach
       if (sessionId) {
-        (async () => {
+        const disconnectSession = async () => {
           try {
             await supabase
               .from('kiosk_sessions')
@@ -244,10 +264,12 @@ export default function KioskPage() {
           } catch (err) {
             console.error('Error disconnecting session:', err);
           }
-        })();
+        };
+        
+        disconnectSession().catch(console.error);
       }
     };
-  }, [initKioskSession, fetchStoreData, loadCart, sessionId, supabase]);
+  }, []); // Intentionally remove dependencies to prevent re-running effect
   
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -431,7 +453,7 @@ export default function KioskPage() {
               >
                 {product.image_url ? (
                   <div className="relative h-48 w-full">
-                    <Image
+                    <SafeImage
                       src={product.image_url}
                       alt={product.product_name}
                       fill
@@ -526,7 +548,7 @@ export default function KioskPage() {
                     <div className="w-16 h-16 bg-gray-200 rounded overflow-hidden flex-shrink-0 mr-3">
                       {item.image_url ? (
                         <div className="relative h-full w-full">
-                          <Image
+                          <SafeImage
                             src={item.image_url}
                             alt={item.product_name}
                             fill
