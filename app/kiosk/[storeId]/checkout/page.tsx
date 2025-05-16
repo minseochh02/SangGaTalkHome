@@ -158,7 +158,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     
     try {
-      // Create new kiosk order - adjust field names
+      // Create new kiosk order - use the same fields as the mobile app
       const { data: orderData, error: orderError } = await supabase
         .from('kiosk_orders')
         .insert({
@@ -166,7 +166,9 @@ export default function CheckoutPage() {
           order_type: orderType,
           total_amount: totalAmount,
           status: 'completed',
-          device_number: deviceNumber ? parseInt(deviceNumber) : null
+          device_number: deviceNumber ? parseInt(deviceNumber) : null,
+          // Include any additional fields that might be required
+          created_at: new Date().toISOString()
         })
         .select('kiosk_order_id')
         .single();
@@ -180,12 +182,13 @@ export default function CheckoutPage() {
       
       const kioskOrderId = orderData.kiosk_order_id;
       
-      // Create order items
+      // Create order items with all required fields
       const orderItems = cartItems.map(item => ({
         kiosk_order_id: kioskOrderId,
         product_id: item.product_id,
         quantity: item.quantity,
-        price_at_purchase: item.sgt_price
+        price_at_purchase: item.sgt_price,
+        created_at: new Date().toISOString()
       }));
       
       const { error: itemsError } = await supabase

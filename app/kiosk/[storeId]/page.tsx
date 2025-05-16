@@ -13,6 +13,9 @@ interface Product {
   description?: string;
   sgt_price: number;
   image_url?: string;
+  status: number;
+  is_kiosk_enabled: boolean;
+  kiosk_order?: number;
   is_sold_out: boolean;
   product_category?: string;
 }
@@ -66,28 +69,45 @@ export default function KioskPage() {
       
       const deviceIdentifier = getDeviceIdentifier();
       
-      // Get the next available device number for this store
-      const { data: deviceData, error: deviceError } = await supabase
-        .from('kiosk_sessions')
-        .select('device_number')
-        .eq('store_id', storeId)
-        .order('device_number', { ascending: false })
-        .limit(1);
-        
+      // Get the next available device number for this store - try using RPC function first
       let nextDeviceNumber = 1;
-      if (!deviceError && deviceData && deviceData.length > 0) {
-        nextDeviceNumber = (deviceData[0].device_number || 0) + 1;
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.rpc(
+          'get_next_device_number',
+          { p_store_id: storeId }
+        );
+        
+        if (!sessionError) {
+          nextDeviceNumber = sessionData;
+        } else {
+          // Fallback to manual calculation if RPC fails
+          console.error('Error using RPC, falling back to manual calculation:', sessionError);
+          const { data: deviceData, error: deviceError } = await supabase
+            .from('kiosk_sessions')
+            .select('device_number')
+            .eq('store_id', storeId)
+            .order('device_number', { ascending: false })
+            .limit(1);
+          
+          if (!deviceError && deviceData && deviceData.length > 0) {
+            nextDeviceNumber = (deviceData[0].device_number || 0) + 1;
+          }
+        }
+      } catch (err) {
+        console.error('Error getting device number:', err);
+        // Continue with default device number 1
       }
       
       // Create or update kiosk session
       const { data: sessionData, error: sessionError } = await supabase
         .from('kiosk_sessions')
-        .upsert({
+        .insert({
           store_id: storeId,
           device_identifier: deviceIdentifier,
           device_number: nextDeviceNumber,
           status: 'active',
-          last_active_at: new Date().toISOString()
+          last_active_at: new Date().toISOString(),
+          expired_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString() // 4 hours from now
         })
         .select()
         .single();
@@ -144,13 +164,14 @@ export default function KioskPage() {
         setSelectedCategory(null);
       }
       
-      // Fetch products - don't include product_category
+      // Fetch products - match the mobile app query format
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('product_id, product_name, description, sgt_price, image_url, is_sold_out')
+        .select('product_id, product_name, description, sgt_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out')
         .eq('store_id', storeId)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+        .eq('status', 1)
+        .eq('is_kiosk_enabled', true)
+        .order('kiosk_order', { ascending: true });
         
       if (productError) {
         console.error('Error fetching products:', productError);
@@ -196,7 +217,10 @@ export default function KioskPage() {
       if (sessionId) {
         supabase
           .from('kiosk_sessions')
-          .update({ last_active_at: new Date().toISOString() })
+          .update({ 
+            last_active_at: new Date().toISOString(),
+            expired_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString() // 4 hours from now
+          })
           .eq('kiosk_session_id', sessionId)
           .then(({ error }) => {
             if (error) console.error('Error refreshing session:', error);
@@ -204,7 +228,25 @@ export default function KioskPage() {
       }
     }, 60000); // Refresh every minute
     
-    return () => clearInterval(refreshTimer);
+    // Cleanup function for session
+    return () => {
+      clearInterval(refreshTimer);
+      
+      // Disconnect session on unmount
+      if (sessionId) {
+        (async () => {
+          try {
+            await supabase
+              .from('kiosk_sessions')
+              .update({ status: 'disconnected' })
+              .eq('kiosk_session_id', sessionId);
+            console.log('Kiosk session disconnected on page unload');
+          } catch (err) {
+            console.error('Error disconnecting session:', err);
+          }
+        })();
+      }
+    };
   }, [initKioskSession, fetchStoreData, loadCart, sessionId, supabase]);
   
   // Save cart to localStorage whenever it changes
@@ -287,10 +329,9 @@ export default function KioskPage() {
     return price.toLocaleString();
   };
   
-  // Filter products by selected category (if categories exist)
-  const filteredProducts = selectedCategory && categories.length > 0
-    ? products.filter(product => product.product_category === selectedCategory)
-    : products;
+  // Filter products (note: we're not filtering by category since product_category isn't available)
+  // Display all products for now, categorization can be added later if needed
+  const filteredProducts = products;
   
   if (loading) {
     return (
@@ -345,7 +386,7 @@ export default function KioskPage() {
         </div>
       </header>
       
-      {/* Category tabs - only show if categories exist */}
+      {/* Category tabs - hiding for now since we're not filtering by category yet
       {categories.length > 0 && (
         <div className="bg-white shadow-sm overflow-x-auto">
           <div className="container mx-auto">
@@ -367,6 +408,7 @@ export default function KioskPage() {
           </div>
         </div>
       )}
+      */}
       
       {/* Main content */}
       <div className="flex-1 container mx-auto p-4">
