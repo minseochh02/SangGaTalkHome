@@ -181,6 +181,81 @@ export default function CheckoutPage() {
     };
   }, [cartItems.length, storeId, router]); // Only depend on cartItems.length, not the entire cartItems array
 
+  // Add real-time subscription for product updates during checkout
+  useEffect(() => {
+    // Skip if no storeId or cartItems not yet loaded
+    if (!storeId || cartItems.length === 0) return;
+    
+    let isActive = true;
+    
+    // Set up real-time subscription for product updates
+    const productChannel = supabase
+      .channel(`checkout-product-updates-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `store_id=eq.${storeId}`,
+        },
+        (payload) => {
+          if (!isActive) return;
+          
+          const updatedProduct = payload.new as any;
+          console.log(`[Checkout] Product update received: ${updatedProduct.product_id}, sold_out: ${updatedProduct.is_sold_out}`);
+          
+          // Check if this is a cart item that just became sold out
+          if (updatedProduct.is_sold_out) {
+            const affectedItem = cartItems.find(item => item.product_id === updatedProduct.product_id);
+            
+            if (affectedItem) {
+              // Alert the user
+              alert(`'${affectedItem.product_name}' 상품이 품절되어 장바구니에서 제거됩니다.`);
+              
+              // Remove the item from cart
+              const updatedCart = cartItems.filter(item => item.product_id !== updatedProduct.product_id);
+              setCartItems(updatedCart);
+              
+              // Update localStorage
+              try {
+                localStorage.setItem(`kiosk-cart-${storeId}`, JSON.stringify(updatedCart));
+              } catch (err) {
+                console.error('Error updating cart in localStorage:', err);
+              }
+              
+              // Recalculate total
+              const total = updatedCart.reduce(
+                (sum, item) => sum + (item.sgt_price * item.quantity), 0
+              );
+              setTotalAmount(total);
+              
+              // If cart is now empty, go back to kiosk page
+              if (updatedCart.length === 0 && isActive) {
+                alert('모든 상품이 품절되어 키오스크 메인 화면으로 돌아갑니다.');
+                router.push(`/kiosk/${storeId}`);
+              }
+            }
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[Checkout] Subscribed to product updates for store ${storeId}`);
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`[Checkout] Product updates channel error:`, err);
+        }
+      });
+    
+    // Cleanup function
+    return () => {
+      isActive = false;
+      supabase.removeChannel(productChannel);
+      console.log(`[Checkout] Unsubscribed from product updates`);
+    };
+  }, [storeId, cartItems.length, router, supabase]); // Only depend on cartItems.length
+
   // Submit order with selected option
   const handleOrderSubmit = async (orderType: 'kiosk_dine_in' | 'kiosk_takeout' | 'kiosk_delivery') => {
     if (isSubmitting) return;

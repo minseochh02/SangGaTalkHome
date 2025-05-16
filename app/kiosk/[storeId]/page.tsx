@@ -355,6 +355,95 @@ export default function KioskPage() {
   // Display all products for now, categorization can be added later if needed
   const filteredProducts = products;
   
+  // Add product subscription useEffect
+  useEffect(() => {
+    // Skip if no storeId or not ready yet
+    if (!storeId) return;
+    
+    // Set up real-time subscription for product updates
+    const productChannel = supabase
+      .channel(`kiosk-product-updates-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `store_id=eq.${storeId}`,
+        },
+        (payload) => {
+          const updatedProduct = payload.new as Product;
+          
+          console.log(`[KioskPage] Product update received: ${updatedProduct.product_id} (${updatedProduct.product_name}), kiosk_enabled: ${updatedProduct.is_kiosk_enabled}, sold_out: ${updatedProduct.is_sold_out}`);
+          
+          // Check for sold-out state changes first, which affect the cart
+          const cartItemExists = cartItems.find(item => item.product_id === updatedProduct.product_id);
+          if (updatedProduct.is_sold_out && cartItemExists) {
+            // Automatically remove the sold-out item from cart
+            setCartItems(prevItems => prevItems.filter(item => item.product_id !== updatedProduct.product_id));
+            
+            // Inform the user that the item was removed
+            alert(
+              `'${updatedProduct.product_name}' 상품이 품절되어 장바구니에서 자동으로 제거되었습니다.`
+            );
+          }
+
+          // Then handle the product list updates
+          setProducts((currentProducts) => {
+            // For debugging, log the current state
+            console.log('[KioskPage] currentProducts count:', currentProducts.length);
+            
+            const productExistsInState = currentProducts.some(p => p.product_id === updatedProduct.product_id);
+            
+            // If the product doesn't exist in state and is not kiosk-enabled, we can skip processing
+            if (!productExistsInState && !updatedProduct.is_kiosk_enabled) {
+              console.log(`[KioskPage] Skipping update for non-existent, non-kiosk product: ${updatedProduct.product_id}`);
+              return currentProducts; // No change needed
+            }
+            
+            // Handle products that should be displayed
+            if (updatedProduct.is_kiosk_enabled) {
+              if (productExistsInState) {
+                console.log(`[KioskPage] Updating existing product: ${updatedProduct.product_name}`);
+                return currentProducts.map((p) =>
+                  p.product_id === updatedProduct.product_id ? { ...p, ...updatedProduct } : p
+                ).sort((a, b) => (a.kiosk_order ?? Infinity) - (b.kiosk_order ?? Infinity));
+              } else {
+                console.log(`[KioskPage] Adding new product: ${updatedProduct.product_name}`);
+                return [...currentProducts, updatedProduct]
+                  .sort((a, b) => (a.kiosk_order ?? Infinity) - (b.kiosk_order ?? Infinity));
+              }
+            } 
+            // Handle products that should be removed
+            else if (productExistsInState) {
+              console.log(`[KioskPage] Removing product: ${updatedProduct.product_name}`);
+              return currentProducts.filter(p => p.product_id !== updatedProduct.product_id);
+            }
+            
+            // Default case - no changes needed
+            return currentProducts;
+          });
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[KioskPage] Subscribed to product updates for store ${storeId}`);
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`[KioskPage] Product updates channel error for store ${storeId}:`, err);
+        }
+        if (status === 'TIMED_OUT') {
+          console.warn(`[KioskPage] Realtime subscription timed out for store ${storeId}`);
+        }
+      });
+    
+    // Cleanup function for subscription
+    return () => {
+      supabase.removeChannel(productChannel);
+      console.log(`[KioskPage] Unsubscribed from product updates for store ${storeId}`);
+    };
+  }, [storeId, supabase, cartItems]); // Add cartItems dependency to access the most up-to-date cart
+  
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
