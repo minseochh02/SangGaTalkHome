@@ -158,7 +158,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     
     try {
-      // Create new kiosk order
+      // Create new kiosk order - adjust field names
       const { data: orderData, error: orderError } = await supabase
         .from('kiosk_orders')
         .insert({

@@ -64,7 +64,7 @@ export default function KioskPage() {
         return newId;
       };
       
-      const deviceId = getDeviceIdentifier();
+      const deviceIdentifier = getDeviceIdentifier();
       
       // Get the next available device number for this store
       const { data: deviceData, error: deviceError } = await supabase
@@ -84,10 +84,10 @@ export default function KioskPage() {
         .from('kiosk_sessions')
         .upsert({
           store_id: storeId,
-          device_id: deviceId,
+          device_identifier: deviceIdentifier,
           device_number: nextDeviceNumber,
-          is_active: true,
-          last_active: new Date().toISOString()
+          status: 'active',
+          last_active_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -103,7 +103,7 @@ export default function KioskPage() {
     }
   }, [storeId, supabase]);
   
-  // Fetch store data, products and categories
+  // Fetch store data and products
   const fetchStoreData = useCallback(async () => {
     try {
       setLoading(true);
@@ -122,24 +122,32 @@ export default function KioskPage() {
         setStoreName(storeData.store_name);
       }
       
-      // Fetch product categories
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('product_categories')
-        .select('category_id, category_name')
-        .eq('store_id', storeId)
-        .order('display_order', { ascending: true });
-        
-      if (categoryError) {
-        console.error('Error fetching categories:', categoryError);
-      } else if (categoryData && categoryData.length > 0) {
-        setCategories(categoryData);
-        setSelectedCategory(categoryData[0].category_id);
+      // Try fetching product categories - this is optional
+      try {
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('product_categories')
+          .select('category_id, category_name')
+          .eq('store_id', storeId)
+          .order('display_order', { ascending: true });
+          
+        if (!categoryError && categoryData && categoryData.length > 0) {
+          setCategories(categoryData);
+          setSelectedCategory(categoryData[0].category_id);
+        } else {
+          // If categories don't exist, clear any existing categories
+          setCategories([]);
+          setSelectedCategory(null);
+        }
+      } catch (err) {
+        console.error('Error fetching categories (optional):', err);
+        setCategories([]);
+        setSelectedCategory(null);
       }
       
-      // Fetch products
+      // Fetch products - don't include product_category
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('product_id, product_name, description, sgt_price, image_url, is_sold_out, product_category')
+        .select('product_id, product_name, description, sgt_price, image_url, is_sold_out')
         .eq('store_id', storeId)
         .eq('is_active', true)
         .order('display_order', { ascending: true });
@@ -188,7 +196,7 @@ export default function KioskPage() {
       if (sessionId) {
         supabase
           .from('kiosk_sessions')
-          .update({ last_active: new Date().toISOString() })
+          .update({ last_active_at: new Date().toISOString() })
           .eq('kiosk_session_id', sessionId)
           .then(({ error }) => {
             if (error) console.error('Error refreshing session:', error);
@@ -279,8 +287,8 @@ export default function KioskPage() {
     return price.toLocaleString();
   };
   
-  // Filter products by selected category
-  const filteredProducts = selectedCategory
+  // Filter products by selected category (if categories exist)
+  const filteredProducts = selectedCategory && categories.length > 0
     ? products.filter(product => product.product_category === selectedCategory)
     : products;
   
@@ -337,7 +345,7 @@ export default function KioskPage() {
         </div>
       </header>
       
-      {/* Category tabs */}
+      {/* Category tabs - only show if categories exist */}
       {categories.length > 0 && (
         <div className="bg-white shadow-sm overflow-x-auto">
           <div className="container mx-auto">

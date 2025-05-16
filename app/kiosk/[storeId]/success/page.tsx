@@ -75,7 +75,7 @@ export default function SuccessPage() {
           setStoreName(storeData.store_name);
         }
         
-        // Fetch order data including order items
+        // Fetch order data including order items - adjust field names if needed
         const { data: orderData, error: orderError } = await supabase
           .from('kiosk_orders')
           .select(`
@@ -102,6 +102,7 @@ export default function SuccessPage() {
           console.error('Error fetching order:', orderError);
           setError('주문 정보를 불러오는데 실패했습니다.');
         } else if (orderData) {
+          // Handle any field name discrepancies here
           setOrderDetails(orderData);
         }
       } catch (err) {
