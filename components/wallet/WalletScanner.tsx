@@ -42,26 +42,26 @@ export function WalletScanner() {
 
   // Function to format NFC ID correctly
   const formatNfcId = (nfcId: string): string => {
-    // If the ID contains colons (:), remove them.
-    // NO LONGER FORCING TO UPPERCASE to see if case-sensitivity in DB is an issue.
-    if (nfcId.includes(':')) {
-      return nfcId.replace(/:/g, '');
+    // Trim whitespace, then remove colons, then convert to uppercase
+    let processedId = nfcId.trim();
+    if (processedId.includes(':')) {
+      processedId = processedId.replace(/:/g, '');
     }
-    return nfcId;
+    return processedId.toUpperCase();
   };
 
   // Function to fetch wallet data by NFC ID
   const getWalletDataByNfcId = async (nfcId: string) => {
     const formattedNfcId = formatNfcId(nfcId);
     console.log('Fetching wallet data for NFC ID:', nfcId);
-    console.log('Formatted (case-preserved) NFC ID for query:', formattedNfcId);
+    console.log('Formatted NFC ID:', formattedNfcId);
 
     try {
       const { data, error, status } = await supabase
         .from('wallets')
         .select('*')
-        .eq('nfc_id', formattedNfcId) // Query will use case from event.serialNumber (after colon removal)
-        .single(); 
+        .eq('nfc_id', formattedNfcId)
+        .single(); // .single() expects 0 or 1 row. If >1, server might return 406.
 
       if (error) {
         if (error.code === 'PGRST116') { // No rows returned
@@ -71,7 +71,7 @@ export function WalletScanner() {
             formattedNfcId,
             statusCode: status || 404,
             errorCode: error.code,
-            details: '해당 NFC ID로 등록된 지갑을 찾을 수 없습니다. (DB 조회 시 대소문자 구분 확인)'
+            details: '해당 NFC ID로 등록된 지갑을 찾을 수 없습니다.'
           });
         } else {
           // For other PostgREST errors or network issues
@@ -79,20 +79,23 @@ export function WalletScanner() {
             message: `서버 오류: ${error.message || '알 수 없는 오류가 발생했습니다.'}`,
             nfcId,
             formattedNfcId,
-            statusCode: status, 
-            errorCode: error.code, 
-            details: `Supabase query failed with status ${status}. Error code: ${error.code}. Query was for NFC ID: ${formattedNfcId}`
+            statusCode: status, // Status from the Supabase response
+            errorCode: error.code, // PostgREST error code
+            details: `Supabase query failed with status ${status}. Error code: ${error.code}`
           });
         }
         return null;
       }
       
+      // This case should ideally not be hit if .single() is used and an error wasn't thrown,
+      // as .single() itself errors if data is null and no error object, or if data is an array.
+      // But as a safeguard:
       if (!data) {
         setScanError({
           message: '데이터를 찾을 수 없습니다 (null 반환).',
           nfcId,
           formattedNfcId,
-          statusCode: status, 
+          statusCode: status, // Should be 200 or 204 if no error, but data is null
           details: '서버에서 데이터를 반환하지 않았지만 명시적인 오류는 없었습니다. 이는 .single() 사용 시 예기치 않은 상황입니다.'
         });
         return null;
@@ -116,7 +119,7 @@ export function WalletScanner() {
         message: '지갑 정보 조회 중 심각한 오류 발생.',
         nfcId,
         formattedNfcId,
-        statusCode: error.status || error.response?.status, 
+        statusCode: error.status || error.response?.status, // Try to get status from error object
         errorCode: error.code,
         details: error.message
       });
@@ -150,21 +153,23 @@ export function WalletScanner() {
 
       ndef.onreading = async (event: any) => {
         const nfcId = event.serialNumber;
-        console.log('NFC tag detected (raw serialNumber):', nfcId);
+        console.log('NFC tag detected:', nfcId);
         
         if (!nfcId) {
           setScanError({
             message: 'NFC ID를 읽을 수 없습니다.',
             details: 'event.serialNumber가 비어있습니다.'
           });
-          setIsScanning(false); 
+          setIsScanning(false); // Stop scanning if ID is not readable
           return;
         }
 
         const data = await getWalletDataByNfcId(nfcId);
         if (data) {
           setWalletData(data);
-        } 
+        } else {
+          // Error state is already set by getWalletDataByNfcId if data is null
+        }
         setIsScanning(false);
       };
     } catch (error: any) {
@@ -225,13 +230,13 @@ export function WalletScanner() {
         
         {scanError.nfcId && (
           <p className="text-gray-300 mb-1">
-            <span className="font-semibold">스캔된 원본 NFC ID:</span> {scanError.nfcId}
+            <span className="font-semibold">원본 NFC ID:</span> {scanError.nfcId}
           </p>
         )}
         
         {scanError.formattedNfcId && (
           <p className="text-gray-300 mb-1">
-            <span className="font-semibold">DB 조회용 NFC ID (대소문자 유지):</span> {scanError.formattedNfcId}
+            <span className="font-semibold">변환된 NFC ID:</span> {scanError.formattedNfcId}
           </p>
         )}
         
