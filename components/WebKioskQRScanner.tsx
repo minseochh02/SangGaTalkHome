@@ -19,12 +19,13 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
   const [cameraPermission, setCameraPermission] = useState<PermissionStatus>('prompt');
   const router = useRouter();
   const html5QrcodeScannerRef = useRef<Html5Qrcode | null>(null);
-  const scannerContainerId = 'qr-reader';
+  const scannerContainerId = 'html5qr-code-full-region';
   const isMountedRef = useRef(true);
   const supabase = createClient();
 
   // Initialize scanner when component mounts
   useEffect(() => {
+    console.log('WebKioskQRScanner component mounted');
     isMountedRef.current = true;
 
     // Check initial camera permission status
@@ -32,6 +33,7 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
 
     // Component cleanup function
     return () => {
+      console.log('WebKioskQRScanner component unmounting, cleaning up...');
       isMountedRef.current = false;
       if (html5QrcodeScannerRef.current) {
         try {
@@ -47,6 +49,7 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
 
   // Check camera permission status
   const checkCameraPermission = async () => {
+    console.log('Checking camera permission...');
     try {
       setCameraPermission('loading');
       
@@ -55,10 +58,12 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
         // Modern browsers
         const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
         
+        console.log('Camera permission status:', permissionStatus.state);
         setCameraPermission(permissionStatus.state as PermissionStatus);
         
         // Listen for permission changes
         permissionStatus.onchange = () => {
+          console.log('Camera permission changed to:', permissionStatus.state);
           setCameraPermission(permissionStatus.state as PermissionStatus);
           
           // If permission was just granted, start the scanner
@@ -68,6 +73,7 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
         };
       } else {
         // Fallback for browsers that don't support navigator.permissions
+        console.log('navigator.permissions not supported, defaulting to prompt');
         setCameraPermission('prompt');
       }
     } catch (err) {
@@ -78,14 +84,22 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
   
   // Request camera permission explicitly
   const requestCameraPermission = async () => {
+    console.log('Requesting camera permission...');
     try {
       setIsLoading(true);
       setError(null);
       
       // Try to access the camera - this will trigger the permission prompt
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
       
       // If we get here, permission was granted
+      console.log('Camera permission granted!', stream.getVideoTracks()[0].label);
       setCameraPermission('granted');
       
       // Always close tracks when we're done
@@ -104,6 +118,7 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
 
   // Start/stop scanner when isOpen changes
   useEffect(() => {
+    console.log('isOpen changed to:', isOpen, 'cameraPermission:', cameraPermission);
     if (isOpen) {
       // Only try to start scanner if we already have permission
       if (cameraPermission === 'granted') {
@@ -115,10 +130,15 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
   }, [isOpen, cameraPermission]);
 
   const startScanner = async () => {
-    if (isScanning || isLoading) return;
+    console.log('Starting QR scanner...');
+    if (isScanning || isLoading) {
+      console.log('Scanner already running or loading, aborting start');
+      return;
+    }
     
     // If we don't have camera permission yet, request it first
     if (cameraPermission !== 'granted') {
+      console.log('Camera permission not granted yet, requesting...');
       requestCameraPermission();
       return;
     }
@@ -127,34 +147,70 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
     setError(null);
     
     try {
+      // Check if the scanner element exists in the DOM
+      const scannerElement = document.getElementById(scannerContainerId);
+      if (!scannerElement) {
+        console.error(`Scanner element with ID ${scannerContainerId} not found in DOM`);
+        setError('스캐너 요소를 찾을 수 없습니다. 페이지를 새로고침 해보세요.');
+        return;
+      }
+      
+      console.log('Scanner element found:', scannerElement);
+      
       if (!html5QrcodeScannerRef.current) {
         // Create HTML5 QR scanner instance only once
+        console.log('Creating new Html5Qrcode instance...');
         const html5QrcodeScanner = new Html5Qrcode(scannerContainerId);
         html5QrcodeScannerRef.current = html5QrcodeScanner;
       }
         
       if (html5QrcodeScannerRef.current) {
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        // Use more specific camera config
+        const cameraConfig = {
+          facingMode: "environment",
+          aspectRatio: 1.0,
+        };
+        
+        const scannerConfig = { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          disableFlip: false,
+          videoConstraints: cameraConfig
+        };
+        
+        console.log('Starting QR scanner with config:', scannerConfig);
+        
         await html5QrcodeScannerRef.current.start(
-          { facingMode: "environment" },
-          config,
+          cameraConfig,
+          scannerConfig,
           onScanSuccess,
           onScanFailure
         );
         
         if (isMountedRef.current) {
+          console.log('Scanner started successfully!');
           setIsScanning(true);
           setError(null);
         }
       }
     } catch (err) {
       console.error('Error initializing QR scanner:', err);
+      // Log more details about the error
+      if (err instanceof Error) {
+        console.error('Error name:', err.name);
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+      }
+      
       if (isMountedRef.current) {
         // If we get a NotAllowedError, it's a permission issue
         if (err instanceof DOMException && err.name === 'NotAllowedError') {
+          console.error('Camera permission was denied by the browser');
           setCameraPermission('denied');
           setError('카메라 접근이 거부되었습니다. 브라우저 설정에서 카메라 접근을 허용해 주세요.');
         } else {
+          console.error('Other camera initialization error:', err);
           setError('카메라를 활성화하지 못했습니다. 카메라 장치를 확인해주세요.');
         }
       }
@@ -166,8 +222,12 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
   };
 
   const stopScanner = async () => {
-    if (!html5QrcodeScannerRef.current || !isScanning) return;
+    if (!html5QrcodeScannerRef.current || !isScanning) {
+      console.log('No scanner to stop or not scanning');
+      return;
+    }
     
+    console.log('Stopping QR scanner...');
     try {
       await html5QrcodeScannerRef.current.stop();
       console.log('Scanner stopped successfully');
@@ -181,6 +241,7 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
   };
 
   const onScanSuccess = async (decodedText: string) => {
+    console.log('QR Code scanned successfully:', decodedText);
     if (isLoading || !isMountedRef.current) return;
 
     try {
@@ -191,9 +252,8 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
       
       if (!isMountedRef.current) return;
       
-      console.log('QR Code scanned:', decodedText);
-      
       // Verify the scanned QR code is a valid kiosk key
+      console.log('Verifying kiosk key with Supabase...');
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('store_id, store_name, kiosk_key')
@@ -203,6 +263,7 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
       if (!isMountedRef.current) return;
 
       if (storeError || !storeData) {
+        console.error('Invalid kiosk key or error verifying:', storeError);
         setError('유효하지 않은 키오스크 코드입니다.');
         // Resume scanning after a short delay
         setTimeout(() => {
@@ -214,6 +275,7 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
       }
 
       // Valid kiosk key found, navigate to the kiosk page
+      console.log('Valid kiosk key found, navigating to store:', storeData.store_id);
       onClose();
       router.push(`/kiosk/${storeData.store_id}`);
     } catch (err) {
@@ -236,10 +298,13 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
 
   const onScanFailure = (error: string) => {
     // This is often called when no QR code is in view, so we don't need to set an error
+    // but we can log it at debug level for troubleshooting
+    // console.debug('QR scan failure (expected when no QR in view):', error);
   };
 
   // Handle close with proper cleanup
   const handleClose = async () => {
+    console.log('Closing QR scanner...');
     await stopScanner();
     onClose();
   };
@@ -309,9 +374,6 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
   // but only display it when the modal is open
   return (
     <>
-      {/* This div is always in the DOM but hidden when not active */}
-      <div id={scannerContainerId} className="hidden"></div>
-      
       {/* Modal is conditionally rendered */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
@@ -344,8 +406,8 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
                 ) : (
                   <>
                     <div className="w-full h-64 relative border rounded bg-gray-100">
-                      {/* Video feed container - manipulated by the html5-qrcode library */}
-                      <div id="qr-video-container" className="absolute inset-0"></div>
+                      {/* Video feed container */}
+                      <div id={scannerContainerId} className="absolute inset-0"></div>
                       
                       {/* Scanner overlay */}
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
