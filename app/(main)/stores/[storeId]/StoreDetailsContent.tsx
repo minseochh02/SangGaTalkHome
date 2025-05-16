@@ -18,7 +18,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 	const [user, setUser] = useState<any>(null);
 	const [isAuthLoading, setIsAuthLoading] = useState(true);
 	const [isHtmlContentExpanded, setIsHtmlContentExpanded] = useState(false);
-
+	console.log("storeId", storeId);
 	// Helper function to format SGT price
 	const formatSGTPrice = (price: number | string | null): string => {
 		if (price === null) return "0";
@@ -834,7 +834,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								</div>
 
 								<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
-									<QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/${storeId}`} size={180} />
+									<QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/${encodeURIComponent(store.kiosk_key)}`} size={180} />
 									<p className="mt-3 text-sm text-gray-600">
 										QR 코드를 스캔하여 웹 키오스크 모드에 바로 접속하세요.
 									</p>
