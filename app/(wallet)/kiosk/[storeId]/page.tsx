@@ -248,28 +248,33 @@ export default function KioskPage() {
     // Cleanup function for session
     return () => {
       isActive = false; // Mark component as unmounted
-      
       if (refreshTimer) clearInterval(refreshTimer);
       clearTimeout(timerSetupDelay);
       
-      // Disconnect session on unmount - use a fire-and-forget approach
+      // Attempt to mark session as disconnected on unmount/close
+      // This might not always run if the browser tab is closed abruptly
       if (sessionId) {
-        const disconnectSession = async () => {
-          try {
-            await supabase
-              .from('kiosk_sessions')
-              .update({ status: 'disconnected' })
-              .eq('kiosk_session_id', sessionId);
-            console.log('Kiosk session disconnected on page unload');
-          } catch (err) {
-            console.error('Error disconnecting session:', err);
-          }
-        };
-        
-        disconnectSession().catch(console.error);
+        // Use sendBeacon if available for more reliable disconnect on page unload
+        if (navigator.sendBeacon) {
+          const formData = new FormData();
+          formData.append('kiosk_session_id', sessionId);
+          formData.append('status', 'disconnected');
+          // Note: sendBeacon needs a URL endpoint to send data to.
+          // For direct Supabase update, this pattern is more complex.
+          // Sticking to direct Supabase call for now, but beacon is an option for specific backend.
+        }
+        // Fallback or primary method: direct Supabase update
+        supabase
+          .from('kiosk_sessions')
+          .update({ status: 'disconnected', last_active_at: new Date().toISOString() })
+          .eq('kiosk_session_id', sessionId)
+          .then(({ error }) => {
+            if (error) console.error('Error disconnecting session on unmount:', error);
+            else console.log('Session marked as disconnected on unmount/close.');
+          });
       }
     };
-  }, []); // Intentionally remove dependencies to prevent re-running effect
+  }, [initKioskSession, fetchStoreData, loadCart]);
   
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -443,6 +448,60 @@ export default function KioskPage() {
       console.log(`[KioskPage] Unsubscribed from product updates for store ${storeId}`);
     };
   }, [storeId, supabase, cartItems]); // Add cartItems dependency to access the most up-to-date cart
+  
+  // Real-time subscription for session status changes (remote disconnect by admin)
+  useEffect(() => {
+    if (!sessionId || !storeId || !supabase) return;
+
+    const channel = supabase
+      .channel(`kiosk-session-status-web-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'kiosk_sessions',
+          filter: `kiosk_session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const updatedSession = payload.new as { status: string; kiosk_session_id: string };
+          console.log('[KioskPage] Session status update received:', updatedSession);
+
+          if (updatedSession.kiosk_session_id === sessionId && updatedSession.status === 'disconnected') {
+            console.log('[KioskPage] Session remotely disconnected by admin.');
+            
+            // Clear the refresh timer to stop heartbeats
+            // Note: refreshTimer is not directly accessible here.
+            // This logic might need refactoring if direct timer clear is needed,
+            // or rely on component unmount/navigation to stop it.
+            // For now, immediate redirect is the primary action.
+
+            alert('스토어 관리자에 의해 현재 키오스크 세션이 종료되었습니다. 홈으로 이동합니다.');
+            router.push('/'); // Redirect to homepage, or a more appropriate page
+            
+            // Optionally clear local storage related to this kiosk session
+            localStorage.removeItem(`kiosk-cart-${storeId}`);
+            localStorage.removeItem('kiosk-device-id'); // If a new session should get a new ID
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[KioskPage] Subscribed to session status updates for session ${sessionId}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`[KioskPage] Session status channel error for ${sessionId}:`, err);
+        } else if (status === 'TIMED_OUT') {
+          console.warn(`[KioskPage] Session status subscription timed out for ${sessionId}`);
+        }
+      });
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+        console.log(`[KioskPage] Unsubscribed from session status updates for ${sessionId}`);
+      }
+    };
+  }, [sessionId, storeId, supabase, router]); // Added router to dependencies
   
   if (loading) {
     return (
