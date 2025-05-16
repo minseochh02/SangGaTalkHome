@@ -805,48 +805,6 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 						</div>
 					)}
 
-					{/* Kiosk QR Code Section - Only visible to store owner */}
-					{store.kiosk_key && (
-						<div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
-							<h3 className="text-lg font-medium text-primary mb-3 flex items-center">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="18"
-									height="18"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2"
-									className="mr-2"
-								>
-									<path d="M15 5v14"></path>
-									<path d="M5 10h14"></path>
-									<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"></path>
-								</svg>
-								키오스크 접속 코드
-							</h3>
-							<div className="flex flex-col items-center space-y-3">
-								<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
-									<QRCodeSVG value={store.kiosk_key} size={180} />
-									<p className="mt-3 text-sm text-gray-600">
-										Sanggawallet 앱으로 스캔하여 키오스크 모드를 활성화하세요.
-									</p>
-								</div>
-
-								<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
-									<QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/${encodeURIComponent(store.kiosk_key)}`} size={180} />
-									<p className="mt-3 text-sm text-gray-600">
-										QR 코드를 스캔하여 웹 키오스크 모드에 바로 접속하세요.
-									</p>
-								</div>
-
-								<p className="text-sm text-gray-600 text-center">
-									이 QR 코드는 웹 브라우저에서 스토어의 키오스크 모드에 바로 접속할 수 있는 링크입니다.
-								</p>
-							</div>
-						</div>
-					)}
-
 					{/* Owner Actions - Only visible to store owner */}
 					{isOwner && (
 						<div className="bg-white rounded-xl shadow-md p-6">
@@ -1004,18 +962,12 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 									</Link>
 								)}
 							</h3>
-							{store?.kiosk_key ? (
-								<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
-									<QRCodeSVG value={store.kiosk_key} size={180} />
-									<p className="mt-3 text-sm text-gray-600">
-										Sanggawallet 앱으로 스캔하여 키오스크 모드를 활성화하세요.
-									</p>
-								</div>
-							) : (
-								<p className="text-gray-600">
-									키오스크 QR 코드가 아직 설정되지 않았습니다. (관리자에게 문의)
+							<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
+								<QRCodeSVG value={`https://sgt-wallet.com/kiosk/${storeId}`} size={180} />
+								<p className="mt-3 text-sm text-gray-600">
+									스캔하여 이 스토어의 키오스크 페이지를 여세요.
 								</p>
-							)}
+							</div>
 						</div>
 						<div>
 							<h3 className="text-xl font-semibold text-gray-700 mb-3">
