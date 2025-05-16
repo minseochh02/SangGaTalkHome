@@ -7,10 +7,13 @@ const geistSans = Geist({
 });
 
 export const metadata = {
-  title: "SGT Kiosk",
-  description: "SangGaTalk Kiosk Interface",
+  title: "SGT Wallet",
+  description: "SGT Wallet Interface",
+  // This is what breaks the parent layout inheritance
+  layoutSegments: {
+    parents: false
+  }
 };
-
 // This makes the layout not inherit from parent layouts
 export const dynamic = 'force-dynamic';
 
