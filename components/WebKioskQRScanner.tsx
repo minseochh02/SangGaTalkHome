@@ -252,12 +252,45 @@ const WebKioskQRScanner: React.FC<WebKioskQRScannerProps> = ({ isOpen, onClose }
       
       if (!isMountedRef.current) return;
       
-      // Verify the scanned QR code is a valid kiosk key
-      console.log('Verifying kiosk key with Supabase...');
+      // Extract storeId and key from URL if present
+      let storeId: string | null = null;
+      let kioskKey: string = decodedText;
+      
+      // Try to parse as URL
+      try {
+        const url = new URL(decodedText);
+        
+        // Check if the URL path contains "/kiosk/{storeId}"
+        const pathMatch = url.pathname.match(/\/kiosk\/([^\/]+)/);
+        if (pathMatch && pathMatch[1]) {
+          storeId = pathMatch[1];
+          console.log('Extracted storeId from URL:', storeId);
+          
+          // Try to get key from query params
+          const keyParam = url.searchParams.get('key');
+          if (keyParam) {
+            kioskKey = keyParam;
+            console.log('Extracted key from URL query params:', kioskKey);
+          }
+        }
+      } catch (urlError) {
+        console.log('Not a valid URL, treating as raw kiosk key');
+      }
+      
+      // If we found a store ID in the URL, navigate directly
+      if (storeId) {
+        console.log('Navigating directly to kiosk page with extracted storeId:', storeId);
+        onClose();
+        router.push(`/kiosk/${storeId}`);
+        return;
+      }
+      
+      // Otherwise, verify the kiosk key with Supabase
+      console.log('Verifying kiosk key with Supabase:', kioskKey);
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('store_id, store_name, kiosk_key')
-        .eq('kiosk_key', decodedText)
+        .eq('kiosk_key', kioskKey)
         .single();
 
       if (!isMountedRef.current) return;

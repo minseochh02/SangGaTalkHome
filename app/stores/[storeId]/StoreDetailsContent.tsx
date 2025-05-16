@@ -314,7 +314,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								className="mr-2 text-primary"
 							>
 								<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z"></path>
-								<path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"></path>
+								<path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L18.375 2.625z"></path>
 							</svg>
 							스토어 소개
 						</h2>
@@ -826,16 +826,22 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								키오스크 접속 코드
 							</h3>
 							<div className="flex flex-col items-center space-y-3">
-								<div className="p-3 bg-white rounded-lg shadow-sm border">
-									<QRCodeSVG
-										value={store.kiosk_key}
-										size={180}
-										level="H"
-										includeMargin={true}
-									/>
+								<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
+									<QRCodeSVG value={store.kiosk_key} size={180} />
+									<p className="mt-3 text-sm text-gray-600">
+										Sanggawallet 앱으로 스캔하여 키오스크 모드를 활성화하세요.
+									</p>
 								</div>
+
+								<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
+									<QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/${storeId}`} size={180} />
+									<p className="mt-3 text-sm text-gray-600">
+										QR 코드를 스캔하여 웹 키오스크 모드에 바로 접속하세요.
+									</p>
+								</div>
+
 								<p className="text-sm text-gray-600 text-center">
-									이 QR 코드는 스토어의 키오스크 모드에 접속하기 위한 코드입니다. 스캔 시 키오스크 모드로 진입합니다.
+									이 QR 코드는 웹 브라우저에서 스토어의 키오스크 모드에 바로 접속할 수 있는 링크입니다.
 								</p>
 							</div>
 						</div>
