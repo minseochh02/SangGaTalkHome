@@ -34,6 +34,7 @@ import ProductEditModal from './ProductEditModal';
 import SortableProductItem from './SortableProductItem';
 import DroppableContainer from './DroppableContainer';
 import { QRCodeSVG } from 'qrcode.react';
+import ProductOptionEditor from './ProductOptionEditor';
 
 // Product Edit Modal Component
 // const ProductEditModal = ({...}) => { ... }; // <-- REMOVE THIS ENTIRE COMPONENT DEFINITION
@@ -66,6 +67,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   // Product Edit Modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Product Option Editor state
+  const [isOptionEditorOpen, setIsOptionEditorOpen] = useState(false);
 
   // Kiosk Settings States
   const [dineInEnabled, setDineInEnabled] = useState(false);
@@ -524,6 +528,23 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     setIsEditModalOpen(true);
   };
 
+  const handleOpenOptionsEditor = () => {
+    setIsOptionEditorOpen(true);
+    // We keep the edit modal open, so the user can see both at once if needed
+    // Alternatively, you could close the edit modal: setIsEditModalOpen(false);
+  };
+
+  const handleSaveOptions = async (productId: string | number, optionGroups: any[]) => {
+    console.log('Saving options for product:', productId, optionGroups);
+    // In a real implementation, you would save the options to the database here
+    
+    // For demonstration purposes, just close the modal
+    setIsOptionEditorOpen(false);
+    
+    // You might want to show a success message
+    alert('옵션이 성공적으로 저장되었습니다.');
+  };
+
   const handleSaveEditedProduct = async (updatedProduct: Product) => {
     try {
       // Only include sgt_price if it's not null
@@ -836,6 +857,15 @@ function KioskEditContent({ storeId }: { storeId: string }) {
           setEditingProduct(null);
         }}
         onSave={handleSaveEditedProduct}
+        onOpenOptionsEditor={handleOpenOptionsEditor}
+      />
+      
+      {/* Modal for product options editing */}
+      <ProductOptionEditor
+        isOpen={isOptionEditorOpen}
+        product={editingProduct}
+        onClose={() => setIsOptionEditorOpen(false)}
+        onSave={handleSaveOptions}
       />
       
       {/* Kiosk Sales History Section */}
