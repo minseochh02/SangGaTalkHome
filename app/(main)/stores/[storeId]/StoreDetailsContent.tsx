@@ -967,6 +967,15 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								<p className="mt-3 text-sm text-gray-600">
 									스캔하여 이 스토어의 키오스크 페이지를 여세요.
 								</p>
+								<Link href={`https://sgt-wallet.com/kiosk/${storeId}`} passHref legacyBehavior>
+									<a
+										target="_blank"
+										rel="noopener noreferrer"
+										className="mt-3 px-4 py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
+									>
+										키오스크 페이지로 이동
+									</a>
+								</Link>
 							</div>
 						</div>
 						<div>
