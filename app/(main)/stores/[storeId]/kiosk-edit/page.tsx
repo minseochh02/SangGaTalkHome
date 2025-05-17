@@ -34,7 +34,7 @@ import ProductEditModal from './ProductEditModal';
 import SortableProductItem from './SortableProductItem';
 import DroppableContainer from './DroppableContainer';
 import { QRCodeSVG } from 'qrcode.react';
-import ProductOptionEditor from './ProductOptionEditor';
+import DefaultOptionsEditor from './DefaultOptionsEditor';
 
 // Product Edit Modal Component
 // const ProductEditModal = ({...}) => { ... }; // <-- REMOVE THIS ENTIRE COMPONENT DEFINITION
@@ -68,8 +68,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Product Option Editor state
-  const [isOptionEditorOpen, setIsOptionEditorOpen] = useState(false);
+  // Default Options state
+  const [isDefaultOptionsEditorOpen, setIsDefaultOptionsEditorOpen] = useState(false);
+  const [defaultOptions, setDefaultOptions] = useState<any[]>([]);
 
   // Kiosk Settings States
   const [dineInEnabled, setDineInEnabled] = useState(false);
@@ -528,23 +529,6 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     setIsEditModalOpen(true);
   };
 
-  const handleOpenOptionsEditor = () => {
-    setIsOptionEditorOpen(true);
-    // We keep the edit modal open, so the user can see both at once if needed
-    // Alternatively, you could close the edit modal: setIsEditModalOpen(false);
-  };
-
-  const handleSaveOptions = async (productId: string | number, optionGroups: any[]) => {
-    console.log('Saving options for product:', productId, optionGroups);
-    // In a real implementation, you would save the options to the database here
-    
-    // For demonstration purposes, just close the modal
-    setIsOptionEditorOpen(false);
-    
-    // You might want to show a success message
-    alert('옵션이 성공적으로 저장되었습니다.');
-  };
-
   const handleSaveEditedProduct = async (updatedProduct: Product) => {
     try {
       // Only include sgt_price if it's not null
@@ -598,6 +582,17 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       console.error('Error in handleSaveEditedProduct:', err);
       alert('상품 정보 업데이트 중 오류가 발생했습니다.');
     }
+  };
+
+  const handleSaveDefaultOptions = (optionGroups: any[]) => {
+    console.log('Saving default options:', optionGroups);
+    // In a real implementation, you would save the options to the database here
+    
+    setDefaultOptions(optionGroups);
+    setIsDefaultOptionsEditorOpen(false);
+    
+    // You might want to show a success message
+    alert('기본 옵션이 성공적으로 저장되었습니다.');
   };
 
   if (loading) {
@@ -655,6 +650,58 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                 이 QR 코드는 웹 브라우저에서 스토어의 키오스크 모드에 바로 접속할 수 있는 링크입니다.
               </p>
             </div>
+          </div>
+        </section>
+        
+        {/* Default Order Options Section */}
+        <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">기본 주문 옵션</h2>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              모든 제품에 적용되는 기본 주문 옵션을 설정합니다. 예: 얼음 양, 당도 등.
+            </p>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium">주문 옵션</h3>
+                <p className="text-sm text-gray-500">
+                  {defaultOptions.length > 0 
+                    ? `${defaultOptions.length}개의 옵션 그룹이 설정되어 있습니다.` 
+                    : '아직 설정된 옵션이 없습니다.'}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsDefaultOptionsEditorOpen(true)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+                옵션 설정
+              </button>
+            </div>
+            
+            {/* Show a preview of the configured options */}
+            {defaultOptions.length > 0 && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium mb-2">설정된 옵션 그룹:</h4>
+                <ul className="space-y-2">
+                  {defaultOptions.map(group => (
+                    <li key={group.id} className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{group.name}</span>
+                        <span className="text-sm text-gray-500 ml-2">
+                          ({group.options.length}개 옵션)
+                        </span>
+                      </div>
+                      <span className="text-xs px-2 py-1 bg-gray-200 rounded-full">
+                        {group.isRequired ? '필수' : '선택'} / {group.allowMultiple ? '다중 선택' : '단일 선택'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </section>
         
@@ -857,15 +904,14 @@ function KioskEditContent({ storeId }: { storeId: string }) {
           setEditingProduct(null);
         }}
         onSave={handleSaveEditedProduct}
-        onOpenOptionsEditor={handleOpenOptionsEditor}
       />
       
-      {/* Modal for product options editing */}
-      <ProductOptionEditor
-        isOpen={isOptionEditorOpen}
-        product={editingProduct}
-        onClose={() => setIsOptionEditorOpen(false)}
-        onSave={handleSaveOptions}
+      {/* Modal for default options editing */}
+      <DefaultOptionsEditor
+        isOpen={isDefaultOptionsEditorOpen}
+        onClose={() => setIsDefaultOptionsEditorOpen(false)}
+        onSave={handleSaveDefaultOptions}
+        initialOptions={defaultOptions}
       />
       
       {/* Kiosk Sales History Section */}

@@ -1,6 +1,5 @@
 import React, { useState, Fragment, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { Product } from '@/utils/type';
 
 // Interface for option items
 interface OptionItem {
@@ -18,20 +17,20 @@ interface OptionGroup {
   options: OptionItem[];
 }
 
-interface ProductOptionEditorProps {
+interface DefaultOptionsEditorProps {
   isOpen: boolean;
-  product: Product | null;
   onClose: () => void;
-  onSave: (productId: string | number, optionGroups: OptionGroup[]) => void;
+  onSave: (optionGroups: OptionGroup[]) => void;
+  initialOptions?: OptionGroup[];
 }
 
-const ProductOptionEditor: React.FC<ProductOptionEditorProps> = ({
+const DefaultOptionsEditor: React.FC<DefaultOptionsEditorProps> = ({
   isOpen,
-  product,
   onClose,
-  onSave
+  onSave,
+  initialOptions
 }) => {
-  // Example default option groups - in a real implementation, this would be loaded from the product
+  // Example default option groups
   const defaultOptionGroups: OptionGroup[] = [
     {
       id: '1',
@@ -46,21 +45,21 @@ const ProductOptionEditor: React.FC<ProductOptionEditorProps> = ({
     }
   ];
 
-  const [optionGroups, setOptionGroups] = useState<OptionGroup[]>(defaultOptionGroups);
+  const [optionGroups, setOptionGroups] = useState<OptionGroup[]>(initialOptions || defaultOptionGroups);
   const [newGroupName, setNewGroupName] = useState('');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [newOptionName, setNewOptionName] = useState('');
   const [newOptionPrice, setNewOptionPrice] = useState<number>(0);
 
   useEffect(() => {
-    // In a real implementation, we would load the product's options from the database here
-    // For now, we'll just use the default options
-    setOptionGroups(defaultOptionGroups);
-  }, [product]);
+    // Set options from props if provided
+    if (initialOptions) {
+      setOptionGroups(initialOptions);
+    }
+  }, [initialOptions]);
 
   const handleSave = () => {
-    if (!product) return;
-    onSave(product.product_id, optionGroups);
+    onSave(optionGroups);
   };
 
   const addOptionGroup = () => {
@@ -157,7 +156,7 @@ const ProductOptionEditor: React.FC<ProductOptionEditorProps> = ({
             >
               <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-lg bg-white p-6 shadow-xl transition-all">
                 <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                  {product?.product_name || '상품'} 옵션 설정
+                  기본 주문 옵션 설정
                 </Dialog.Title>
                 
                 <div className="mt-4 max-h-[70vh] overflow-y-auto">
@@ -321,4 +320,4 @@ const ProductOptionEditor: React.FC<ProductOptionEditorProps> = ({
   );
 };
 
-export default ProductOptionEditor; 
+export default DefaultOptionsEditor; 
