@@ -712,6 +712,11 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         </section>
       </div>
       
+      {/* Kiosk Orders Management - MOVED UP for visibility */}
+      <section className="mb-10">
+        <KioskOrdersManagement storeId={storeId} />
+      </section>
+      
       {/* Drag and drop section */}
       <div>
         <DndContext
@@ -832,9 +837,6 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         }}
         onSave={handleSaveEditedProduct}
       />
-      
-      {/* Kiosk Orders Management Section */}
-      <KioskOrdersManagement storeId={storeId} />
       
       {/* Kiosk Sales History Section */}
       <KioskSalesHistory storeId={storeId} />
