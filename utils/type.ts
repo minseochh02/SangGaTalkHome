@@ -93,6 +93,19 @@ export interface Product {
 	is_kiosk_enabled?: boolean; // Whether this product is enabled in kiosk
 	kiosk_order?: number; // The order of this product in kiosk
 	is_sold_out?: boolean; // Indicates if the product is sold out
+	options?: ProductOptionCategory[]; // Product customization options
+}
+
+// Product Options - For customizing products (e.g., ice level, size, etc.)
+export interface ProductOptionChoice {
+	id: string;
+	name: string;
+}
+
+export interface ProductOptionCategory {
+	id: string;
+	name: string;
+	choices: ProductOptionChoice[];
 }
 
 // 1-2-2. ORDERS
