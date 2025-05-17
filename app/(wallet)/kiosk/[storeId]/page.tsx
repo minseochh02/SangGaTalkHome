@@ -33,6 +33,17 @@ interface CartItem {
   image_url?: string | null;
 }
 
+// Define this interface, ideally in a shared types file or at the top of the component
+interface KioskOrder {
+  order_id: string;
+  kiosk_session_id?: string;
+  store_id: string;
+  status: string;
+  order_display_id?: string;
+  device_number?: number;
+  // other relevant order fields
+}
+
 export default function KioskPage() {
   const params = useParams();
   const router = useRouter();
@@ -528,6 +539,57 @@ export default function KioskPage() {
       }
     };
   }, [sessionId, storeId, supabase, router]); // Added router to dependencies
+  
+  // useEffect for order completion notifications (Web Kiosk)
+  useEffect(() => {
+    if (!storeId || !supabase) return;
+
+    const ordersChannel = supabase
+      .channel(`web-kiosk-orders-updates-${storeId}-${sessionId || 'global'}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'kiosk_orders', // Ensure this is your orders table name
+          filter: `store_id=eq.${storeId}`, // Listen to orders for this store
+          // If orders are tied to kiosk_session_id and you only want to notify this specific device:
+          // filter: `kiosk_session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          console.log('[KioskPage] Order update received:', payload);
+          const updatedOrder = payload.new as KioskOrder;
+
+          if (updatedOrder.status === 'ready_for_pickup') {
+            // Optional: Check if this order belongs to this session if that's a requirement
+            // if (sessionId && updatedOrder.kiosk_session_id === sessionId) { ... }
+            alert(
+              updatedOrder.device_number
+                ? `단말기 ${updatedOrder.device_number}번에서 주문하신 메뉴가 준비되었습니다. 픽업대로 와주세요.`
+                : '주문 완료! 주문하신 메뉴가 준비되었습니다. 픽업대로 와주세요.' // Fallback message
+            );
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[KioskPage] Subscribed to kiosk_orders updates for store ${storeId}`);
+        }
+        if (status === 'CHANNEL_ERROR' || err) {
+          console.error(`[KioskPage] kiosk_orders updates channel error for store ${storeId}:`, err);
+        }
+        if (status === 'TIMED_OUT') {
+          console.warn(`[KioskPage] kiosk_orders subscription timed out for store ${storeId}`);
+        }
+      });
+
+    return () => {
+      if (ordersChannel) {
+        supabase.removeChannel(ordersChannel);
+        console.log(`[KioskPage] Unsubscribed from kiosk_orders updates for store ${storeId}`);
+      }
+    };
+  }, [storeId, supabase, sessionId]); // sessionId is a dependency if used in channel name or logic
   
   if (loading) {
     return (
