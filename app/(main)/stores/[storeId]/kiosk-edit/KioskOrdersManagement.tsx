@@ -219,9 +219,9 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
             </thead>
             <tbody className="divide-y divide-gray-200">
               {orders.map((order) => (
-                <tr key={order.order_id} className="hover:bg-gray-50">
+                <tr key={order.order_id || Math.random().toString()} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.order_id.substring(0, 8)}...
+                    {order.order_id ? `${order.order_id.substring(0, 8)}...` : '(ID 없음)'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {order.device_number ? (
@@ -241,20 +241,27 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
                           : 'bg-gray-100 text-gray-800'
                     }`}>
                       {order.status === 'pending' ? '대기 중' : 
-                       order.status === 'processing' ? '처리 중' : order.status}
+                       order.status === 'processing' ? '처리 중' : order.status || '상태 없음'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {order.total_amount ? `${order.total_amount.toLocaleString()} SGT` : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(order.created_at)}
-                    <div className="text-xs text-gray-400">{getTimeAgo(order.created_at)}</div>
+                    {order.created_at ? (
+                      <>
+                        {formatDate(order.created_at)}
+                        <div className="text-xs text-gray-400">{getTimeAgo(order.created_at)}</div>
+                      </>
+                    ) : (
+                      '-'
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
-                      onClick={() => handleMarkAsReady(order.order_id, order.device_number)}
+                      onClick={() => handleMarkAsReady(order.order_id || '', order.device_number)}
                       className="text-green-600 hover:text-green-900 bg-green-100 hover:bg-green-200 px-3 py-1 rounded"
+                      disabled={!order.order_id}
                     >
                       완료
                     </button>
