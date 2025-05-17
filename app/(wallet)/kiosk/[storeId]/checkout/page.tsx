@@ -263,6 +263,13 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     
     try {
+      // For delivery, redirect to the delivery address page
+      if (orderType === 'kiosk_delivery') {
+        // Redirect to delivery address page with necessary params
+        router.push(`/kiosk/${storeId}/delivery-address?totalAmount=${totalAmount}&sessionId=${sessionId || ''}&deviceNumber=${deviceNumber || ''}`);
+        return;
+      }
+      
       // Create new kiosk order - use the same fields as the mobile app
       const { data: orderData, error: orderError } = await supabase
         .from('kiosk_orders')
