@@ -221,7 +221,7 @@ export default function SuccessPage() {
             {orderDetails?.total_amount && (
               <div className="flex justify-between">
                 <span className="text-gray-600">결제 금액:</span>
-                <span className="font-bold text-green-600">{Number(orderDetails.total_amount).toLocaleString()}원</span>
+                <span className="font-bold text-green-600 flex items-center gap-1 flex-row">{Number(orderDetails.total_amount).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></span>
               </div>
             )}
           </div>

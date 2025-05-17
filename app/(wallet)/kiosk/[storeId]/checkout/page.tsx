@@ -503,7 +503,7 @@ export default function CheckoutPage() {
                       <span className="font-medium">{item.product_name}</span>
                       <span className="text-gray-500 ml-2">x{item.quantity}</span>
                     </div>
-                    <span className="font-medium">{formatPrice(item.sgt_price * item.quantity)}원</span>
+                    <span className="font-medium flex items-center gap-1 flex-row">{formatPrice(item.sgt_price * item.quantity)}<p className="text-xs text-gray-500">SGT</p></span>
                   </div>
                 ))}
               </div>
@@ -511,7 +511,7 @@ export default function CheckoutPage() {
             
             <div className="flex justify-between items-center text-lg font-bold">
               <span>총 결제 금액</span>
-              <span className="text-red-600">{formatPrice(totalAmount)}원</span>
+              <span className="text-red-600 flex items-center gap-1 flex-row">{formatPrice(totalAmount)}<p className="text-xs text-gray-500">SGT</p></span>
             </div>
           </div>
           
