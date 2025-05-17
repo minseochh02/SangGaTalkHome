@@ -637,7 +637,7 @@ export default function KioskPage() {
                     <p className="text-gray-600 text-sm mt-1 line-clamp-2">{product.description}</p>
                   )}
                   <div className="mt-2 flex justify-between items-center">
-                    <span className="text-red-600 font-bold">{formatPrice(product.sgt_price)}원</span>
+                    <span className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
                     <button
                       className={`px-3 py-1 rounded-md ${
                         product.is_sold_out
@@ -717,7 +717,7 @@ export default function KioskPage() {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium">{item.product_name}</h4>
-                      <p className="text-red-600 font-bold">{formatPrice(item.sgt_price)}원</p>
+                      <p className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(item.sgt_price)}<p className="text-xs text-gray-500">SGT</p></p>
                     </div>
                     <div className="flex flex-col items-end">
                       <button 
