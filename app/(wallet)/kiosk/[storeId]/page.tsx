@@ -807,7 +807,7 @@ export default function KioskPage() {
           <div className="p-4 border-t">
             <div className="flex justify-between items-center mb-4">
               <span className="text-gray-700 font-medium">총 금액</span>
-              <span className="text-xl font-bold text-red-600">{formatPrice(totalAmount)}원</span>
+              <span className="text-xl font-bold text-red-600">{formatPrice(totalAmount)}<p className="text-xs text-gray-500">SGT</p></span>
             </div>
             
             <div className="space-y-2">
