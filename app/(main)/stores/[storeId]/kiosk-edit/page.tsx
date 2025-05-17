@@ -643,8 +643,8 @@ function KioskEditContent({ storeId }: { storeId: string }) {
             {/* Dine-in Toggle */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium text-gray-800">매장 내 식사</h3>
-                <p className="text-sm text-gray-500">키오스크에서 매장 내 식사 옵션을 제공합니다.</p>
+                <h3 className="text-lg font-medium text-gray-800">매장에서</h3>
+                <p className="text-sm text-gray-500">키오스크에서 매장 내 수령 옵션을 제공합니다.</p>
               </div>
               <button
                 onClick={() => setDineInEnabled(!dineInEnabled)}

@@ -334,6 +334,17 @@ export default function KioskPage() {
     }, 700);
   };
   
+  // Check if item is in cart
+  const isInCart = (productId: string): boolean => {
+    return cartItems.some(item => item.product_id === productId);
+  };
+  
+  // Get quantity of item in cart
+  const getCartQuantity = (productId: string): number => {
+    const item = cartItems.find(item => item.product_id === productId);
+    return item ? item.quantity : 0;
+  };
+  
   const incrementItem = (productId: string) => {
     setCartItems(prevItems => 
       prevItems.map(item => 
@@ -610,69 +621,87 @@ export default function KioskPage() {
               <p className="text-gray-600">해당 카테고리에 상품이 없습니다.</p>
             </div>
           ) : (
-            filteredProducts.map((product) => (
-              <div 
-                key={product.product_id} 
-                className={`bg-white rounded-lg shadow-md overflow-hidden ${
-                  product.is_sold_out ? 'opacity-60' : ''
-                } ${recentlyAdded === product.product_id ? 'animate-pulse border-2 border-red-500' : ''}`}
-              >
-                {product.image_url ? (
-                  <div className="relative h-48 w-full">
-                    <SafeImage
-                      src={product.image_url}
-                      alt={product.product_name}
-                      fill
-                      style={{ objectFit: 'cover' }}
-                    />
-                    {product.is_sold_out && (
-                      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                        <span className="bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm font-medium">
-                          품절
-                        </span>
+            filteredProducts.map((product) => {
+              const inCart = isInCart(product.product_id);
+              const quantity = getCartQuantity(product.product_id);
+              
+              return (
+                <div 
+                  key={product.product_id} 
+                  className={`bg-white rounded-lg shadow-md overflow-hidden ${
+                    product.is_sold_out ? 'opacity-60' : ''
+                  } ${recentlyAdded === product.product_id ? 'animate-pulse' : ''}
+                    ${inCart ? 'border-2 border-red-500' : ''}`}
+                >
+                  <div className="relative">
+                    {inCart && (
+                      <div className="absolute top-2 right-2 z-10 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        {quantity}개
+                      </div>
+                    )}
+                    
+                    {product.image_url ? (
+                      <div className="relative h-48 w-full">
+                        <SafeImage
+                          src={product.image_url}
+                          alt={product.product_name}
+                          fill
+                          style={{ objectFit: 'cover' }}
+                        />
+                        {product.is_sold_out && (
+                          <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+                            <span className="bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm font-medium">
+                              품절
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-48 bg-gray-200 flex items-center justify-center">
+                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {product.is_sold_out && (
+                          <span className="absolute bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm font-medium">
+                            품절
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="h-48 bg-gray-200 flex items-center justify-center">
-                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {product.is_sold_out && (
-                      <span className="absolute bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm font-medium">
-                        품절
-                      </span>
+                  <div className="p-4">
+                    <h3 className="text-lg font-medium">{product.product_name}</h3>
+                    {product.description && (
+                      <p className="text-gray-600 text-sm mt-1 line-clamp-2">{product.description}</p>
                     )}
-                  </div>
-                )}
-                <div className="p-4">
-                  <h3 className="text-lg font-medium">{product.product_name}</h3>
-                  {product.description && (
-                    <p className="text-gray-600 text-sm mt-1 line-clamp-2">{product.description}</p>
-                  )}
-                  <div className="mt-2 flex justify-between items-center">
-                    <span className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
-                    <button
-                      className={`px-3 py-1 rounded-md ${
-                        product.is_sold_out
-                          ? 'bg-gray-300 cursor-not-allowed'
+                    <div className="mt-2 flex justify-between items-center">
+                      <span className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
+                      <button
+                        className={`px-3 py-1 rounded-md ${
+                          product.is_sold_out
+                            ? 'bg-gray-300 cursor-not-allowed'
+                            : recentlyAdded === product.product_id 
+                              ? 'bg-green-600 text-white transition-colors duration-300' 
+                              : inCart
+                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                : 'bg-red-600 text-white hover:bg-red-700'
+                        }`}
+                        onClick={() => !product.is_sold_out && addToCart(product)}
+                        disabled={product.is_sold_out}
+                      >
+                        {product.is_sold_out 
+                          ? '품절' 
                           : recentlyAdded === product.product_id 
-                            ? 'bg-green-600 text-white transition-colors duration-300' 
-                            : 'bg-red-600 text-white hover:bg-red-700'
-                      }`}
-                      onClick={() => !product.is_sold_out && addToCart(product)}
-                      disabled={product.is_sold_out}
-                    >
-                      {product.is_sold_out 
-                        ? '품절' 
-                        : recentlyAdded === product.product_id 
-                          ? '추가됨!' 
-                          : '담기'}
-                    </button>
+                            ? '추가됨!' 
+                            : inCart
+                              ? '추가' 
+                              : '담기'}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

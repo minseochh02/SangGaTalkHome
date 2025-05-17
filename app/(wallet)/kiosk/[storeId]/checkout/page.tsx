@@ -335,11 +335,11 @@ export default function CheckoutPage() {
     switch (option) {
       case 'dine-in':
         orderType = 'kiosk_dine_in';
-        optionName = '매장 식사';
+        optionName = '매장 에서';
         break;
       case 'takeout':
         orderType = 'kiosk_takeout';
-        optionName = '포장';
+        optionName = '가져가기';
         break;
       case 'delivery':
         orderType = 'kiosk_delivery';
@@ -347,7 +347,7 @@ export default function CheckoutPage() {
         break;
       default:
         orderType = 'kiosk_dine_in';
-        optionName = '매장 식사';
+        optionName = '매장 에서';
     }
     
     if (confirm(`${optionName}로 주문을 진행하시겠습니까?`)) {
@@ -403,7 +403,7 @@ export default function CheckoutPage() {
             </div>
             <div className="text-left">
               <h3 className="font-bold text-lg">매장에서</h3>
-              <p className="text-gray-600">매장 내에서 드실 경우 선택하세요</p>
+              <p className="text-gray-600">매장 내에서 수령할 경우 선택하세요</p>
             </div>
             <div className="ml-auto">
               <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -425,8 +425,8 @@ export default function CheckoutPage() {
               </svg>
             </div>
             <div className="text-left">
-              <h3 className="font-bold text-lg">포장</h3>
-              <p className="text-gray-600">포장해서 가져가실 경우 선택하세요</p>
+              <h3 className="font-bold text-lg">가져가기</h3>
+              <p className="text-gray-600">가져가실 경우 선택하세요</p>
             </div>
             <div className="ml-auto">
               <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

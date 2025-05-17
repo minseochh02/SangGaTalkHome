@@ -147,8 +147,8 @@ export default function SuccessPage() {
     if (!type) return '주문';
     
     switch (type) {
-      case 'kiosk_dine_in': return '매장 식사';
-      case 'kiosk_takeout': return '포장';
+      case 'kiosk_dine_in': return '매장 에서';
+      case 'kiosk_takeout': return '가져가기';
       case 'kiosk_delivery': return '배달';
       default: return '주문';
     }
