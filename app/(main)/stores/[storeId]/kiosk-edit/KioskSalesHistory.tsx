@@ -168,21 +168,28 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
                           </thead>
                           <tbody>
                             {expandedOrderItems[order.kiosk_order_id].map((item) => (
-                              <tr key={item.kiosk_order_item_id} className="border-b">
-                                <td className="py-2 flex items-center">
-                                  {item.product?.image_url && (
-                                    <img
-                                      src={item.product.image_url}
-                                      alt={item.product?.product_name || '상품 이미지'}
-                                      className="w-10 h-10 object-cover rounded mr-2"
-                                    />
-                                  )}
-                                  <span>{item.product?.product_name || `상품 #${item.product_id.substring(0, 8)}`}</span>
-                                </td>
-                                <td className="py-2 text-right flex items-center gap-1 flex-row">{Number(item.price_at_purchase).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></td>
-                                <td className="py-2 text-right">{item.quantity}개</td>
-                                <td className="py-2 text-right flex items-center gap-1 flex-row">{(Number(item.price_at_purchase) * item.quantity).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></td>
-                              </tr>
+
+<tr key={item.kiosk_order_item_id} className="border-b">
+  <td className="py-2 flex items-center">
+    {item.product?.image_url && (
+      <img
+        src={item.product.image_url}
+        alt={item.product?.product_name || '상품 이미지'}
+        className="w-10 h-10 object-cover rounded mr-2"
+      />
+    )}
+    <span>{item.product?.product_name || `상품 #${item.product_id.substring(0, 8)}`}</span>
+  </td>
+  <td className="py-2 text-right flex items-center justify-end">
+    <span>{Number(item.price_at_purchase).toLocaleString()}</span>
+    <span className="text-xs text-gray-500 ml-1 flex-shrink-0">SGT</span>
+  </td>
+  <td className="py-2 text-right">{item.quantity}개</td>
+  <td className="py-2 text-right flex items-center justify-end">
+    <span>{(Number(item.price_at_purchase) * item.quantity).toLocaleString()}</span>
+    <span className="text-xs text-gray-500 ml-1 flex-shrink-0">SGT</span>
+  </td>
+</tr>
                             ))}
                           </tbody>
                           <tfoot>
