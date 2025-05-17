@@ -29,6 +29,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Dialog, Transition } from '@headlessui/react';
 import KioskSalesHistory from './KioskSalesHistory';
 import KioskActiveSessions from './KioskActiveSessions';
+import KioskOrdersManagement from './KioskOrdersManagement';
 import ProductEditModal from './ProductEditModal';
 import SortableProductItem from './SortableProductItem';
 import DroppableContainer from './DroppableContainer';
@@ -831,6 +832,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         }}
         onSave={handleSaveEditedProduct}
       />
+      
+      {/* Kiosk Orders Management Section */}
+      <KioskOrdersManagement storeId={storeId} />
       
       {/* Kiosk Sales History Section */}
       <KioskSalesHistory storeId={storeId} />

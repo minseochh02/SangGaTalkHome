@@ -540,56 +540,54 @@ export default function KioskPage() {
     };
   }, [sessionId, storeId, supabase, router]); // Added router to dependencies
   
-  // useEffect for order completion notifications (Web Kiosk)
+  // Add this new useEffect for order notifications
   useEffect(() => {
-    if (!storeId || !supabase) return;
+    if (!storeId || !sessionId) return;
 
+    console.log('[KioskPage] Setting up order notification subscription for store:', storeId);
+    
     const ordersChannel = supabase
-      .channel(`web-kiosk-orders-updates-${storeId}-${sessionId || 'global'}`)
+      .channel(`web-kiosk-orders-${storeId}-${sessionId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'kiosk_orders', // Ensure this is your orders table name
-          filter: `store_id=eq.${storeId}`, // Listen to orders for this store
-          // If orders are tied to kiosk_session_id and you only want to notify this specific device:
-          // filter: `kiosk_session_id=eq.${sessionId}`,
+          table: 'kiosk_orders', // Make sure this matches your actual orders table
+          filter: `store_id=eq.${storeId}`,
         },
         (payload) => {
           console.log('[KioskPage] Order update received:', payload);
           const updatedOrder = payload.new as KioskOrder;
-
+          
+          // Check if this is a ready-for-pickup notification
           if (updatedOrder.status === 'ready_for_pickup') {
-            // Optional: Check if this order belongs to this session if that's a requirement
-            // if (sessionId && updatedOrder.kiosk_session_id === sessionId) { ... }
-            alert(
-              updatedOrder.device_number
-                ? `단말기 ${updatedOrder.device_number}번에서 주문하신 메뉴가 준비되었습니다. 픽업대로 와주세요.`
-                : '주문 완료! 주문하신 메뉴가 준비되었습니다. 픽업대로 와주세요.' // Fallback message
-            );
+            // You can optionally check if device_number matches this kiosk
+            // if (updatedOrder.device_number === deviceNumber) {
+              // For web, we'll use the built-in alert
+              alert(
+                updatedOrder.device_number 
+                  ? `단말기 ${updatedOrder.device_number}번에서 주문하신 메뉴가 준비되었습니다. 픽업대로 와주세요.`
+                  : '주문하신 메뉴가 준비되었습니다. 픽업대로 와주세요.'
+              );
+            // }
           }
         }
       )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`[KioskPage] Subscribed to kiosk_orders updates for store ${storeId}`);
-        }
-        if (status === 'CHANNEL_ERROR' || err) {
-          console.error(`[KioskPage] kiosk_orders updates channel error for store ${storeId}:`, err);
-        }
-        if (status === 'TIMED_OUT') {
-          console.warn(`[KioskPage] kiosk_orders subscription timed out for store ${storeId}`);
+          console.log(`[KioskPage] Successfully subscribed to orders for store ${storeId}`);
+        } else if (err) {
+          console.error(`[KioskPage] Error subscribing to orders:`, err);
         }
       });
 
+    // Cleanup function
     return () => {
-      if (ordersChannel) {
-        supabase.removeChannel(ordersChannel);
-        console.log(`[KioskPage] Unsubscribed from kiosk_orders updates for store ${storeId}`);
-      }
+      console.log(`[KioskPage] Cleaning up orders subscription for store ${storeId}`);
+      supabase.removeChannel(ordersChannel);
     };
-  }, [storeId, supabase, sessionId]); // sessionId is a dependency if used in channel name or logic
+  }, [storeId, sessionId, deviceNumber]); // Dependencies for this effect
   
   if (loading) {
     return (
