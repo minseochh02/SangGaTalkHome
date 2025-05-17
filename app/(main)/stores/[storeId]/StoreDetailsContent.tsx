@@ -939,6 +939,22 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							</svg>
 							리뷰 작성하기
 						</button>
+
+						<Link href={`https://sgt-wallet.com/kiosk/${storeId}`} passHref legacyBehavior>
+							<a
+								target="_blank"
+								rel="noopener noreferrer"
+								className="w-full px-4 py-3 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors duration-200 text-base font-medium flex items-center justify-center gap-2"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+									<path d="M10 21h4c.6 0 1-.4 1-1v-2c0-.6-.4-1-1-1h-4c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1Z"/>
+									<path d="M4 17V5c0-1.7 1.3-3 3-3h10c1.7 0 3 1.3 3 3v12"/>
+									<path d="M8 2h8"/>
+									<path d="M20 17a1 1 0 0 0 1-1V8c0-.6-.4-1-1-1h-2"/>
+								</svg>
+								키오스크 페이지로 이동
+							</a>
+						</Link>
 					</div>
 				</div>
 			</div>
@@ -967,15 +983,6 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								<p className="mt-3 text-sm text-gray-600">
 									스캔하여 이 스토어의 키오스크 페이지를 여세요.
 								</p>
-								<Link href={`https://sgt-wallet.com/kiosk/${storeId}`} passHref legacyBehavior>
-									<a
-										target="_blank"
-										rel="noopener noreferrer"
-										className="mt-3 px-4 py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
-									>
-										키오스크 페이지로 이동
-									</a>
-								</Link>
 							</div>
 						</div>
 						<div>
