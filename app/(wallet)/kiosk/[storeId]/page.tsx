@@ -51,6 +51,8 @@ export default function KioskPage() {
   const [showCart, setShowCart] = useState<boolean>(false);
   const [deviceNumber, setDeviceNumber] = useState<number | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
+  const [cartIconAnimate, setCartIconAnimate] = useState<boolean>(false);
   
   // Initialize kiosk session
   const initKioskSession = useCallback(async () => {
@@ -318,6 +320,18 @@ export default function KioskPage() {
         }];
       }
     });
+    
+    // Set recently added product to trigger animation
+    setRecentlyAdded(product.product_id);
+    
+    // Animate cart icon
+    setCartIconAnimate(true);
+    
+    // Clear animation states after a delay
+    setTimeout(() => {
+      setRecentlyAdded(null);
+      setCartIconAnimate(false);
+    }, 700);
   };
   
   const incrementItem = (productId: string) => {
@@ -545,7 +559,7 @@ export default function KioskPage() {
             {deviceNumber ? ` (단말기 ${deviceNumber}번)` : ''}
           </h1>
           <div 
-            className="relative cursor-pointer" 
+            className={`relative cursor-pointer ${cartIconAnimate ? 'animate-bounce' : ''}`}
             onClick={() => setShowCart(!showCart)}
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -601,7 +615,7 @@ export default function KioskPage() {
                 key={product.product_id} 
                 className={`bg-white rounded-lg shadow-md overflow-hidden ${
                   product.is_sold_out ? 'opacity-60' : ''
-                }`}
+                } ${recentlyAdded === product.product_id ? 'animate-pulse border-2 border-red-500' : ''}`}
               >
                 {product.image_url ? (
                   <div className="relative h-48 w-full">
@@ -642,12 +656,18 @@ export default function KioskPage() {
                       className={`px-3 py-1 rounded-md ${
                         product.is_sold_out
                           ? 'bg-gray-300 cursor-not-allowed'
-                          : 'bg-red-600 text-white hover:bg-red-700'
+                          : recentlyAdded === product.product_id 
+                            ? 'bg-green-600 text-white transition-colors duration-300' 
+                            : 'bg-red-600 text-white hover:bg-red-700'
                       }`}
                       onClick={() => !product.is_sold_out && addToCart(product)}
                       disabled={product.is_sold_out}
                     >
-                      {product.is_sold_out ? '품절' : '담기'}
+                      {product.is_sold_out 
+                        ? '품절' 
+                        : recentlyAdded === product.product_id 
+                          ? '추가됨!' 
+                          : '담기'}
                     </button>
                   </div>
                 </div>
