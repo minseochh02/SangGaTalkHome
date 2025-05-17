@@ -138,7 +138,7 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
                       )}
                     </div>
                     <div className="flex items-center">
-                      <span className="mr-4 font-bold">{Number(order.total_amount).toLocaleString()}SGT</span>
+                      <span className="mr-4 font-bold">{Number(order.total_amount).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></span>
                       <ChevronUpIcon
                         className={`${open ? 'rotate-180 transform' : ''} h-5 w-5 text-gray-500`}
                       />
@@ -179,16 +179,16 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
                                   )}
                                   <span>{item.product?.product_name || `상품 #${item.product_id.substring(0, 8)}`}</span>
                                 </td>
-                                <td className="py-2 text-right">{Number(item.price_at_purchase).toLocaleString()}SGT</td>
+                                <td className="py-2 text-right">{Number(item.price_at_purchase).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></td>
                                 <td className="py-2 text-right">{item.quantity}개</td>
-                                <td className="py-2 text-right">{(Number(item.price_at_purchase) * item.quantity).toLocaleString()}SGT</td>
+                                <td className="py-2 text-right">{(Number(item.price_at_purchase) * item.quantity).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></td>
                               </tr>
                             ))}
                           </tbody>
                           <tfoot>
                             <tr className="font-bold">
                               <td colSpan={3} className="py-2 text-right">총계:</td>
-                              <td className="py-2 text-right">{Number(order.total_amount).toLocaleString()}SGT</td>
+                              <td className="py-2 text-right">{Number(order.total_amount).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></td>
                             </tr>
                           </tfoot>
                         </table>
