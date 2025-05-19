@@ -365,17 +365,23 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     setSavingProducts(true);
     
     try {
-      console.log('[KioskEditPage] Saving kiosk product settings with list:', currentKioskProducts.map(p => ({id: p.product_id, name: p.product_name, order: p.kiosk_order})));
+      // The currentKioskProducts should already have the correct kiosk_order from handleDragEnd or other updates
+      console.log('[KioskEditPage] Saving kiosk product settings with list (expecting correct kiosk_order):', currentKioskProducts.map(p => ({id: p.product_id, name: p.product_name, order: p.kiosk_order})));
       
       // Step 1: Enable and set order for kiosk products in one batch
       if (currentKioskProducts.length > 0) {
-        const kioskProductIds = currentKioskProducts.map(p => p.product_id);
-        const kioskUpdates = currentKioskProducts.map((product, index) => {
+        const kioskUpdates = currentKioskProducts.map((product) => { // Removed index from map
+          // Use the product.kiosk_order that was calculated by drag & drop logic or initial load
+          if (product.kiosk_order === undefined || product.kiosk_order === null) {
+            console.warn(`Product ${product.product_id} is missing kiosk_order. This should not happen for products in kiosk list.`);
+            // Assign a fallback or skip? For now, let's be strict and expect it.
+            // If we allow it, it might get a default order of 0 which could be problematic.
+          }
           return supabase
             .from('products')
             .update({ 
               is_kiosk_enabled: true,
-              kiosk_order: index 
+              kiosk_order: product.kiosk_order // USE THE PRE-CALCULATED KIOSK_ORDER
             })
             .eq('product_id', product.product_id);
         });
@@ -493,10 +499,10 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         const updatedKioskProducts = newKioskProducts.map((product, index) => ({
           ...product,
           kiosk_order: index
-        }));
-        
-        setKioskProducts(updatedKioskProducts);
-        finalKioskProductsForSave = updatedKioskProducts;
+          }));
+
+          setKioskProducts(updatedKioskProducts);
+          finalKioskProductsForSave = updatedKioskProducts;
         kioskConfigChanged = true;
       } 
       // Product added from available to kiosk (at the end)
@@ -513,15 +519,15 @@ function KioskEditContent({ storeId }: { storeId: string }) {
           
           setKioskProducts(newKioskProducts);
           finalKioskProductsForSave = newKioskProducts;
-          kioskConfigChanged = true;
-        }
-      }
+                kioskConfigChanged = true;
+              }
+            }
       // A divider cannot be dragged to the available products list - enforce this
       else if (activeIdString.startsWith('divider-') && overIdString === 'availableProducts') {
         // No change, reset states
-        setActiveId(null);
-        setActiveDivider(null);
-        setCurrentContainer(null);
+    setActiveId(null);
+    setActiveDivider(null);
+    setCurrentContainer(null);
         return;
       }
     }
@@ -547,8 +553,8 @@ function KioskEditContent({ storeId }: { storeId: string }) {
           if (item.type === 'product') {
             const product = item.item as Product;
             newKioskProducts.push({
-              ...product,
-              kiosk_order: index
+          ...product,
+          kiosk_order: index
             });
           } else { // item.type === 'divider'
             const divider = item.item as KioskDivider;
@@ -718,7 +724,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         
         if (idx !== -1) {
             insertionIndex = idx + 1; // Insert *after* the found product
-        } else { 
+      } else {
             console.warn(`Could not find item ID ${targetProductItemId} to insert divider after. Adding to end of current items.`);
             insertionIndex = originalCombinedItems.length;
             // Fallback for intendedAfterProductIdForDB if target not found
@@ -729,8 +735,8 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
     // 2. Create the new KioskDivider object (position will be set in step 4)
     const newDividerObject: KioskDivider = {
-        id: newDividerId,
-        name: newDividerName.trim(),
+      id: newDividerId,
+      name: newDividerName.trim(),
         position: 0, // Placeholder, will be correctly set during re-indexing
         afterProductId: intendedAfterProductIdForDB // For DB, reflecting user intent
     };
@@ -816,7 +822,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   const handleRemoveDivider = async (dividerId: string) => {
     try {
       // Remove from local state
-      setDividers(dividers.filter(d => d.id !== dividerId));
+    setDividers(dividers.filter(d => d.id !== dividerId));
       
       // Also remove from the database
       const { error } = await supabase
@@ -1006,7 +1012,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         // If we were in a category, close it
         if (currentCategoryName) {
           // Add a visual end of the previous category
-          items.push(
+      items.push(
             <div key={`category-end-${currentCategoryId}`} className="border-b border-blue-200 mb-2"></div>
           );
         }
@@ -1019,19 +1025,19 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         // Add divider (category header)
         items.push(
           <div key={`category-start-${divider.id}`} className="bg-blue-50 rounded-t-md border border-blue-200 border-b-0 mt-1">
-            <SortableDividerItem
-              key={`divider-${divider.id}`}
-              divider={{ product_id: divider.id, product_name: divider.name }}
-              onRemove={handleRemoveDivider}
-            />
+        <SortableDividerItem
+          key={`divider-${divider.id}`}
+          divider={{ product_id: divider.id, product_name: divider.name }}
+          onRemove={handleRemoveDivider}
+        />
           </div>
         );
       } else { // item.type === 'product'
         const product = item.item as Product;
-        const productId = product.product_id.toString();
-        
+      const productId = product.product_id.toString();
+      
         // Add the product with proper styling based on category
-        items.push(
+      items.push(
           <div 
             key={`product-wrapper-${productId}`} 
             className={currentCategoryName 
@@ -1039,18 +1045,18 @@ function KioskEditContent({ storeId }: { storeId: string }) {
               : ""
             }
           >
-            <SortableProductItem 
+        <SortableProductItem 
               key={`kiosk-product-${product.product_id}`} 
-              product={product} 
-              isKioskProduct={true}
-              onToggleSoldOut={handleToggleSoldOut}
-              onEditProduct={handleEditProduct}
-            />
+          product={product} 
+          isKioskProduct={true}
+          onToggleSoldOut={handleToggleSoldOut}
+          onEditProduct={handleEditProduct}
+        />
           </div>
         );
-        
-        // Add placeholder after each product
-        items.push(
+      
+      // Add placeholder after each product
+      items.push(
           <div 
             key={`placeholder-wrapper-${productId}`} 
             className={currentCategoryName 
@@ -1058,15 +1064,15 @@ function KioskEditContent({ storeId }: { storeId: string }) {
               : ""
             }
           >
-            <AddDividerPlaceholder
-              key={`divider-placeholder-after-${productId}`}
-              onClick={() => handleShowDividerInput(productId)}
-              showInput={addingDividerAfter === productId}
-              inputValue={newDividerName}
-              onInputChange={setNewDividerName}
-              onSave={handleSaveNewDivider}
-              onCancel={handleCancelAddDivider}
-            />
+        <AddDividerPlaceholder
+          key={`divider-placeholder-after-${productId}`}
+          onClick={() => handleShowDividerInput(productId)}
+          showInput={addingDividerAfter === productId}
+          inputValue={newDividerName}
+          onInputChange={setNewDividerName}
+          onSave={handleSaveNewDivider}
+          onCancel={handleCancelAddDivider}
+        />
           </div>
         );
       }
@@ -1081,28 +1087,28 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
     // Handle the case where there are no items
     if (combinedItems.length === 0) {
-      items.push(
-        <div key="empty-kiosk-message" className="flex flex-col justify-center items-center h-40 text-gray-400">
-          <p>키오스크에 표시할 상품을 추가하세요.</p>
-        </div>
-      );
+        items.push(
+          <div key="empty-kiosk-message" className="flex flex-col justify-center items-center h-40 text-gray-400">
+            <p>키오스크에 표시할 상품을 추가하세요.</p>
+          </div>
+        );
     }
     
     // Add a final placeholder if the last item was a divider or the list is empty
     const lastItem = combinedItems[combinedItems.length - 1];
     if (!lastItem || lastItem.type === 'divider') {
-      items.push(
-        <AddDividerPlaceholder
+        items.push(
+          <AddDividerPlaceholder
           key="last-divider-placeholder"
-          onClick={() => handleShowDividerInput(null)}
-          showInput={addingDividerAfter === null}
-          inputValue={newDividerName}
-          onInputChange={setNewDividerName}
-          onSave={handleSaveNewDivider}
-          onCancel={handleCancelAddDivider}
-        />
-      );
-    }
+            onClick={() => handleShowDividerInput(null)}
+            showInput={addingDividerAfter === null}
+            inputValue={newDividerName}
+            onInputChange={setNewDividerName}
+            onSave={handleSaveNewDivider}
+            onCancel={handleCancelAddDivider}
+          />
+        );
+      }
 
     return items;
   };
