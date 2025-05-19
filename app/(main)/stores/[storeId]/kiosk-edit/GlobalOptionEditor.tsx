@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 // Import FontAwesome components and icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { library, IconPrefix, IconName } from '@fortawesome/fontawesome-svg-core';
+import { library, IconPrefix, IconName, findIconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
 import { JSX } from 'react/jsx-runtime';
@@ -57,7 +57,7 @@ const faIconNames: IconName[] = [
   "truck-fast", "clock", "calendar-days", "credit-card",
   "bell-concierge", "temperature-high", "temperature-low", "snowflake",
   "sun", "moon", "cloud", "droplet", "wine-glass", "champagne-glasses", "cookie-bite", "fish",
-  "cubes-stacked", "cube", "hand-holding-heart", "image", "question-circle", "save", "plus-circle", "times", "trash-alt", "times-circle", "folder-open"
+  "cubes-stacked", "cube", "hand-holding-heart", "image", "question-circle", "save", "plus-circle", "times", "trash-alt", "times-circle", "folder-open", "check-circle", "check"
 ];
 
 
@@ -104,31 +104,32 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   useEffect(() => {
     const fetchGlobalOptions = async () => {
       setLoading(true);
+      // Mock data with one default choice per category
       const mockOptions: ProductOptionCategory[] = [
         { 
           id: 'opt-1', name: '얼음 양', icon: '🧊', 
           choices: [
-            { id: 'choice-1', name: '적게', icon: 'fas cubes-stacked' },
-            { id: 'choice-2', name: '보통', icon: 'fas cube' }, 
-            { id: 'choice-3', name: '많이', icon: 'fas cubes-stacked' },
-            { id: 'choice-3b', name: '아주 많이', icon: 'fas cubes-stacked' }
+            { id: 'choice-1', name: '적게', icon: 'fas cubes-stacked', isDefault: false },
+            { id: 'choice-2', name: '보통', icon: 'fas cube', isDefault: true }, 
+            { id: 'choice-3', name: '많이', icon: 'fas cubes-stacked', isDefault: false },
+            { id: 'choice-3b', name: '아주 많이', icon: 'fas cubes-stacked', isDefault: false }
           ] 
         },
         { 
           id: 'opt-2', name: '시럽 추가 옵션', icon: '🍯', 
           choices: [
-            { id: 'choice-4', name: '추가 안함' }, 
-            { id: 'choice-5', name: '바닐라', icon: '1️⃣' }, 
-            { id: 'choice-6', name: '헤이즐넛', icon: '1️⃣' },
-            { id: 'choice-6b', name: '카라멜', icon: '2️⃣' }
+            { id: 'choice-4', name: '추가 안함', isDefault: true }, 
+            { id: 'choice-5', name: '바닐라', icon: '1️⃣', isDefault: false }, 
+            { id: 'choice-6', name: '헤이즐넛', icon: '1️⃣', isDefault: false },
+            { id: 'choice-6b', name: '카라멜', icon: '2️⃣', isDefault: false }
           ] 
         },
         { 
           id: 'opt-3', name: '컵 선택', icon: 'fas mug-hot', 
           choices: [
-            { id: 'choice-7', name: '매장컵', icon: 'fas store' }, 
-            { id: 'choice-8', name: '개인컵', icon: 'fas hand-holding-heart' }, 
-            { id: 'choice-9', name: '일회용컵', icon: 'fas trash-alt' }
+            { id: 'choice-7', name: '매장컵', icon: 'fas store', isDefault: true }, 
+            { id: 'choice-8', name: '개인컵', icon: 'fas hand-holding-heart', isDefault: false }, 
+            { id: 'choice-9', name: '일회용컵', icon: 'fas trash-alt', isDefault: false }
           ] 
         }
       ];
@@ -163,10 +164,18 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       return;
     }
     
-    // Ensure we have exactly one default option if none was set
-    let hasDefault = validChoices.some(c => c.isDefault);
-    if (!hasDefault && validChoices.length > 0) {
-      validChoices[0].isDefault = true;
+    let defaultCount = validChoices.filter(c => c.isDefault).length;
+    if (defaultCount === 0 && validChoices.length > 0) {
+      validChoices[0].isDefault = true; // Set first as default if none selected
+    } else if (defaultCount > 1) {
+      // If multiple defaults somehow got selected, keep only the first one
+      let firstDefaultFound = false;
+      validChoices.forEach(c => {
+        if (c.isDefault) {
+          if (firstDefaultFound) c.isDefault = false;
+          else firstDefaultFound = true;
+        }
+      });
     }
     
     const newCategory: ProductOptionCategory = {
@@ -187,7 +196,6 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   const handleNewChoiceChange = (index: number, field: 'name' | 'icon' | 'isDefault', value: any) => {
     const updatedChoices = [...newChoices];
     
-    // If setting a choice as default, unset default for all other choices
     if (field === 'isDefault' && value === true) {
       updatedChoices.forEach((choice, i) => {
         if (i !== index) updatedChoices[i] = { ...updatedChoices[i], isDefault: false };
@@ -205,7 +213,14 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         showNotification('최소 하나의 선택지는 유지해야 합니다.', 'error');
         return;
     }
-    setNewChoices(newChoices.filter((_, i) => i !== index));
+    const removedChoiceWasDefault = newChoices[index].isDefault;
+    const updatedChoices = newChoices.filter((_, i) => i !== index);
+
+    // If the removed choice was the default and there are other choices left, make the new first choice the default.
+    if (removedChoiceWasDefault && updatedChoices.length > 0 && !updatedChoices.some(c => c.isDefault)) {
+        updatedChoices[0].isDefault = true;
+    }
+    setNewChoices(updatedChoices);
   };
 
   const handleRemoveCategory = (id: string) => {
@@ -213,11 +228,31 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     showNotification('카테고리가 삭제되었습니다.', 'success');
   };
 
+  // NEW: Function to set a choice as default within an existing category
+  const handleSetDefaultChoice = (categoryId: string, choiceIdToSetAsDefault: string) => {
+    setGlobalOptions(prevOptions =>
+      prevOptions.map(category => {
+        if (category.id === categoryId) {
+          // Ensure only one default choice in this category
+          const updatedChoices = category.choices.map(choice => ({
+            ...choice,
+            isDefault: choice.id === choiceIdToSetAsDefault
+          }));
+          return { ...category, choices: updatedChoices };
+        }
+        return category;
+      })
+    );
+    showNotification('기본 선택이 변경되었습니다. 변경 사항을 저장해주세요.', 'success');
+  };
+
   const handleSaveOptions = async () => {
     setSaving(true);
     try {
+      // Here you would typically send `globalOptions` to your backend/Supabase
       console.log('Saving global options:', globalOptions);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
       showNotification('글로벌 옵션이 성공적으로 저장되었습니다.', 'success');
     } catch (e) {
       console.error('Error saving options:', e);
@@ -229,7 +264,9 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   
   const openLinkModal = (option: ProductOptionCategory) => {
     setSelectedOption(option);
-    setSelectedProducts([]);
+    // Mock: Fetch currently linked products for this option if needed
+    // For now, assume no products are pre-selected when opening
+    setSelectedProducts([]); 
     setShowLinkModal(true);
   };
   
@@ -243,8 +280,10 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     if (!selectedOption) return;
     setSaving(true);
     try {
+      // Here you would typically save the link between selectedOption.id and selectedProducts
       console.log('Linking option', selectedOption.id, 'to products:', selectedProducts);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
       showNotification('상품 연결이 성공적으로 저장되었습니다.', 'success');
       setShowLinkModal(false);
       setSelectedOption(null);
@@ -271,7 +310,6 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     setPickingIconFor(null);
   };
 
-  // Main icon rendering function used for category headers and choice items
   const renderIconDisplay = useCallback((iconString?: string, sizeClass: string = "text-xl sm:text-2xl"): JSX.Element | null => {
     if (!iconString || iconString.trim() === '') return null;
     const parts = iconString.split(' ');
@@ -291,20 +329,26 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
 
     if (parsedPrefix && parsedIconName) {
         try {
-            return <FontAwesomeIcon icon={[parsedPrefix, parsedIconName]} className={`${sizeClass} flex-shrink-0`} />;
+            // Check if the icon is in the library
+            const iconLookup = findIconDefinition({ prefix: parsedPrefix, iconName: parsedIconName });
+            if (iconLookup) {
+                return <FontAwesomeIcon icon={[parsedPrefix, parsedIconName]} className={`${sizeClass} flex-shrink-0`} />;
+            } else {
+                console.warn(`FontAwesome icon fas ${parsedIconName} or far ${parsedIconName} not found in library. Icon string: ${iconString}`);
+            }
         } catch (e) { console.warn(`Error rendering FA icon: ${iconString}`, e); }
     }
+    // Check for emoji (simplified check)
     const faRelated = iconString.toLowerCase().includes('fa') || iconString.toLowerCase().includes('solid') || iconString.toLowerCase().includes('regular') || (parsedPrefix !== undefined);
     if (!faRelated && (iconString.length <= 2 || iconString.match(/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]/))) {
         return <span className={`${sizeClass} flex-shrink-0`}>{iconString}</span>;
     }
-    // Fallback icon
+    // Fallback icon if not an emoji and not a valid FA icon
     return <span className="text-gray-400 text-xs flex-shrink-0" title={`Unknown icon: ${iconString}`}><FontAwesomeIcon icon={['far', 'question-circle']} className={sizeClass} /></span>;
   }, []);
 
-  // Icon rendering for input previews (smaller)
   const renderIconForInput = useCallback((iconString?: string): JSX.Element | null => {
-    return renderIconDisplay(iconString, "text-lg"); // Use a smaller size for input previews
+    return renderIconDisplay(iconString, "text-lg");
   }, [renderIconDisplay]);
 
 
@@ -344,7 +388,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           </div>
           <p className="text-gray-600 mb-8 text-sm sm:text-base leading-relaxed">
             여기서 생성한 옵션은 여러 상품에 공통으로 적용할 수 있습니다. 옵션을 생성한 후 원하는 상품에 연결하세요.<br/>
-            아이콘은 목록에서 선택하거나 이모지 (예: 🧊)를 직접 입력할 수 있습니다. (형식: "fas 아이콘이름" 또는 "far 아이콘이름")
+            아이콘은 목록에서 선택하거나 이모지 (예: 🧊)를 직접 입력할 수 있습니다. (형식: "fas 아이콘이름" 또는 "far 아이콘이름")<br/>
+            옵션 카드를 클릭하여 기본 선택을 빠르게 변경할 수 있습니다.
           </p>
 
           {globalOptions.length > 0 ? (
@@ -367,23 +412,23 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                   </div>
 
                   <div className="flex flex-col flex-grow gap-y-4">
-                    {/* Category Header - Now always on top */}
                     <div className="w-full pb-4 mb-4 border-b border-gray-200">
                       <div className="flex items-start space-x-3 mb-1">
-                        {renderIconDisplay(category.icon, "text-2xl sm:text-3xl")} {/* Larger icon for category title */}
+                        {renderIconDisplay(category.icon, "text-2xl sm:text-3xl")}
                         <h4 className="font-semibold text-2xl text-gray-800">{category.name}</h4>
                       </div>
                     </div>
 
-                    {/* Options List */}
                     <div className="w-full">
                       {category.choices.length > 0 ? (
                         <div className="flex flex-row flex-wrap gap-3">
                           {category.choices.map(choice => (
                             <div 
                               key={choice.id} 
-                              className={`bg-slate-50 p-3 rounded-lg flex flex-col items-center justify-center shadow-sm hover:bg-slate-100 transition-colors border ${choice.isDefault ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'} min-w-[80px] md:min-w-[100px] flex-1 text-center cursor-default relative`}
-                              style={{ minHeight: '90px' }} // Ensure cards have some minimum height
+                              onClick={() => handleSetDefaultChoice(category.id, choice.id)} // MODIFIED: Added onClick handler
+                              className={`bg-slate-50 p-3 rounded-lg flex flex-col items-center justify-center shadow-sm hover:bg-slate-100 transition-colors border ${choice.isDefault ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'} min-w-[80px] md:min-w-[100px] flex-1 text-center cursor-pointer relative`} // MODIFIED: Changed cursor-default to cursor-pointer
+                              style={{ minHeight: '90px' }}
+                              title={`클릭하여 "${choice.name}"을(를) 기본 선택으로 설정`}
                             >
                               {choice.isDefault && (
                                 <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 font-medium shadow-sm">
@@ -391,11 +436,11 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                                 </div>
                               )}
                               <div className="flex flex-col items-center justify-center flex-grow">
-                                {renderIconDisplay(choice.icon, "text-2xl mb-1.5")} {/* Icon for choice, slightly smaller, with bottom margin */}
+                                {renderIconDisplay(choice.icon, "text-2xl mb-1.5")}
                                 <span className="text-xs sm:text-sm text-slate-700 leading-tight">{choice.name}</span>
                               </div>
-                              {choice.price_impact && (
-                                  <span className={`mt-2 text-xs font-medium ${choice.price_impact > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {choice.price_impact !== undefined && ( // Display price impact if it exists
+                                  <span className={`mt-2 text-xs font-medium ${choice.price_impact > 0 ? 'text-green-600' : choice.price_impact < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                                       ({choice.price_impact > 0 ? '+' : ''}{choice.price_impact.toLocaleString()}원)
                                   </span>
                               )}
@@ -413,6 +458,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                   <div className="text-sm text-gray-600 mt-auto pt-5 border-t border-gray-200">
                     <span className="font-semibold">연결된 상품:</span>
                     <span className="italic ml-1.5 text-gray-500">
+                      {/* This part would ideally show actual linked product count or names */}
                       아직 연결된 상품 정보가 없습니다. '상품 연결' 버튼을 사용하세요.
                     </span>
                   </div>
@@ -443,7 +489,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold text-gray-700">새 옵션 카테고리 생성</h3>
               <button
-                onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '' }, { name: '', icon: '' }]); }}
+                onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
                 title="닫기"
               >
@@ -473,7 +519,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-600 mb-1.5">옵션 선택지 <span className="text-red-500">*</span></label>
-              <p className="text-xs text-gray-500 mb-3">각 선택지에 이름과 아이콘(선택)을 설정할 수 있습니다.</p>
+              <p className="text-xs text-gray-500 mb-3">각 선택지에 이름과 아이콘(선택)을 설정할 수 있습니다. 하나의 선택지를 기본값으로 지정하세요.</p>
               <div className="space-y-3">
                 {newChoices.map((choice, index) => (
                   <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
@@ -491,7 +537,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                         >
                           <FontAwesomeIcon icon={['fas', 'check-circle']} className="w-5 h-5" />
                         </button>
-                        {newChoices.length > 1 && (
+                        {newChoices.length > 1 && ( // Only show remove button if there's more than one choice
                             <button type="button" onClick={() => handleRemoveNewChoice(index)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors" title="선택지 삭제">
                                 <FontAwesomeIcon icon={['fas', 'times-circle']} className="w-5 h-5" />
                             </button>
@@ -503,7 +549,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                           <FontAwesomeIcon icon={['fas', 'check']} className="w-3 h-3 mr-1" /> 기본 선택
                         </span>
                       )}
-                      {choice.icon && (
+                      {choice.icon && ( // Show icon input only if an icon is selected/entered
                           <input type="text" placeholder='예: "fas star" 또는 ⭐' className="block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder-gray-400 text-xs" value={choice.icon} onChange={(e) => handleNewChoiceChange(index, 'icon', e.target.value)} title="선택한 아이콘 (직접 수정 가능)"/>
                       )}
                     </div>
@@ -517,7 +563,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             </div>
             
             <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-8 pt-6 border-t border-gray-200">
-              <button type="button" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '' }, { name: '', icon: '' }]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
+              <button type="button" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
               <button type="button" onClick={handleAddCategory} className="px-6 py-2.5 bg-blue-600 border border-transparent rounded-lg shadow-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">카테고리 추가 완료</button>
             </div>
           </div>
@@ -533,12 +579,12 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                         </button>
                     </div>
                     <div className="overflow-y-auto flex-grow grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 custom-scrollbar pr-2">
-                        {faIconNames.map(iconName => (
+                        {faIconNames.map(iconName => ( // Only map through curated list
                             <button key={`fas-${iconName}`} type="button" onClick={() => handleIconSelect(`fas ${iconName}`)} className="p-3 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-blue-100 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all aspect-square" title={`fas ${iconName}`}>
                                 <FontAwesomeIcon icon={['fas', iconName]} className="text-2xl text-gray-700" />
                             </button>
                         ))}
-                        {faIconNames.map(iconName => ( 
+                        {faIconNames.map(iconName => (  // Only map through curated list
                              <button key={`far-${iconName}`} type="button" onClick={() => handleIconSelect(`far ${iconName}`)} className="p-3 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-blue-100 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all aspect-square" title={`far ${iconName}`}>
                                 <FontAwesomeIcon icon={['far', iconName]} className="text-2xl text-gray-700" />
                             </button>
