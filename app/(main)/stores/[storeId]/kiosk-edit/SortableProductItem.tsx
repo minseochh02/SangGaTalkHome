@@ -1,267 +1,122 @@
-import React, { useState, useEffect } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  UniqueIdentifier,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable';
-import { Product } from '@/utils/type'; // Your Product type
-import SortableProductItem from './SortableProductItem'; // Your existing component
-import SortableDividerItem, { DividerItemData } from './SortableDividerItem'; // New component for dividers
+import React from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Product } from '@/utils/type';
 
-// Define the structure for a product item within our Kiosk list
-interface ProductListItem {
-  id: UniqueIdentifier; // Unique ID for dnd-kit, e.g., `kiosk-${product.product_id}`
-  type: 'product';
-  originalProduct: Product; // This holds the actual product data
+interface SortableProductItemProps {
+  product: Product;
+  isKioskProduct?: boolean;
+  onToggleSoldOut: (productId: string | number, currentStatus: boolean) => Promise<void>;
+  onEditProduct: (product: Product) => void;
 }
 
-// Union type for items in our sortable list
-export type KioskListItem = DividerItemData | ProductListItem;
-
-// --- InsertActionComponent ---
-// This component handles showing the insert line/button and the category input form
-interface InsertActionComponentProps {
-  index: number; // Index in the list where this insert action is placed
-  onShowInput: (index: number) => void;
-  onAddCategory: (index: number, name: string) => void;
-  isInputVisible: boolean;
-  onCancelInput: () => void;
-}
-
-const InsertActionComponent: React.FC<InsertActionComponentProps> = ({
-  index,
-  onShowInput,
-  onAddCategory,
-  isInputVisible,
-  onCancelInput,
+const SortableProductItem: React.FC<SortableProductItemProps> = ({
+  product,
+  isKioskProduct = false,
+  onToggleSoldOut,
+  onEditProduct
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [categoryName, setCategoryName] = useState('');
-
-  const handleAddClick = () => {
-    if (categoryName.trim()) {
-      onAddCategory(index, categoryName.trim());
-      setCategoryName(''); // Reset for next use
-    }
+  // For kiosk products, we use a prefix to distinguish them in the drag and drop context
+  const id = isKioskProduct ? `kiosk-${product.product_id}` : `${product.product_id}`;
+  
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   };
-
-  if (isInputVisible) {
-    return (
-      <div className="my-3 p-4 bg-blue-50 border border-blue-300 rounded-lg shadow-sm">
-        <input
-          type="text"
-          placeholder="새 카테고리 이름 입력"
-          value={categoryName}
-          onChange={(e) => setCategoryName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          autoFocus
-          onKeyDown={(e) => { if (e.key === 'Enter') handleAddClick(); if (e.key === 'Escape') onCancelInput();}}
-        />
-        <div className="mt-3 flex justify-end space-x-2">
-          <button
-            onClick={onCancelInput}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          >
-            취소
-          </button>
-          <button
-            onClick={handleAddClick}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            카테고리 추가
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  
+  // Helper function to format price with commas
+  const formatPrice = (price: number | null): string => {
+    if (price === null) return "0";
+    return price.toLocaleString();
+  };
+  
   return (
     <div
-      className="h-10 my-1 flex items-center justify-center relative group cursor-pointer"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onShowInput(index)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onShowInput(index);}}
-      aria-label={`Add category section at position ${index + 1}`}
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`p-3 my-2 rounded-lg border bg-white shadow-sm transition-all ${
+        isDragging ? 'z-10 shadow-lg' : ''
+      } ${isKioskProduct ? 'border-green-300' : 'border-gray-200'}`}
     >
-      <div
-        className={`absolute inset-x-0 top-1/2 transform -translate-y-1/2 flex items-center justify-center transition-opacity duration-150 ease-in-out ${
-          isHovered ? 'opacity-100' : 'opacity-0 group-focus-within:opacity-100'
-        }`}
-      >
-        <div className="w-full h-px bg-blue-400"></div>
-        <div className="absolute bg-white p-1.5 rounded-full border-2 border-blue-500 shadow-md">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+      <div className="flex items-center gap-3">
+        <div className="cursor-grab">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
           </svg>
         </div>
+        
+        {/* Product image */}
+        {product.image_url ? (
+          <img 
+            src={product.image_url} 
+            alt={product.product_name}
+            className="w-12 h-12 object-cover rounded"
+          />
+        ) : (
+          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+            No Image
+          </div>
+        )}
+        
+        {/* Product details */}
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h4 className="font-medium">{product.product_name}</h4>
+            {product.is_sold_out && (
+              <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full">
+                품절
+              </span>
+            )}
+          </div>
+          <div className="flex text-sm gap-2">
+            <span className="text-gray-600">{formatPrice(product.won_price)}원</span>
+            {product.sgt_price && (
+              <span className="text-blue-600">{formatPrice(product.sgt_price)} SGT</span>
+            )}
+          </div>
+        </div>
+        
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => onToggleSoldOut(product.product_id, product.is_sold_out || false)}
+            className={`p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+              product.is_sold_out 
+                ? 'bg-red-100 hover:bg-red-200 focus:ring-red-500' 
+                : 'bg-gray-100 hover:bg-gray-200 focus:ring-gray-500'
+            }`}
+            title={product.is_sold_out ? "재고 있음으로 변경" : "품절 처리"}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${product.is_sold_out ? 'text-red-600' : 'text-gray-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={() => onEditProduct(product)}
+            className="p-1.5 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+            title="상품 편집"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        </div>
       </div>
-      {/* Hidden text for screen readers when not hovered/focused */}
-      {!isHovered && <span className="sr-only">Add category here</span>}
     </div>
   );
 };
 
-
-// --- KioskProductList ---
-interface KioskProductListProps {
-  initialProducts: Product[];
-  onToggleSoldOut: (productId: string | number, currentStatus: boolean) => void;
-  onEditProduct: (product: Product) => void;
-  onOrderChange: (orderedItems: KioskListItem[]) => void; // Callback for when list order or content changes
-}
-
-const KioskProductList: React.FC<KioskProductListProps> = ({
-  initialProducts,
-  onToggleSoldOut,
-  onEditProduct,
-  onOrderChange,
-}) => {
-  const [items, setItems] = useState<KioskListItem[]>([]);
-  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null); // For dnd-kit visual feedback
-  const [activeIndexForCategoryInput, setActiveIndexForCategoryInput] = useState<number | null>(null);
-
-  useEffect(() => {
-    // Initialize items from initialProducts, transforming them into ProductListItem
-    const productListItems: ProductListItem[] = initialProducts.map((product, index) => ({
-      id: `kiosk-${product.product_id}`, // Consistent with SortableProductItem's ID logic
-      type: 'product',
-      originalProduct: {
-        ...product,
-        // Ensure kiosk_order is set if it's used for initial sorting or display
-        // kiosk_order: product.kiosk_order !== undefined ? product.kiosk_order : index,
-      }
-    }));
-    setItems(productListItems);
-  }, [initialProducts]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragStart = (event: DragEndEvent) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveId(null);
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setItems((currentItems) => {
-        const oldIndex = currentItems.findIndex((item) => item.id === active.id);
-        const newIndex = currentItems.findIndex((item) => item.id === over.id);
-        const updatedItems = arrayMove(currentItems, oldIndex, newIndex);
-        onOrderChange(updatedItems); // Notify parent of order change
-        return updatedItems;
-      });
-    }
-  };
-
-  const handleShowCategoryInput = (index: number) => {
-    setActiveIndexForCategoryInput(index);
-  };
-
-  const handleAddCategory = (insertAtIndex: number, name: string) => {
-    const newDivider: DividerItemData = {
-      id: `divider-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // More unique ID
-      type: 'divider',
-      name: name,
-    };
-    
-    setItems((currentItems) => {
-      const newItems = [...currentItems];
-      newItems.splice(insertAtIndex, 0, newDivider);
-      onOrderChange(newItems); // Notify parent of content change
-      return newItems;
-    });
-    setActiveIndexForCategoryInput(null); // Close input form
-  };
-
-  const handleCancelCategoryInput = () => {
-    setActiveIndexForCategoryInput(null);
-  };
-  
-  // Handler to remove an item (product or divider) - Example
-  const handleRemoveItem = (idToRemove: UniqueIdentifier) => {
-    setItems(currentItems => {
-        const updatedItems = currentItems.filter(item => item.id !== idToRemove);
-        onOrderChange(updatedItems);
-        return updatedItems;
-    });
-  };
-
-
-  return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-        <div className="p-4 bg-gray-50 rounded-lg shadow">
-          {/* Insert Action for the very top of the list */}
-          <InsertActionComponent
-            index={0}
-            onShowInput={handleShowCategoryInput}
-            onAddCategory={handleAddCategory}
-            isInputVisible={activeIndexForCategoryInput === 0}
-            onCancelInput={handleCancelCategoryInput}
-          />
-
-          {items.map((item, index) => (
-            <React.Fragment key={item.id}>
-              {item.type === 'product' ? (
-                <SortableProductItem
-                  // id={item.id.toString()} // dnd-kit's useSortable will get ID from SortableContext
-                  product={item.originalProduct}
-                  isKioskProduct={true} // Assuming this context is always for kiosk
-                  onToggleSoldOut={onToggleSoldOut}
-                  onEditProduct={onEditProduct}
-                  // Add a remove handler if needed for products
-                  // onRemove={() => handleRemoveItem(item.id)}
-                />
-              ) : (
-                <SortableDividerItem 
-                  divider={item} 
-                  // Add a remove handler if needed for dividers
-                  // onRemove={() => handleRemoveItem(item.id)}
-                />
-              )}
-              {/* Insert Action between items */}
-              <InsertActionComponent
-                index={index + 1} // Insert *after* the current item
-                onShowInput={handleShowCategoryInput}
-                onAddCategory={handleAddCategory}
-                isInputVisible={activeIndexForCategoryInput === (index + 1)}
-                onCancelInput={handleCancelCategoryInput}
-              />
-            </React.Fragment>
-          ))}
-           {items.length === 0 && (
-             <p className="text-center text-gray-500 py-4">상품 목록이 비어있습니다. 첫 카테고리 또는 상품을 추가하세요.</p>
-           )}
-        </div>
-      </SortableContext>
-    </DndContext>
-  );
-};
-
-export default KioskProductList;
+export default SortableProductItem;
