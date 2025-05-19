@@ -82,28 +82,43 @@ const ProductEditModal = ({
         sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
         won_price: wonPrice ? parseFloat(wonPrice) : 0,
         image_url: imageUrl,
-        options: productOptions,
+        // options: productOptions, // productOptions are saved separately now
       };
       
       // Call the parent component's onSave function to save the basic product details
-      await onSave(updatedProduct);
+      // This onSave is from KioskEditPage and saves the main product attributes
+      await onSave(updatedProduct); 
+      console.log("ProductEditModal: Basic product details saved via parent onSave.");
       
       // Check if we have any options to save
-      if (productOptions && productOptions.length > 0) {
+      if (productOptions && productOptions.length > 0 && product.product_id && product.store_id) {
+        console.log("ProductEditModal: Attempting to save options:", JSON.stringify(productOptions, null, 2)); 
         try {
-          // Transform ProductOptionCategory[] to ProductOptionGroup[]
-          const optionGroups = transformCategoriesToGroups(
+          // Transform ProductOptionCategory[] (from editor state) to ProductOptionGroup[] (for DB)
+          const optionGroupsToSave = transformCategoriesToGroups(
             productOptions, 
             product.product_id, 
             product.store_id
           );
           
+          console.log("ProductEditModal: Transformed optionGroups for DB:", JSON.stringify(optionGroupsToSave, null, 2)); 
+          
           // Save the product options to the database
-          await saveProductOptions(product.product_id, product.store_id, optionGroups);
-          console.log('Product options saved successfully.');
+          await saveProductOptions(product.product_id, product.store_id, optionGroupsToSave);
+          console.log('Product options saved successfully to DB.');
         } catch (optionsError) {
-          console.error('Error saving product options:', optionsError);
-          // Consider what to do on option save error - maybe show a warning but don't block the flow
+          console.error('Error saving product options to DB:', optionsError);
+          alert('상품 옵션 저장 중 오류가 발생했습니다.'); 
+        }
+      } else {
+        // If there are no productOptions, but we might need to clear existing options in DB
+        // This handles the case where all options were removed.
+        if (product.product_id && product.store_id) {
+            console.log("ProductEditModal: No options in editor, ensuring options are cleared in DB for product:", product.product_id);
+            await saveProductOptions(product.product_id, product.store_id, []); // Pass empty array to delete existing
+            console.log('Ensured no options are present in DB for this product.');
+        } else {
+            console.warn("ProductEditModal: product_id or store_id missing, cannot clear options.");
         }
       }
       
