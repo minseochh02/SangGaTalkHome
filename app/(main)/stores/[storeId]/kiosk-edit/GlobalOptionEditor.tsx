@@ -107,26 +107,26 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           id: 'opt-1', name: '얼음 양', icon: '🧊', 
           choices: [
             { id: 'choice-1', name: '적게', icon: 'fas cubes-stacked' },
-            { id: 'choice-2', name: '보통' }, 
-            { id: 'choice-3', name: '많이', icon: 'fas cube' },
-            { id: 'choice-3b', name: '아주 많이 (추가 요금)', icon: 'fas cubes-stacked' }
+            { id: 'choice-2', name: '보통', icon: 'fas cube' }, 
+            { id: 'choice-3', name: '많이', icon: 'fas cubes-stacked' },
+            { id: 'choice-3b', name: '아주 많이', icon: 'fas cubes-stacked' }
           ] 
         },
         { 
-          id: 'opt-2', name: '시럽 추가 옵션 (선택 사항)', icon: '🍯', 
+          id: 'opt-2', name: '시럽 추가 옵션', icon: '🍯', 
           choices: [
             { id: 'choice-4', name: '추가 안함' }, 
-            { id: 'choice-5', name: '바닐라 시럽 (1펌프)', icon: '1️⃣' }, 
-            { id: 'choice-6', name: '헤이즐넛 시럽 (1펌프)', icon: '1️⃣' },
-            { id: 'choice-6b', name: '카라멜 시럽 (2펌프)', icon: '2️⃣' }
+            { id: 'choice-5', name: '바닐라', icon: '1️⃣' }, 
+            { id: 'choice-6', name: '헤이즐넛', icon: '1️⃣' },
+            { id: 'choice-6b', name: '카라멜', icon: '2️⃣' }
           ] 
         },
         { 
           id: 'opt-3', name: '컵 선택', icon: 'fas mug-hot', 
           choices: [
-            { id: 'choice-7', name: '매장컵 (환경보호 동참)', icon: 'fas store' }, 
-            { id: 'choice-8', name: '개인컵 (할인 적용)', icon: 'fas hand-holding-heart' }, 
-            { id: 'choice-9', name: '일회용컵' }
+            { id: 'choice-7', name: '매장컵', icon: 'fas store' }, 
+            { id: 'choice-8', name: '개인컵', icon: 'fas hand-holding-heart' }, 
+            { id: 'choice-9', name: '일회용컵', icon: 'fas trash-alt' }
           ] 
         }
       ];
@@ -250,7 +250,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     setPickingIconFor(null);
   };
 
-  const renderIcon = useCallback((iconString?: string): JSX.Element | null => {
+  // Main icon rendering function used for category headers and choice items
+  const renderIconDisplay = useCallback((iconString?: string, sizeClass: string = "text-xl sm:text-2xl"): JSX.Element | null => {
     if (!iconString || iconString.trim() === '') return null;
     const parts = iconString.split(' ');
     let parsedPrefix: IconPrefix | undefined = undefined;
@@ -269,15 +270,21 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
 
     if (parsedPrefix && parsedIconName) {
         try {
-            return <FontAwesomeIcon icon={[parsedPrefix, parsedIconName]} className="text-xl sm:text-2xl flex-shrink-0" />; // Increased size
+            return <FontAwesomeIcon icon={[parsedPrefix, parsedIconName]} className={`${sizeClass} flex-shrink-0`} />;
         } catch (e) { console.warn(`Error rendering FA icon: ${iconString}`, e); }
     }
     const faRelated = iconString.toLowerCase().includes('fa') || iconString.toLowerCase().includes('solid') || iconString.toLowerCase().includes('regular') || (parsedPrefix !== undefined);
     if (!faRelated && (iconString.length <= 2 || iconString.match(/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]/))) {
-        return <span className="text-2xl sm:text-3xl flex-shrink-0">{iconString}</span>; // Increased size
+        return <span className={`${sizeClass} flex-shrink-0`}>{iconString}</span>;
     }
-    return <span className="text-gray-400 text-xs flex-shrink-0" title={`Unknown icon: ${iconString}`}><FontAwesomeIcon icon={['far', 'question-circle']} className="text-xl sm:text-2xl" /></span>;
+    // Fallback icon
+    return <span className="text-gray-400 text-xs flex-shrink-0" title={`Unknown icon: ${iconString}`}><FontAwesomeIcon icon={['far', 'question-circle']} className={sizeClass} /></span>;
   }, []);
+
+  // Icon rendering for input previews (smaller)
+  const renderIconForInput = useCallback((iconString?: string): JSX.Element | null => {
+    return renderIconDisplay(iconString, "text-lg"); // Use a smaller size for input previews
+  }, [renderIconDisplay]);
 
 
   if (loading) {
@@ -291,7 +298,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
 
   return (
     <div className="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8 font-sans">
-      <div className="max-w-4xl mx-auto"> {/* Adjusted max-width for single column cards */}
+      <div className="max-w-4xl mx-auto">
         {notification && (
           <div className={`fixed top-5 right-5 z-[100] p-4 mb-4 rounded-md text-white shadow-lg ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`} role="alert">
             {notification.message}
@@ -319,12 +326,10 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             아이콘은 목록에서 선택하거나 이모지 (예: 🧊)를 직접 입력할 수 있습니다. (형식: "fas 아이콘이름" 또는 "far 아이콘이름")
           </p>
 
-          {/* List for Global Options (single column) */}
           {globalOptions.length > 0 ? (
-            <div className="space-y-8"> {/* Changed from grid to space-y for single column with more spacing */}
+            <div className="space-y-8">
               {globalOptions.map(category => (
                 <div key={category.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out flex flex-col">
-                  {/* Section 1: Action Buttons (top-right) */}
                   <div className="flex justify-end space-x-2 mb-4">
                     <button
                       onClick={() => openLinkModal(category)}
@@ -340,35 +345,35 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                     </button>
                   </div>
 
-                  {/* Section 2: Main Content (Category Info + Options List in columns, responsive) */}
                   <div className="flex flex-col md:flex-row flex-grow gap-x-0 md:gap-x-6">
                     {/* Column A: Category Name & Icon */}
                     <div className="w-full md:w-2/5 lg:w-1/3 md:pr-6 md:border-r border-gray-200 pb-4 md:pb-0 mb-4 md:mb-0 md:border-b-0 border-b">
-                      <div className="flex items-start space-x-3 mb-3"> {/* space-x for icon and text */}
-                        {renderIcon(category.icon)}
+                      <div className="flex items-start space-x-3 mb-3">
+                        {renderIconDisplay(category.icon, "text-2xl sm:text-3xl")} {/* Larger icon for category title */}
                         <h4 className="font-semibold text-2xl text-gray-800">{category.name}</h4>
                       </div>
-                      {/* You could add a category description here if needed */}
-                       <p className="text-sm text-gray-500 pl-0"> {/* Example description - adjust padding if icon is present */}
-                        {/* {category.description || '이 카테고리에 대한 상세 설명이 여기에 표시될 수 있습니다.'} */}
-                      </p>
                     </div>
 
-                    {/* Column B: Options List */}
-                    <div className="w-full md:w-3/5 lg:w-2/3 space-y-3">
+                    {/* Column B: Options List (Horizontal, Icon over Text) */}
+                    <div className="w-full md:w-3/5 lg:w-2/3">
                       {category.choices.length > 0 ? (
-                        category.choices.map(choice => (
-                          <div key={choice.id} className="bg-slate-50 p-3.5 rounded-lg flex items-center shadow-sm hover:bg-slate-100 transition-colors border border-slate-200">
-                            {renderIcon(choice.icon)}
-                            <span className={`text-sm sm:text-base text-slate-800 ${choice.icon ? 'ml-3' : ''}`}>{choice.name}</span>
-                            {/* Price impact can be added here if available */}
-                            {choice.price_impact && (
-                                <span className={`ml-auto text-xs font-medium ${choice.price_impact > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    ({choice.price_impact > 0 ? '+' : ''}{choice.price_impact.toLocaleString()}원)
-                                </span>
-                            )}
-                          </div>
-                        ))
+                        <div className="flex flex-row flex-wrap gap-3">
+                          {category.choices.map(choice => (
+                            <div 
+                              key={choice.id} 
+                              className="bg-slate-50 p-3 rounded-lg flex flex-col items-center justify-start shadow-sm hover:bg-slate-100 transition-colors border border-slate-200 min-w-[80px] md:min-w-[100px] flex-1 text-center cursor-default"
+                              style={{ minHeight: '90px' }} // Ensure cards have some minimum height
+                            >
+                              {renderIconDisplay(choice.icon, "text-2xl mb-1.5")} {/* Icon for choice, slightly smaller, with bottom margin */}
+                              <span className="text-xs sm:text-sm text-slate-700 leading-tight">{choice.name}</span>
+                              {choice.price_impact && (
+                                  <span className={`mt-auto pt-1 text-xs font-medium ${choice.price_impact > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      ({choice.price_impact > 0 ? '+' : ''}{choice.price_impact.toLocaleString()}원)
+                                  </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       ) : (
                         <div className="flex items-center justify-center h-full bg-gray-50 rounded-md p-6">
                             <p className="text-sm text-gray-500 italic">선택지가 없습니다. 옵션을 추가해주세요.</p>
@@ -377,8 +382,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                     </div>
                   </div>
 
-                  {/* Section 3: Footer (Linked Products) */}
-                  <div className="text-sm text-gray-600 mt-auto pt-5 border-t border-gray-200"> {/* Increased font size and padding */}
+                  <div className="text-sm text-gray-600 mt-auto pt-5 border-t border-gray-200">
                     <span className="font-semibold">연결된 상품:</span>
                     <span className="italic ml-1.5 text-gray-500">
                       아직 연결된 상품 정보가 없습니다. '상품 연결' 버튼을 사용하세요.
@@ -427,7 +431,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                 <label className="block text-sm font-medium text-gray-600 mb-1.5">카테고리 아이콘 (선택)</label>
                 <div className="flex items-center space-x-2">
                     <button type="button" onClick={() => openIconPicker('category')} className="flex-grow px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-left text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors min-h-[3rem] flex items-center">
-                        {newCategoryIcon ? renderIcon(newCategoryIcon) : <span className="text-gray-400">아이콘 선택...</span>}
+                        {newCategoryIcon ? renderIconForInput(newCategoryIcon) : <span className="text-gray-400">아이콘 선택...</span>}
                     </button>
                     {newCategoryIcon && (
                         <button type="button" onClick={() => setNewCategoryIcon('')} className="p-2 text-gray-400 hover:text-red-600" title="아이콘 제거">
@@ -449,7 +453,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                         <span className="text-gray-500 text-sm font-medium w-6 text-center">{index + 1}.</span>
                         <input type="text" placeholder={`선택지 이름`} className="flex-grow px-3 py-2.5 border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md placeholder-gray-400" value={choice.name} onChange={(e) => handleNewChoiceChange(index, 'name', e.target.value)} />
                         <button type="button" onClick={() => openIconPicker(index)} className="p-2.5 border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400" title="선택지 아이콘 선택">
-                            {choice.icon ? renderIcon(choice.icon) : <FontAwesomeIcon icon={['far', 'image']} className="text-gray-400 w-5 h-5" />}
+                            {choice.icon ? renderIconForInput(choice.icon) : <FontAwesomeIcon icon={['far', 'image']} className="text-gray-400 w-5 h-5" />}
                         </button>
                         {newChoices.length > 1 && (
                             <button type="button" onClick={() => handleRemoveNewChoice(index)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors" title="선택지 삭제">
@@ -511,7 +515,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             <div className="bg-white rounded-xl p-6 shadow-xl transform transition-all sm:max-w-lg w-full max-h-[90vh] flex flex-col">
               <div className="flex justify-between items-center mb-5">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  {renderIcon(selectedOption.icon)}
+                  {renderIconDisplay(selectedOption.icon)}
                   <span className={`${selectedOption.icon ? 'ml-2' : ''}`}>"{selectedOption.name}" 옵션을 상품에 연결</span>
                 </h3>
                 <button onClick={() => setShowLinkModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100" aria-label="Close modal">
