@@ -802,46 +802,91 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       />
     );
 
-    // Process the combined items to generate the UI elements in the correct order
-    let lastProductId: string | null = null;
+    // Add visual category groups
+    let currentCategoryName: string | null = null;
+    let currentCategoryId: string | null = null;
+    let categoryStartIndex = -1;
+    
+    // First pass: add all items
     combinedItems.forEach((item, index) => {
-      if (item.type === 'product') {
-        // Add the product
-        const product = item.item as Product;
+      if (item.type === 'divider') {
+        const divider = item.item as KioskDivider;
+        
+        // If we were in a category, close it
+        if (currentCategoryName) {
+          // Add a visual end of the previous category
+          items.push(
+            <div key={`category-end-${currentCategoryId}`} className="border-b border-blue-200 mb-2"></div>
+          );
+        }
+        
+        // Start a new category
+        currentCategoryName = divider.name;
+        currentCategoryId = divider.id;
+        categoryStartIndex = items.length;
+        
+        // Add divider (category header)
         items.push(
-          <SortableProductItem 
-            key={`kiosk-product-${product.product_id}`} 
-            product={product} 
-            isKioskProduct={true}
-            onToggleSoldOut={handleToggleSoldOut}
-            onEditProduct={handleEditProduct}
-          />
+          <div key={`category-start-${divider.id}`} className="bg-blue-50 rounded-t-md border border-blue-200 border-b-0 mt-1">
+            <SortableDividerItem
+              key={`divider-${divider.id}`}
+              divider={{ product_id: divider.id, product_name: divider.name }}
+              onRemove={handleRemoveDivider}
+            />
+          </div>
         );
-        lastProductId = product.product_id.toString();
+      } else { // item.type === 'product'
+        const product = item.item as Product;
+        const productId = product.product_id.toString();
+        
+        // Add the product with proper styling based on category
+        items.push(
+          <div 
+            key={`product-wrapper-${productId}`} 
+            className={currentCategoryName 
+              ? "pl-2 border-l border-r border-blue-200 bg-blue-50 bg-opacity-30" 
+              : ""
+            }
+          >
+            <SortableProductItem 
+              key={`kiosk-product-${product.product_id}`} 
+              product={product} 
+              isKioskProduct={true}
+              onToggleSoldOut={handleToggleSoldOut}
+              onEditProduct={handleEditProduct}
+            />
+          </div>
+        );
         
         // Add placeholder after each product
         items.push(
-          <AddDividerPlaceholder
-            key={`divider-placeholder-after-${product.product_id}`}
-            onClick={() => handleShowDividerInput(product.product_id.toString())}
-            showInput={addingDividerAfter === product.product_id.toString()}
-            inputValue={newDividerName}
-            onInputChange={setNewDividerName}
-            onSave={handleSaveNewDivider}
-            onCancel={handleCancelAddDivider}
-          />
-        );
-      } else { // item.type === 'divider'
-        const divider = item.item as KioskDivider;
-        items.push(
-          <SortableDividerItem
-            key={`divider-${divider.id}`}
-            divider={{ product_id: divider.id, product_name: divider.name }}
-            onRemove={handleRemoveDivider}
-          />
+          <div 
+            key={`placeholder-wrapper-${productId}`} 
+            className={currentCategoryName 
+              ? "pl-2 border-l border-r border-blue-200 bg-blue-50 bg-opacity-30" 
+              : ""
+            }
+          >
+            <AddDividerPlaceholder
+              key={`divider-placeholder-after-${productId}`}
+              onClick={() => handleShowDividerInput(productId)}
+              showInput={addingDividerAfter === productId}
+              inputValue={newDividerName}
+              onInputChange={setNewDividerName}
+              onSave={handleSaveNewDivider}
+              onCancel={handleCancelAddDivider}
+            />
+          </div>
         );
       }
     });
+
+    // Close the last category if open
+    if (currentCategoryName) {
+      items.push(
+        <div key={`category-end-${currentCategoryId}-final`} className="border-b border-blue-200 rounded-b-md mb-2"></div>
+      );
+    }
 
     // Handle the case where there are no items
     if (combinedItems.length === 0) {

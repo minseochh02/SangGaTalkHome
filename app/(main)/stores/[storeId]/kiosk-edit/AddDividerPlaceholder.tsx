@@ -35,6 +35,9 @@ const AddDividerPlaceholder: React.FC<AddDividerPlaceholderProps> = ({
             }
           }}
         />
+        <div className="text-xs text-gray-600 italic mb-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+          <p>💡 <strong>카테고리 활용 방법:</strong> 카테고리를 추가한 후, 그 아래에 관련 제품을 드래그해 놓으세요. 같은 카테고리 아래 있는 상품들은 키오스크에서 그룹으로 표시됩니다.</p>
+        </div>
         <div className="flex justify-end space-x-2">
           <button
             onClick={onCancel}
