@@ -374,55 +374,96 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       return; // No need to save products as only divider order changed
     }
     
-    // Handle product dragging
+    // Handle product dragging (activeIdString is a product ID or kiosk-product ID)
     
-    // Handle drop into container
+    // Case 1: Product dropped directly onto one of the main containers
     if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
       const updatedList = handleContainerDrop(activeIdString, overIdString);
       if (updatedList) {
         finalKioskProductsForSave = updatedList;
       }
-      // A drop into/out of kioskProducts always signifies a change
+      // A drop into/out of kioskProducts always signifies a change that needs saving
       if (overIdString === 'kioskProducts' || (activeIdString.startsWith('kiosk-') && overIdString === 'availableProducts')) {
         kioskConfigChanged = true;
       }
     }
-    // Handle drop onto another item
+    // Case 2: Product dropped onto another draggable ITEM (another product or a divider)
     else {
-      // If dropping onto a divider, treat it like dropping into kioskProducts
-      if (overIdString.startsWith('divider-')) {
-        if (currentContainer !== 'kioskProducts') {
-          const updatedList = handleContainerDrop(activeIdString, 'kioskProducts');
-          if (updatedList) {
-            finalKioskProductsForSave = updatedList;
-            kioskConfigChanged = true;
+      if (overIdString.startsWith('divider-')) { // Product (activeId) dropped on a Divider (overId)
+        const activeProductId = activeIdString.startsWith('kiosk-')
+          ? activeIdString.replace('kiosk-', '')
+          : activeIdString; // Can be from availableProducts if currentContainer was 'availableProducts'
+
+        const overDividerId = overIdString.replace('divider-', '');
+        const overDivider = dividers.find(d => d.id === overDividerId);
+        const productToMoveDetails = allProducts.find(p => p.product_id.toString() === activeProductId);
+
+        if (productToMoveDetails && overDivider) {
+          let newKioskListState = [...kioskProducts];
+          const originalKioskIndex = newKioskListState.findIndex(p => p.product_id.toString() === activeProductId);
+
+          let targetInsertionIndexInKioskProducts = 0;
+          if (overDivider.afterProductId === null) {
+            targetInsertionIndexInKioskProducts = 0;
+          } else {
+            const precedingProductIndex = newKioskListState.findIndex(p => p.product_id.toString() === overDivider.afterProductId);
+            if (precedingProductIndex !== -1) {
+              targetInsertionIndexInKioskProducts = precedingProductIndex + 1;
+            } else {
+              targetInsertionIndexInKioskProducts = 0; // Fallback: place at start
+              console.warn(`Product ${overDivider.afterProductId} (after which divider ${overDivider.id} should be) not found in kiosk products. Placing dragged product at start.`);
+            }
           }
-        }
-      } else {
-        const containerType = overIdString.startsWith('kiosk-') ? 'kioskProducts' : 'availableProducts';
-        
-        if (containerType !== currentContainer) {
-          // Moving between containers
-          const updatedList = handleContainerDrop(activeIdString, containerType);
-          if (updatedList) {
-            finalKioskProductsForSave = updatedList;
+
+          if (originalKioskIndex !== -1) { // Product was already in kioskProducts (reordering)
+            const [movedItem] = newKioskListState.splice(originalKioskIndex, 1);
+            const adjustedTargetIndex = (originalKioskIndex < targetInsertionIndexInKioskProducts)
+              ? targetInsertionIndexInKioskProducts - 1
+              : targetInsertionIndexInKioskProducts;
+            newKioskListState.splice(adjustedTargetIndex, 0, movedItem);
+          } else { // Product was from availableProducts (adding to kiosk)
+            const newKioskProduct = { ...productToMoveDetails, is_kiosk_enabled: true };
+            newKioskListState.splice(targetInsertionIndexInKioskProducts, 0, newKioskProduct);
           }
-          if (containerType === 'kioskProducts' || activeIdString.startsWith('kiosk-')){
-              kioskConfigChanged = true;
-          }
+
+          const updatedKioskProducts = newKioskListState.map((p, index) => ({
+            ...p,
+            kiosk_order: index,
+          }));
+
+          setKioskProducts(updatedKioskProducts);
+          finalKioskProductsForSave = updatedKioskProducts;
+          kioskConfigChanged = true; // Kiosk product list has changed
         } else {
-          // Reordering within the same container
-          if (containerType === 'kioskProducts') {
-              const previousKioskProductsOrder = kioskProducts.map(p => p.product_id);
-              const updatedList = handleReorder(activeIdString, overIdString, containerType);
-              if (updatedList) {
-                finalKioskProductsForSave = updatedList;
-                const currentKioskProductsOrder = updatedList.map(p => p.product_id);
-                if (JSON.stringify(previousKioskProductsOrder) !== JSON.stringify(currentKioskProductsOrder)) {
-                    kioskConfigChanged = true;
-                }
-              }
+          if (!productToMoveDetails) console.error("Dragged product details not found:", activeProductId);
+          if (!overDivider) console.error("Over divider details not found:", overDividerId);
+        }
+      } else { // Product dropped on another PRODUCT (could be in available or kiosk list)
+        // Determine which container the 'over' product belongs to
+        const overIsKioskProduct = overIdString.startsWith('kiosk-');
+        const overContainerType = overIsKioskProduct ? 'kioskProducts' : 'availableProducts';
+        
+        if (overContainerType !== currentContainer) {
+          // Product is moving between 'availableProducts' and 'kioskProducts' by being dropped on an item in the target list
+          const updatedList = handleContainerDrop(activeIdString, overContainerType);
+          if (updatedList) {
+            finalKioskProductsForSave = updatedList;
           }
+          kioskConfigChanged = true; // Moving in/out of kiosk always changes config
+        } else {
+          // Product is being reordered within the same list (must be 'kioskProducts' if reordering is supported)
+          if (currentContainer === 'kioskProducts') {
+            const previousKioskProductsOrder = kioskProducts.map(p => p.product_id);
+            const updatedList = handleReorder(activeIdString, overIdString, currentContainer); // currentContainer is 'kioskProducts'
+            if (updatedList) {
+              finalKioskProductsForSave = updatedList;
+              const currentKioskProductsOrder = updatedList.map(p => p.product_id);
+              if (JSON.stringify(previousKioskProductsOrder) !== JSON.stringify(currentKioskProductsOrder)) {
+                kioskConfigChanged = true;
+              }
+            }
+          }
+          // No reorder logic for 'availableProducts' currently needed.
         }
       }
     }
