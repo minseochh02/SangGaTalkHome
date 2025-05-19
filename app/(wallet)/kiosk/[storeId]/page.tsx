@@ -17,7 +17,7 @@ interface Product {
   is_kiosk_enabled: boolean;
   kiosk_order?: number;
   is_sold_out: boolean;
-  product_category?: string; // This general category is NOT used for kiosk grouping/filtering
+  // product_category?: string; // This general category is NOT used for kiosk grouping/filtering
 }
 
 interface Category { // This represents KioskCategory for the kiosk page
@@ -182,7 +182,7 @@ export default function KioskPage() {
       // Fetch products - match the mobile app query format
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('product_id, product_name, description, sgt_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out, product_category')
+        .select('product_id, product_name, description, sgt_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out')
         .eq('store_id', storeId)
         .eq('status', 1)
         .eq('is_kiosk_enabled', true)
