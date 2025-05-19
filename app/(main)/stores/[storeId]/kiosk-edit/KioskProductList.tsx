@@ -15,9 +15,9 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { Product } from '@/utils/type';
-import SortableProductItem from './SortableProductItem';
-import SortableDividerItem, { DividerItemData } from './SortableDividerItem';
+import { Product } from '@/utils/type'; // Your Product type
+import SortableProductItem from './SortableProductItem'; // Your existing component
+import SortableDividerItem, { DividerItemData } from './SortableDividerItem'; // New component for dividers
 
 // Define the structure for a product item within our Kiosk list
 interface ProductListItem {
@@ -115,10 +115,11 @@ const InsertActionComponent: React.FC<InsertActionComponentProps> = ({
   );
 };
 
+
 // --- KioskProductList ---
 interface KioskProductListProps {
   initialProducts: Product[];
-  onToggleSoldOut: (productId: string | number, currentStatus: boolean) => Promise<void>;
+  onToggleSoldOut: (productId: string | number, currentStatus: boolean) => void;
   onEditProduct: (product: Product) => void;
   onOrderChange: (orderedItems: KioskListItem[]) => void; // Callback for when list order or content changes
 }
@@ -206,6 +207,7 @@ const KioskProductList: React.FC<KioskProductListProps> = ({
     });
   };
 
+
   return (
     <DndContext
       sensors={sensors}
@@ -228,14 +230,19 @@ const KioskProductList: React.FC<KioskProductListProps> = ({
             <React.Fragment key={item.id}>
               {item.type === 'product' ? (
                 <SortableProductItem
+                  // id={item.id.toString()} // dnd-kit's useSortable will get ID from SortableContext
                   product={item.originalProduct}
                   isKioskProduct={true} // Assuming this context is always for kiosk
                   onToggleSoldOut={onToggleSoldOut}
                   onEditProduct={onEditProduct}
+                  // Add a remove handler if needed for products
+                  // onRemove={() => handleRemoveItem(item.id)}
                 />
               ) : (
                 <SortableDividerItem 
-                  divider={item}
+                  divider={item} 
+                  // Add a remove handler if needed for dividers
+                  // onRemove={() => handleRemoveItem(item.id)}
                 />
               )}
               {/* Insert Action between items */}
@@ -257,4 +264,4 @@ const KioskProductList: React.FC<KioskProductListProps> = ({
   );
 };
 
-export default KioskProductList; 
+export default KioskProductList;
