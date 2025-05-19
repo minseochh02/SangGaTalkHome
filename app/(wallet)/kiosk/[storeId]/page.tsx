@@ -158,13 +158,13 @@ export default function KioskPage() {
       // Try fetching product categories - this is optional
       try {
         const { data: categoryData, error: categoryError } = await supabase
-          .from('product_categories')
+          .from('kiosk_categories')
           .select('category_id, category_name')
           .eq('store_id', storeId)
-          .order('display_order', { ascending: true });
+          .order('position', { ascending: true });
           
         if (!categoryError && categoryData && categoryData.length > 0) {
-          setCategories(categoryData);
+          setCategories(categoryData as Category[]);
           // setSelectedCategory(categoryData[0].category_id); // Keep 'all' as default
         } else {
           // If categories don't exist, clear any existing categories
