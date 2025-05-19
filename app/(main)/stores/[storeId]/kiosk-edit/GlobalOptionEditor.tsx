@@ -6,8 +6,8 @@ import React, { useState, useEffect } from 'react';
 const supabaseMock = {
   from: () => ({
     select: async () => ({ data: [], error: null }),
-    insert: async (data) => ({ data, error: null }),
-    update: async (data) => ({ data, error: null }),
+    insert: async (data: unknown) => ({ data, error: null }),
+    update: async (data: unknown) => ({ data, error: null }),
     delete: async () => ({ data: [], error: null }),
   }),
 };
