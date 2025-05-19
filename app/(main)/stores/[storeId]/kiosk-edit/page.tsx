@@ -825,8 +825,20 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         onCancel={handleCancelAddDivider}
       />
     );
+
+    // Add dividers that should be at the absolute beginning (before any products)
+    const topLevelDividers = dividers.filter(d => d.afterProductId === null || d.position === 0);
+    topLevelDividers.forEach(divider => {
+      items.push(
+        <SortableDividerItem
+          key={`divider-${divider.id}`}
+          divider={{ product_id: divider.id, product_name: divider.name }}
+          onRemove={handleRemoveDivider}
+        />
+      );
+    });
     
-    // Process each product and add dividers in the correct positions
+    // Process each product and add dividers that come after it
     kioskProducts.forEach((product, index) => {
       const productId = product.product_id.toString();
       
@@ -841,9 +853,10 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         />
       );
       
-      // Add dividers that should come after this product
-      const afterDividers = dividers.filter(d => d.afterProductId === productId);
-      afterDividers.forEach(divider => {
+      // Add dividers that should come after this specific product
+      // Exclude dividers that were already added as top-level
+      const afterProductDividers = dividers.filter(d => d.afterProductId === productId && !topLevelDividers.some(td => td.id === d.id));
+      afterProductDividers.forEach(divider => {
         items.push(
           <SortableDividerItem
             key={`divider-${divider.id}`}
@@ -867,12 +880,28 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       );
     });
     
-    // Add a placeholder at the end if there are no products
+    // Handle the case where there are no products, but there might be top-level dividers
     if (kioskProducts.length === 0) {
-      items.push(
-        <div key="empty-kiosk-message" className="flex flex-col justify-center items-center h-40 text-gray-400">
-          <p>키오스크에 표시할 상품을 추가하세요.</p>
+      // If there are also no top-level dividers, show the "add products" message and last placeholder
+      if (topLevelDividers.length === 0) {
+        items.push(
+          <div key="empty-kiosk-message" className="flex flex-col justify-center items-center h-40 text-gray-400">
+            <p>키오스크에 표시할 상품을 추가하세요.</p>
+            <AddDividerPlaceholder
+              onClick={() => handleShowDividerInput(null)} // This will add to the end (or beginning if empty)
+              showInput={addingDividerAfter === null}
+              inputValue={newDividerName}
+              onInputChange={setNewDividerName}
+              onSave={handleSaveNewDivider}
+              onCancel={handleCancelAddDivider}
+            />
+          </div>
+        );
+      } else {
+        // If there are top-level dividers but no products, just add the final "add to end" placeholder
+        items.push(
           <AddDividerPlaceholder
+            key="last-divider-placeholder-after-top-dividers"
             onClick={() => handleShowDividerInput(null)}
             showInput={addingDividerAfter === null}
             inputValue={newDividerName}
@@ -880,23 +909,63 @@ function KioskEditContent({ storeId }: { storeId: string }) {
             onSave={handleSaveNewDivider}
             onCancel={handleCancelAddDivider}
           />
-        </div>
-      );
-    } else {
-      // Add a placeholder at the end for products list
-      items.push(
-        <AddDividerPlaceholder
-          key="last-divider-placeholder"
-          onClick={() => handleShowDividerInput(null)}
-          showInput={addingDividerAfter === null}
-          inputValue={newDividerName}
-          onInputChange={setNewDividerName}
-          onSave={handleSaveNewDivider}
-          onCancel={handleCancelAddDivider}
-        />
-      );
+        );
+      }
+    } else if (dividers.filter(d => d.afterProductId === kioskProducts[kioskProducts.length -1].product_id.toString()).length === 0 && kioskProducts.length > 0){
+      // If there are products, and the last item IS NOT a divider associated with the last product,
+      // ensure there's an "Add to end" placeholder.
+      // This handles the case where the last item is a product, so we need a placeholder after it.
+      // It also covers the case where the last item is a top-level divider (if no products).
+      // The condition `addingDividerAfter === null` will be true for this final placeholder.
+      // No, this existing logic is fine. The placeholder after the last product will be added by the loop.
+      // The only case to handle is if all products are removed and only top-level dividers remain.
+      // The `kioskProducts.length === 0` and `topLevelDividers.length > 0` case above should handle this.
+      // The final AddDividerPlaceholder that gets added when `kioskProducts.length > 0` is the one after the last product.
+      // If we want a distinct "add to very end if last item is a product", the existing loop handles that.
+
+      // The main change needed is to process top-level dividers BEFORE the product loop.
+      // And the logic for empty kiosk with/without top-level dividers.
+      // The existing code for adding placeholder AT THE END if there are products is in the product loop
+      // (after the last product).
+      // Let's refine the "Add a placeholder at the end if there are no products" logic.
+
+      // If there are products, the loop will add a placeholder after the last product.
+      // If there are NO products, but there ARE top-level dividers, we need a placeholder at the end of these dividers.
+      // The `else` block for `kioskProducts.length === 0` covers this.
+
+      // The current `else` block for `kioskProducts.length > 0` that adds the final placeholder is this:
+      // items.push(
+      //   <AddDividerPlaceholder
+      //     key="last-divider-placeholder"
+      //     onClick={() => handleShowDividerInput(null)}
+      //     showInput={addingDividerAfter === null}
+      //     inputValue={newDividerName}
+      //     onInputChange={setNewDividerName}
+      //     onSave={handleSaveNewDivider}
+      //     onCancel={handleCancelAddDivider}
+      //   />
+      // );
+      // This will be added IF kioskProducts.length > 0 AND the last item processed was a product.
+      // This is not quite right. This placeholder should only be added if the very last visual item
+      // in the list is not already followed by its own "add after me" placeholder.
+
+      // The loop already adds a placeholder after every product. So if the last item is a product,
+      // a placeholder will be there.
+
+      // The key is: if the list is NOT empty (has products or top-level dividers),
+      // and the "add at the very end" placeholder (where addingDividerAfter === null) is active,
+      // it should be displayed. The initial placeholder handles `__first__`.
+
+      // The critical part is rendering top-level dividers first.
+
     }
-    
+    // The placeholder for adding to the very end if the list is not empty and `addingDividerAfter === null`
+    // is effectively handled by the AddDividerPlaceholder after the last product if products exist,
+    // or by the specific logic when kioskProducts.length === 0.
+    // If addingDividerAfter is null, it means the user clicked a placeholder intended for the end.
+    // The last placeholder added by the loop for kioskProducts (or by the empty list logic) will
+    // be the one that `handleShowDividerInput(null)` points to.
+
     return items;
   };
 
