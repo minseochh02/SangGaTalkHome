@@ -76,6 +76,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   // Add a new state to control the tab view
   const [activeSection, setActiveSection] = useState<'menu' | 'options' | 'orders'>('menu');
 
+  // Add a new state to control the view type
+  const [menuViewType, setMenuViewType] = useState<'simple' | 'category'>('simple');
+
   // Setup DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -753,13 +756,154 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       {/* Dynamic section content */}
       {activeSection === 'menu' && (
         <div>
-          <EnhancedProductList 
-            storeId={storeId}
-            initialProducts={allProducts}
-            onSaveKioskProducts={handleSaveKioskProducts}
-            onToggleSoldOut={handleToggleSoldOut}
-            onEditProduct={handleEditProduct}
-          />
+          {/* View toggle buttons */}
+          <div className="flex justify-end mb-6">
+            <div className="inline-flex rounded-md shadow-sm" role="group">
+              <button
+                type="button"
+                onClick={() => setMenuViewType('simple')}
+                className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
+                  menuViewType === 'simple'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                } border border-gray-300`}
+              >
+                기본 관리
+              </button>
+              <button
+                type="button"
+                onClick={() => setMenuViewType('category')}
+                className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
+                  menuViewType === 'category'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                } border border-gray-300 border-l-0`}
+              >
+                카테고리 관리
+              </button>
+            </div>
+          </div>
+
+          {/* Simple View - Original Drag and Drop */}
+          {menuViewType === 'simple' && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+            >
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Available Products Column */}
+                <div className="flex-1">
+                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
+                    <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
+                  </div>
+                  
+                  <DroppableContainer 
+                    id="availableProducts" 
+                    items={availableProducts.map(p => p.product_id.toString())}
+                  >
+                    {availableProducts.length === 0 ? (
+                      <div className="flex justify-center items-center h-32 text-gray-400">
+                        모든 상품이 키오스크에 추가되었습니다.
+                      </div>
+                    ) : (
+                      <SortableContext
+                        items={availableProducts.map(p => p.product_id.toString())}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {availableProducts.map(product => (
+                          <SortableProductItem 
+                            key={product.product_id} 
+                            product={product}
+                            onToggleSoldOut={handleToggleSoldOut}
+                            onEditProduct={handleEditProduct}
+                          />
+                        ))}
+                      </SortableContext>
+                    )}
+                  </DroppableContainer>
+                </div>
+
+                {/* Kiosk Products Column */}
+                <div className="flex-1">
+                  <div className="bg-green-50 p-4 rounded-lg mb-4">
+                    <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
+                    <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
+                  </div>
+                  
+                  <DroppableContainer 
+                    id="kioskProducts" 
+                    items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
+                  >
+                    {kioskProducts.length === 0 ? (
+                      <div className="flex justify-center items-center h-32 text-gray-400">
+                        키오스크에 표시할 상품을 추가하세요.
+                      </div>
+                    ) : (
+                      <SortableContext
+                        items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {kioskProducts.map((product) => (
+                          <SortableProductItem 
+                            key={`kiosk-${product.product_id}`} 
+                            product={product} 
+                            isKioskProduct={true}
+                            onToggleSoldOut={handleToggleSoldOut}
+                            onEditProduct={handleEditProduct}
+                          />
+                        ))}
+                      </SortableContext>
+                    )}
+                  </DroppableContainer>
+                </div>
+              </div>
+
+              {/* Drag overlay for visual feedback */}
+              <DragOverlay>
+                {activeProduct && (
+                  <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
+                    <div className="flex items-center gap-3">
+                      {activeProduct.image_url ? (
+                        <img 
+                          src={activeProduct.image_url} 
+                          alt={activeProduct.product_name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                          No Image
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h4 className="font-medium">{activeProduct.product_name}</h4>
+                        <div className="flex text-sm gap-2">
+                          <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
+                          {activeProduct.sgt_price && (
+                            <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </DragOverlay>
+            </DndContext>
+          )}
+
+          {/* Category View - Enhanced Product List with Categories */}
+          {menuViewType === 'category' && (
+            <EnhancedProductList 
+              storeId={storeId}
+              initialProducts={allProducts}
+              onSaveKioskProducts={handleSaveKioskProducts}
+              onToggleSoldOut={handleToggleSoldOut}
+              onEditProduct={handleEditProduct}
+            />
+          )}
         </div>
       )}
       
