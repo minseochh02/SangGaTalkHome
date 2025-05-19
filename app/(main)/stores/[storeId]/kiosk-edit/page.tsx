@@ -47,6 +47,48 @@ interface KioskDivider {
   afterProductId: string | null; // The product ID this divider comes after, null if at the beginning
 }
 
+// Add these new type definitions and helper functions near the top of the file, after the KioskDivider interface
+interface CombinedMenuItem {
+  id: string; // Combined ID that includes the type prefix (kiosk-, divider-)
+  type: 'product' | 'divider';
+  itemId: string; // The original ID without prefix
+  position: number; // Position in the combined list
+  item: Product | KioskDivider; // The actual item object
+}
+
+function createCombinedMenuItems(products: Product[], dividers: KioskDivider[]): CombinedMenuItem[] {
+  const items: CombinedMenuItem[] = [];
+  
+  // Add products
+  products.forEach((product, index) => {
+    items.push({
+      id: `kiosk-${product.product_id}`,
+      type: 'product',
+      itemId: product.product_id.toString(),
+      position: product.kiosk_order !== undefined ? product.kiosk_order : index,
+      item: product
+    });
+  });
+  
+  // Add dividers
+  dividers.forEach((divider) => {
+    items.push({
+      id: `divider-${divider.id}`,
+      type: 'divider',
+      itemId: divider.id,
+      position: divider.position,
+      item: divider
+    });
+  });
+  
+  // Sort by position
+  return items.sort((a, b) => a.position - b.position);
+}
+
+function getCombinedItemIds(combinedItems: CombinedMenuItem[]): string[] {
+  return combinedItems.map(item => item.id);
+}
+
 function KioskEditContent({ storeId }: { storeId: string }) {
   const supabase = createClient();
   const [store, setStore] = useState<Store | null>(null);
@@ -355,115 +397,177 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     let kioskConfigChanged = false;
     let finalKioskProductsForSave: Product[] = [...kioskProducts];
     
-    // Handle divider dragging
-    if (activeIdString.startsWith('divider-')) {
-      // Don't allow dividers to be moved to available products
-      if (overIdString === 'availableProducts') {
+    // Create a combined ordered list of all items in the kiosk menu
+    const combinedMenuItems = createCombinedMenuItems(kioskProducts, dividers);
+    
+    // Case 1: Dragging between containers (available products ↔ kiosk products)
+    if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
+      // Product removed from kiosk to available products
+      if (activeIdString.startsWith('kiosk-') && overIdString === 'availableProducts') {
+        const productId = activeIdString.replace('kiosk-', '');
+        const newKioskProducts = kioskProducts.filter(p => p.product_id.toString() !== productId);
+        const updatedKioskProducts = newKioskProducts.map((product, index) => ({
+          ...product,
+          kiosk_order: index
+        }));
+        
+        setKioskProducts(updatedKioskProducts);
+        finalKioskProductsForSave = updatedKioskProducts;
+        kioskConfigChanged = true;
+      } 
+      // Product added from available to kiosk (at the end)
+      else if (!activeIdString.startsWith('kiosk-') && !activeIdString.startsWith('divider-') && overIdString === 'kioskProducts') {
+        const productId = activeIdString;
+        const productToAdd = allProducts.find(p => p.product_id.toString() === productId);
+        
+        if (productToAdd) {
+          const newKioskProducts = [...kioskProducts, {
+            ...productToAdd,
+            is_kiosk_enabled: true,
+            kiosk_order: kioskProducts.length
+          }];
+          
+          setKioskProducts(newKioskProducts);
+          finalKioskProductsForSave = newKioskProducts;
+          kioskConfigChanged = true;
+        }
+      }
+      // A divider cannot be dragged to the available products list - enforce this
+      else if (activeIdString.startsWith('divider-') && overIdString === 'availableProducts') {
+        // No change, reset states
         setActiveId(null);
         setActiveDivider(null);
         setCurrentContainer(null);
         return;
       }
-      
-      // Reordering dividers within kioskProducts
-      handleReorderDividers(activeIdString, overIdString);
-      
-      setActiveId(null);
-      setActiveDivider(null);
-      setCurrentContainer(null);
-      return; // No need to save products as only divider order changed
     }
-    
-    // Handle product dragging (activeIdString is a product ID or kiosk-product ID)
-    
-    // Case 1: Product dropped directly onto one of the main containers
-    if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
-      const updatedList = handleContainerDrop(activeIdString, overIdString);
-      if (updatedList) {
-        finalKioskProductsForSave = updatedList;
-      }
-      // A drop into/out of kioskProducts always signifies a change that needs saving
-      if (overIdString === 'kioskProducts' || (activeIdString.startsWith('kiosk-') && overIdString === 'availableProducts')) {
+    // Case 2: Reordering within kiosk menu (product or divider dragged onto another item)
+    else if (currentContainer === 'kioskProducts' && 
+            (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-')) &&
+            (activeIdString.startsWith('kiosk-') || activeIdString.startsWith('divider-'))) {
+      
+      // Find indices in the combined list
+      const activeIndex = combinedMenuItems.findIndex(item => item.id === activeIdString);
+      const overIndex = combinedMenuItems.findIndex(item => item.id === overIdString);
+      
+      if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
+        // Use arrayMove to reorder the combined list
+        const newCombinedItems = arrayMove(combinedMenuItems, activeIndex, overIndex);
+        
+        // Reconstruct kioskProducts and dividers from the new order
+        const newKioskProducts: Product[] = [];
+        const newDividers: KioskDivider[] = [];
+        
+        // Assign new positions to all items based on their index in the combined list
+        newCombinedItems.forEach((item, index) => {
+          if (item.type === 'product') {
+            const product = item.item as Product;
+            newKioskProducts.push({
+              ...product,
+              kiosk_order: index
+            });
+          } else { // item.type === 'divider'
+            const divider = item.item as KioskDivider;
+            
+            // Determine what product this divider comes after
+            let afterProductId: string | null = null;
+            
+            if (index === 0) {
+              // If first item, it comes at the beginning
+              afterProductId = null;
+            } else {
+              // Find the nearest product before this divider
+              for (let i = index - 1; i >= 0; i--) {
+                if (newCombinedItems[i].type === 'product') {
+                  afterProductId = newCombinedItems[i].itemId;
+                  break;
+                }
+              }
+            }
+            
+            newDividers.push({
+              ...divider,
+              position: index,
+              afterProductId
+            });
+          }
+        });
+        
+        setKioskProducts(newKioskProducts);
+        setDividers(newDividers);
+        finalKioskProductsForSave = newKioskProducts;
         kioskConfigChanged = true;
       }
     }
-    // Case 2: Product dropped onto another draggable ITEM (another product or a divider)
-    else {
-      if (overIdString.startsWith('divider-')) { // Product (activeId) dropped on a Divider (overId)
-        const activeProductId = activeIdString.startsWith('kiosk-')
-          ? activeIdString.replace('kiosk-', '')
-          : activeIdString; // Can be from availableProducts if currentContainer was 'availableProducts'
-
-        const overDividerId = overIdString.replace('divider-', '');
-        const overDivider = dividers.find(d => d.id === overDividerId);
-        const productToMoveDetails = allProducts.find(p => p.product_id.toString() === activeProductId);
-
-        if (productToMoveDetails && overDivider) {
-          let newKioskListState = [...kioskProducts];
-          const originalKioskIndex = newKioskListState.findIndex(p => p.product_id.toString() === activeProductId);
-
-          let targetInsertionIndexInKioskProducts = 0;
-          if (overDivider.afterProductId === null) {
-            targetInsertionIndexInKioskProducts = 0;
-          } else {
-            const precedingProductIndex = newKioskListState.findIndex(p => p.product_id.toString() === overDivider.afterProductId);
-            if (precedingProductIndex !== -1) {
-              targetInsertionIndexInKioskProducts = precedingProductIndex + 1;
-            } else {
-              targetInsertionIndexInKioskProducts = 0; // Fallback: place at start
-              console.warn(`Product ${overDivider.afterProductId} (after which divider ${overDivider.id} should be) not found in kiosk products. Placing dragged product at start.`);
-            }
-          }
-
-          if (originalKioskIndex !== -1) { // Product was already in kioskProducts (reordering)
-            const [movedItem] = newKioskListState.splice(originalKioskIndex, 1);
-            const adjustedTargetIndex = (originalKioskIndex < targetInsertionIndexInKioskProducts)
-              ? targetInsertionIndexInKioskProducts - 1
-              : targetInsertionIndexInKioskProducts;
-            newKioskListState.splice(adjustedTargetIndex, 0, movedItem);
-          } else { // Product was from availableProducts (adding to kiosk)
-            const newKioskProduct = { ...productToMoveDetails, is_kiosk_enabled: true };
-            newKioskListState.splice(targetInsertionIndexInKioskProducts, 0, newKioskProduct);
-          }
-
-          const updatedKioskProducts = newKioskListState.map((p, index) => ({
-            ...p,
-            kiosk_order: index,
-          }));
-
-          setKioskProducts(updatedKioskProducts);
-          finalKioskProductsForSave = updatedKioskProducts;
-          kioskConfigChanged = true; // Kiosk product list has changed
-        } else {
-          if (!productToMoveDetails) console.error("Dragged product details not found:", activeProductId);
-          if (!overDivider) console.error("Over divider details not found:", overDividerId);
-        }
-      } else { // Product dropped on another PRODUCT (could be in available or kiosk list)
-        // Determine which container the 'over' product belongs to
-        const overIsKioskProduct = overIdString.startsWith('kiosk-');
-        const overContainerType = overIsKioskProduct ? 'kioskProducts' : 'availableProducts';
+    // Case 3: Adding a product from available to kiosk by dropping on a specific item
+    else if (!activeIdString.startsWith('kiosk-') && !activeIdString.startsWith('divider-') && 
+             currentContainer === 'availableProducts' && 
+             (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-'))) {
+      
+      const productId = activeIdString;
+      const productToAdd = allProducts.find(p => p.product_id.toString() === productId);
+      
+      if (productToAdd) {
+        // Find where to insert the product
+        const overIndex = combinedMenuItems.findIndex(item => item.id === overIdString);
         
-        if (overContainerType !== currentContainer) {
-          // Product is moving between 'availableProducts' and 'kioskProducts' by being dropped on an item in the target list
-          const updatedList = handleContainerDrop(activeIdString, overContainerType);
-          if (updatedList) {
-            finalKioskProductsForSave = updatedList;
-          }
-          kioskConfigChanged = true; // Moving in/out of kiosk always changes config
-        } else {
-          // Product is being reordered within the same list (must be 'kioskProducts' if reordering is supported)
-          if (currentContainer === 'kioskProducts') {
-            const previousKioskProductsOrder = kioskProducts.map(p => p.product_id);
-            const updatedList = handleReorder(activeIdString, overIdString, currentContainer); // currentContainer is 'kioskProducts'
-            if (updatedList) {
-              finalKioskProductsForSave = updatedList;
-              const currentKioskProductsOrder = updatedList.map(p => p.product_id);
-              if (JSON.stringify(previousKioskProductsOrder) !== JSON.stringify(currentKioskProductsOrder)) {
-                kioskConfigChanged = true;
+        if (overIndex !== -1) {
+          // Create new product entry with appropriate kiosk_order
+          const newProduct = {
+            ...productToAdd,
+            is_kiosk_enabled: true,
+            kiosk_order: overIndex // We'll adjust all kiosk_order values after insertion
+          };
+          
+          // Insert into combined list
+          const newCombinedItems = [...combinedMenuItems];
+          newCombinedItems.splice(overIndex, 0, {
+            id: `kiosk-${productToAdd.product_id}`,
+            type: 'product',
+            itemId: productToAdd.product_id.toString(),
+            position: overIndex,
+            item: newProduct
+          });
+          
+          // Reconstruct kioskProducts and dividers from the new order (similar to Case 2)
+          const newKioskProducts: Product[] = [];
+          const newDividers: KioskDivider[] = [];
+          
+          newCombinedItems.forEach((item, index) => {
+            if (item.type === 'product') {
+              const product = item.item as Product;
+              newKioskProducts.push({
+                ...product,
+                kiosk_order: index
+              });
+            } else { // item.type === 'divider'
+              const divider = item.item as KioskDivider;
+              
+              let afterProductId: string | null = null;
+              
+              if (index === 0) {
+                afterProductId = null;
+              } else {
+                for (let i = index - 1; i >= 0; i--) {
+                  if (newCombinedItems[i].type === 'product') {
+                    afterProductId = newCombinedItems[i].itemId;
+                    break;
+                  }
+                }
               }
+              
+              newDividers.push({
+                ...divider,
+                position: index,
+                afterProductId
+              });
             }
-          }
-          // No reorder logic for 'availableProducts' currently needed.
+          });
+          
+          setKioskProducts(newKioskProducts);
+          setDividers(newDividers);
+          finalKioskProductsForSave = newKioskProducts;
+          kioskConfigChanged = true;
         }
       }
     }
@@ -478,179 +582,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     if (kioskConfigChanged && isOwner) {
       console.log('[KioskEditPage] Kiosk configuration changed by D&D, auto-saving with list:', finalKioskProductsForSave.map(p=>({id: p.product_id, name: p.product_name, order: p.kiosk_order})));
       await handleSaveKioskProducts(finalKioskProductsForSave);
-      
-      // Update divider positions after product changes
-      updateDividerPositionsAfterProductChange(finalKioskProductsForSave);
     }
-  };
-
-  // Helper function to handle drops between containers (for products only)
-  const handleContainerDrop = (activeId: string, containerId: string): Product[] | null => {
-    let newKioskStateForSave: Product[] | null = null;
-    // Moving from kiosk to available
-    if (activeId.startsWith('kiosk-') && containerId === 'availableProducts') {
-      const productId = activeId.replace('kiosk-', '');
-      const movedProduct = kioskProducts.find(p => p.product_id.toString() === productId);
-      
-      if (movedProduct) {
-        // Remove from kiosk products
-        const newKioskProducts = kioskProducts.filter(p => p.product_id.toString() !== productId);
-        
-        // Update kiosk order for remaining products
-        const updatedKioskProducts = newKioskProducts.map((product, index) => ({
-          ...product,
-          kiosk_order: index
-        }));
-        
-        setKioskProducts(updatedKioskProducts);
-        newKioskStateForSave = updatedKioskProducts;
-      }
-    }
-    // Moving from available to kiosk
-    else if (!activeId.startsWith('kiosk-') && !activeId.startsWith('divider-') && containerId === 'kioskProducts') {
-      const currentAvailableProducts = allProducts.filter(p => 
-        !kioskProducts.some(kp => kp.product_id.toString() === p.product_id.toString())
-      );
-      
-      const movedProduct = currentAvailableProducts.find(p => p.product_id.toString() === activeId);
-      
-      if (movedProduct) {
-        // Add to the end of kiosk products
-        const newKioskProductsList = [...kioskProducts, {
-          ...movedProduct,
-          is_kiosk_enabled: true, // Explicitly set, though handleSave will do it too
-          kiosk_order: kioskProducts.length
-        }];
-        
-        setKioskProducts(newKioskProductsList);
-        newKioskStateForSave = newKioskProductsList;
-      }
-    }
-    return newKioskStateForSave;
-  };
-
-  // Helper function to handle reordering within a container (for products only)
-  const handleReorder = (activeId: string, overId: string, containerId: string): Product[] | null => {
-    let newKioskStateForSave: Product[] | null = null;
-    if (containerId === 'kioskProducts') {
-      const activeIndex = kioskProducts.findIndex(
-        p => `kiosk-${p.product_id}` === activeId
-      );
-      const overIndex = kioskProducts.findIndex(
-        p => `kiosk-${p.product_id}` === overId
-      );
-      
-      if (activeIndex !== overIndex && activeIndex !== -1 && overIndex !== -1) {
-        // Reorder the products
-        const newKioskProductsList = arrayMove(kioskProducts, activeIndex, overIndex);
-        
-        // Update kiosk order for all products
-        const updatedKioskProducts = newKioskProductsList.map((product, index) => ({
-          ...product,
-          kiosk_order: index
-        }));
-        
-        setKioskProducts(updatedKioskProducts);
-        newKioskStateForSave = updatedKioskProducts;
-      }
-    } 
-    // For now we don't need to reorder available products, but we could add that here
-    return newKioskStateForSave;
-  };
-
-  // Helper function to handle reordering dividers
-  const handleReorderDividers = (activeDividerId: string, overItemId: string) => {
-    const dividerId = activeDividerId.replace('divider-', '');
-    const activeDivider = dividers.find(d => d.id === dividerId);
-    
-    if (!activeDivider) return;
-    
-    let targetProductId: string | null = null;
-    let insertBeforeProduct = false;
-    
-    // Figure out where to place the divider
-    if (overItemId === 'kioskProducts') {
-      // Dropped on the container, place at the end
-      targetProductId = kioskProducts.length > 0 
-        ? kioskProducts[kioskProducts.length - 1].product_id.toString()
-        : null;
-      insertBeforeProduct = false;
-    } else if (overItemId.startsWith('kiosk-')) {
-      // Dropped on a product
-      targetProductId = overItemId.replace('kiosk-', '');
-      insertBeforeProduct = true;
-    } else if (overItemId.startsWith('divider-')) {
-      // Dropped on another divider
-      const overDividerId = overItemId.replace('divider-', '');
-      const overDivider = dividers.find(d => d.id === overDividerId);
-      
-      if (overDivider) {
-        targetProductId = overDivider.afterProductId;
-        insertBeforeProduct = false;
-      }
-    }
-    
-    // Update divider position
-    const updatedDividers = dividers.filter(d => d.id !== dividerId);
-    if (targetProductId) {
-      const productIndex = kioskProducts.findIndex(p => p.product_id.toString() === targetProductId);
-      
-      if (productIndex !== -1) {
-        const newDivider = {
-          ...activeDivider,
-          afterProductId: insertBeforeProduct 
-            ? (productIndex > 0 ? kioskProducts[productIndex - 1].product_id.toString() : null) 
-            : targetProductId,
-          position: insertBeforeProduct ? productIndex : productIndex + 1
-        };
-        
-        updatedDividers.push(newDivider);
-      }
-    } else {
-      // If no target product (empty kiosk or beginning), place at the beginning
-      const newDivider = {
-        ...activeDivider,
-        afterProductId: null,
-        position: 0
-      };
-      
-      updatedDividers.push(newDivider);
-    }
-    
-    // Sort dividers by position
-    const sortedDividers = updatedDividers.sort((a, b) => a.position - b.position);
-    setDividers(sortedDividers);
-  };
-
-  // Update divider positions after product list changes
-  const updateDividerPositionsAfterProductChange = (updatedProducts: Product[]) => {
-    const productIdToIndexMap = new Map<string, number>();
-    
-    // Create a map of product IDs to their indices
-    updatedProducts.forEach((product, index) => {
-      productIdToIndexMap.set(product.product_id.toString(), index);
-    });
-    
-    // Update divider positions based on their afterProductId
-    const updatedDividers = dividers.map(divider => {
-      if (divider.afterProductId === null) {
-        // This divider should be at the beginning
-        return { ...divider, position: 0 };
-      }
-      
-      const afterProductIndex = productIdToIndexMap.get(divider.afterProductId);
-      if (afterProductIndex !== undefined) {
-        // The product still exists, put the divider after it
-        return { ...divider, position: afterProductIndex + 1 };
-      } else {
-        // The product was removed, remove this divider too
-        return null;
-      }
-    }).filter(Boolean) as KioskDivider[];
-    
-    // Sort by position
-    const sortedDividers = updatedDividers.sort((a, b) => a.position - b.position);
-    setDividers(sortedDividers);
   };
 
   // ---- Divider specific functions ----
@@ -850,9 +782,12 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     product => !kioskProducts.some(kProduct => kProduct.product_id === product.product_id)
   );
 
-  // Combine products and dividers for display in the kiosk menu
+  // Replace the displayKioskItems function with this improved version
   const displayKioskItems = () => {
     const items: JSX.Element[] = [];
+    
+    // Create the combined ordered list using our helper function
+    const combinedItems = createCombinedMenuItems(kioskProducts, dividers);
     
     // Add placeholder at the beginning
     items.push(
@@ -867,37 +802,37 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       />
     );
 
-    // Add dividers that should be at the absolute beginning (before any products)
-    const topLevelDividers = dividers.filter(d => d.afterProductId === null || d.position === 0);
-    topLevelDividers.forEach(divider => {
-      items.push(
-        <SortableDividerItem
-          key={`divider-${divider.id}`}
-          divider={{ product_id: divider.id, product_name: divider.name }}
-          onRemove={handleRemoveDivider}
-        />
-      );
-    });
-    
-    // Process each product and add dividers that come after it
-    kioskProducts.forEach((product, index) => {
-      const productId = product.product_id.toString();
-      
-      // Add the product
-      items.push(
-        <SortableProductItem 
-          key={`kiosk-product-${productId}`} 
-          product={product} 
-          isKioskProduct={true}
-          onToggleSoldOut={handleToggleSoldOut}
-          onEditProduct={handleEditProduct}
-        />
-      );
-      
-      // Add dividers that should come after this specific product
-      // Exclude dividers that were already added as top-level
-      const afterProductDividers = dividers.filter(d => d.afterProductId === productId && !topLevelDividers.some(td => td.id === d.id));
-      afterProductDividers.forEach(divider => {
+    // Process the combined items to generate the UI elements in the correct order
+    let lastProductId: string | null = null;
+    combinedItems.forEach((item, index) => {
+      if (item.type === 'product') {
+        // Add the product
+        const product = item.item as Product;
+        items.push(
+          <SortableProductItem 
+            key={`kiosk-product-${product.product_id}`} 
+            product={product} 
+            isKioskProduct={true}
+            onToggleSoldOut={handleToggleSoldOut}
+            onEditProduct={handleEditProduct}
+          />
+        );
+        lastProductId = product.product_id.toString();
+        
+        // Add placeholder after each product
+        items.push(
+          <AddDividerPlaceholder
+            key={`divider-placeholder-after-${product.product_id}`}
+            onClick={() => handleShowDividerInput(product.product_id.toString())}
+            showInput={addingDividerAfter === product.product_id.toString()}
+            inputValue={newDividerName}
+            onInputChange={setNewDividerName}
+            onSave={handleSaveNewDivider}
+            onCancel={handleCancelAddDivider}
+          />
+        );
+      } else { // item.type === 'divider'
+        const divider = item.item as KioskDivider;
         items.push(
           <SortableDividerItem
             key={`divider-${divider.id}`}
@@ -905,107 +840,33 @@ function KioskEditContent({ storeId }: { storeId: string }) {
             onRemove={handleRemoveDivider}
           />
         );
-      });
-      
-      // Add placeholder after each product
+      }
+    });
+
+    // Handle the case where there are no items
+    if (combinedItems.length === 0) {
+      items.push(
+        <div key="empty-kiosk-message" className="flex flex-col justify-center items-center h-40 text-gray-400">
+          <p>키오스크에 표시할 상품을 추가하세요.</p>
+        </div>
+      );
+    }
+    
+    // Add a final placeholder if the last item was a divider or the list is empty
+    const lastItem = combinedItems[combinedItems.length - 1];
+    if (!lastItem || lastItem.type === 'divider') {
       items.push(
         <AddDividerPlaceholder
-          key={`divider-placeholder-after-${productId}`}
-          onClick={() => handleShowDividerInput(productId)}
-          showInput={addingDividerAfter === productId}
+          key="last-divider-placeholder"
+          onClick={() => handleShowDividerInput(null)}
+          showInput={addingDividerAfter === null}
           inputValue={newDividerName}
           onInputChange={setNewDividerName}
           onSave={handleSaveNewDivider}
           onCancel={handleCancelAddDivider}
         />
       );
-    });
-    
-    // Handle the case where there are no products, but there might be top-level dividers
-    if (kioskProducts.length === 0) {
-      // If there are also no top-level dividers, show the "add products" message and last placeholder
-      if (topLevelDividers.length === 0) {
-        items.push(
-          <div key="empty-kiosk-message" className="flex flex-col justify-center items-center h-40 text-gray-400">
-            <p>키오스크에 표시할 상품을 추가하세요.</p>
-            <AddDividerPlaceholder
-              onClick={() => handleShowDividerInput(null)} // This will add to the end (or beginning if empty)
-              showInput={addingDividerAfter === null}
-              inputValue={newDividerName}
-              onInputChange={setNewDividerName}
-              onSave={handleSaveNewDivider}
-              onCancel={handleCancelAddDivider}
-            />
-          </div>
-        );
-      } else {
-        // If there are top-level dividers but no products, just add the final "add to end" placeholder
-        items.push(
-          <AddDividerPlaceholder
-            key="last-divider-placeholder-after-top-dividers"
-            onClick={() => handleShowDividerInput(null)}
-            showInput={addingDividerAfter === null}
-            inputValue={newDividerName}
-            onInputChange={setNewDividerName}
-            onSave={handleSaveNewDivider}
-            onCancel={handleCancelAddDivider}
-          />
-        );
-      }
-    } else if (dividers.filter(d => d.afterProductId === kioskProducts[kioskProducts.length -1].product_id.toString()).length === 0 && kioskProducts.length > 0){
-      // If there are products, and the last item IS NOT a divider associated with the last product,
-      // ensure there's an "Add to end" placeholder.
-      // This handles the case where the last item is a product, so we need a placeholder after it.
-      // It also covers the case where the last item is a top-level divider (if no products).
-      // The condition `addingDividerAfter === null` will be true for this final placeholder.
-      // No, this existing logic is fine. The placeholder after the last product will be added by the loop.
-      // The only case to handle is if all products are removed and only top-level dividers remain.
-      // The `kioskProducts.length === 0` and `topLevelDividers.length > 0` case above should handle this.
-      // The final AddDividerPlaceholder that gets added when `kioskProducts.length > 0` is the one after the last product.
-      // If we want a distinct "add to very end if last item is a product", the existing loop handles that.
-
-      // The main change needed is to process top-level dividers BEFORE the product loop.
-      // And the logic for empty kiosk with/without top-level dividers.
-      // The existing code for adding placeholder AT THE END if there are products is in the product loop
-      // (after the last product).
-      // Let's refine the "Add a placeholder at the end if there are no products" logic.
-
-      // If there are products, the loop will add a placeholder after the last product.
-      // If there are NO products, but there ARE top-level dividers, we need a placeholder at the end of these dividers.
-      // The `else` block for `kioskProducts.length === 0` covers this.
-
-      // The current `else` block for `kioskProducts.length > 0` that adds the final placeholder is this:
-      // items.push(
-      //   <AddDividerPlaceholder
-      //     key="last-divider-placeholder"
-      //     onClick={() => handleShowDividerInput(null)}
-      //     showInput={addingDividerAfter === null}
-      //     inputValue={newDividerName}
-      //     onInputChange={setNewDividerName}
-      //     onSave={handleSaveNewDivider}
-      //     onCancel={handleCancelAddDivider}
-      //   />
-      // );
-      // This will be added IF kioskProducts.length > 0 AND the last item processed was a product.
-      // This is not quite right. This placeholder should only be added if the very last visual item
-      // in the list is not already followed by its own "add after me" placeholder.
-
-      // The loop already adds a placeholder after every product. So if the last item is a product,
-      // a placeholder will be there.
-
-      // The key is: if the list is NOT empty (has products or top-level dividers),
-      // and the "add at the very end" placeholder (where addingDividerAfter === null) is active,
-      // it should be displayed. The initial placeholder handles `__first__`.
-
-      // The critical part is rendering top-level dividers first.
-
     }
-    // The placeholder for adding to the very end if the list is not empty and `addingDividerAfter === null`
-    // is effectively handled by the AddDividerPlaceholder after the last product if products exist,
-    // or by the specific logic when kioskProducts.length === 0.
-    // If addingDividerAfter is null, it means the user clicked a placeholder intended for the end.
-    // The last placeholder added by the loop for kioskProducts (or by the empty list logic) will
-    // be the one that `handleShowDividerInput(null)` points to.
 
     return items;
   };
@@ -1197,7 +1058,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                   items={[...kioskProducts.map(p => `kiosk-${p.product_id}`), ...dividers.map(d => `divider-${d.id}`)]}
                 >
                   <SortableContext
-                    items={[...kioskProducts.map(p => `kiosk-${p.product_id}`), ...dividers.map(d => `divider-${d.id}`)]}
+                    items={getCombinedItemIds(createCombinedMenuItems(kioskProducts, dividers))}
                     strategy={verticalListSortingStrategy}
                   >
                     {displayKioskItems()}
