@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { library, IconPrefix, IconName } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
+import { JSX } from 'react/jsx-runtime';
 // import { createClient } from '@/utils/supabase/client'; // Assuming this is your Supabase client setup
 // import { ProductOptionCategory, ProductOptionChoice, Product } from '@/utils/type'; // Assuming these types are defined in your project
 
@@ -272,7 +273,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         } catch (e) { console.warn(`Error rendering FA icon: ${iconString}`, e); }
     }
     const faRelated = iconString.toLowerCase().includes('fa') || iconString.toLowerCase().includes('solid') || iconString.toLowerCase().includes('regular') || (parsedPrefix !== undefined);
-    if (!faRelated && (iconString.length <= 2 || /\p{Emoji}/u.test(iconString))) {
+    if (!faRelated && (iconString.length <= 2 || iconString.match(/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]/))) {
         return <span className="text-2xl sm:text-3xl flex-shrink-0">{iconString}</span>; // Increased size
     }
     return <span className="text-gray-400 text-xs flex-shrink-0" title={`Unknown icon: ${iconString}`}><FontAwesomeIcon icon={['far', 'question-circle']} className="text-xl sm:text-2xl" /></span>;
