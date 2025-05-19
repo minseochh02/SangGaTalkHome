@@ -201,7 +201,7 @@ export const transformCategoriesToGroups = (
 ): ProductOptionGroup[] => {
   return categories.map((category, categoryIndex) => {
     // Handle choices transformation
-    const choices: ProductOptionChoice[] = (category.choices || []).map((choice: any, choiceIndex) => ({
+    const choices: ProductOptionChoice[] = (category.choices || []).map((choice: any, choiceIndex: number) => ({
       option_choice_id: choice.option_choice_id || choice.id || uuidv4(),
       option_group_id: category.option_group_id || category.id || uuidv4(),
       choice_name: choice.choice_name || choice.name || '',
