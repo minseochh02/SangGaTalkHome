@@ -128,6 +128,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   const [addingDividerAfter, setAddingDividerAfter] = useState<string | null | undefined>(undefined); // null for end, product_id for after specific item, undefined for not adding
   const [newDividerName, setNewDividerName] = useState('');
 
+  // Add this state near the other state declarations
+  const [savingCategories, setSavingCategories] = useState(false);
+
   // Setup DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -170,7 +173,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       // Fetch store details
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
-        .select('*, user_id, kiosk_dine_in_enabled, kiosk_takeout_enabled, kiosk_delivery_enabled') // Assuming these columns exist or will be added
+        .select('*, user_id, kiosk_dine_in_enabled, kiosk_takeout_enabled, kiosk_delivery_enabled')
         .eq('store_id', storeId)
         .single();
 
@@ -202,6 +205,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         
         // Fetch products
         await fetchProducts(storeId);
+        
+        // Also fetch categories
+        await fetchCategories(storeId);
       }
       setLoading(false);
     };
@@ -245,6 +251,84 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       console.error('Error in fetchProducts:', err);
     } finally {
       setLoadingProducts(false);
+    }
+  };
+
+  const fetchCategories = async (storeId: string) => {
+    try {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('kiosk_categories')
+        .select('*')
+        .eq('store_id', storeId)
+        .order('position', { ascending: true });
+        
+      if (categoriesError) {
+        console.error('Error fetching categories:', categoriesError);
+        return;
+      }
+      
+      // Convert the retrieved data to KioskDivider format
+      const dividers: KioskDivider[] = categoriesData.map(category => ({
+        id: category.category_id,
+        name: category.category_name,
+        position: category.position,
+        afterProductId: category.after_product_id
+      }));
+      
+      console.log('Fetched categories:', dividers);
+      setDividers(dividers);
+    } catch (err) {
+      console.error('Error in fetchCategories:', err);
+    }
+  };
+
+  const saveCategories = async () => {
+    if (!isOwner) return;
+    
+    setSavingCategories(true);
+    try {
+      console.log('Saving categories:', dividers);
+      
+      // First, delete all existing categories for this store
+      const { error: deleteError } = await supabase
+        .from('kiosk_categories')
+        .delete()
+        .eq('store_id', storeId);
+        
+      if (deleteError) {
+        console.error('Error deleting existing categories:', deleteError);
+        throw deleteError;
+      }
+      
+      // Then insert all current categories
+      if (dividers.length > 0) {
+        const categoriesToInsert = dividers.map(divider => ({
+          category_id: divider.id, // Use the existing UUID
+          store_id: storeId,
+          category_name: divider.name,
+          position: divider.position,
+          after_product_id: divider.afterProductId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('kiosk_categories')
+          .insert(categoriesToInsert);
+          
+        if (insertError) {
+          console.error('Error inserting categories:', insertError);
+          throw insertError;
+        }
+      }
+      
+      console.log('Categories saved successfully');
+      alert('카테고리가 성공적으로 저장되었습니다.');
+    } catch (err) {
+      console.error('Error in saveCategories:', err);
+      alert('카테고리 저장 중 오류가 발생했습니다.');
+    } finally {
+      setSavingCategories(false);
     }
   };
 
@@ -398,7 +482,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     let finalKioskProductsForSave: Product[] = [...kioskProducts];
     
     // Create a combined ordered list of all items in the kiosk menu
-    const combinedMenuItems = createCombinedMenuItems(kioskProducts, dividers);
+    const combinedItems = createCombinedMenuItems(kioskProducts, dividers);
     
     // Case 1: Dragging between containers (available products ↔ kiosk products)
     if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
@@ -447,12 +531,12 @@ function KioskEditContent({ storeId }: { storeId: string }) {
             (activeIdString.startsWith('kiosk-') || activeIdString.startsWith('divider-'))) {
       
       // Find indices in the combined list
-      const activeIndex = combinedMenuItems.findIndex(item => item.id === activeIdString);
-      const overIndex = combinedMenuItems.findIndex(item => item.id === overIdString);
+      const activeIndex = combinedItems.findIndex(item => item.id === activeIdString);
+      const overIndex = combinedItems.findIndex(item => item.id === overIdString);
       
       if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
         // Use arrayMove to reorder the combined list
-        const newCombinedItems = arrayMove(combinedMenuItems, activeIndex, overIndex);
+        const newCombinedItems = arrayMove(combinedItems, activeIndex, overIndex);
         
         // Reconstruct kioskProducts and dividers from the new order
         const newKioskProducts: Product[] = [];
@@ -497,6 +581,14 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         setDividers(newDividers);
         finalKioskProductsForSave = newKioskProducts;
         kioskConfigChanged = true;
+        
+        // Check if a divider was moved, which requires special handling
+        if (activeIdString.startsWith('divider-')) {
+          // Force an immediate save of the categories when a divider is moved
+          setTimeout(() => {
+            saveCategories().catch(err => console.error('Error saving categories after divider move:', err));
+          }, 100);
+        }
       }
     }
     // Case 3: Adding a product from available to kiosk by dropping on a specific item
@@ -509,7 +601,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       
       if (productToAdd) {
         // Find where to insert the product
-        const overIndex = combinedMenuItems.findIndex(item => item.id === overIdString);
+        const overIndex = combinedItems.findIndex(item => item.id === overIdString);
         
         if (overIndex !== -1) {
           // Create new product entry with appropriate kiosk_order
@@ -520,7 +612,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
           };
           
           // Insert into combined list
-          const newCombinedItems = [...combinedMenuItems];
+          const newCombinedItems = [...combinedItems];
           newCombinedItems.splice(overIndex, 0, {
             id: `kiosk-${productToAdd.product_id}`,
             type: 'product',
@@ -582,6 +674,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     if (kioskConfigChanged && isOwner) {
       console.log('[KioskEditPage] Kiosk configuration changed by D&D, auto-saving with list:', finalKioskProductsForSave.map(p=>({id: p.product_id, name: p.product_name, order: p.kiosk_order})));
       await handleSaveKioskProducts(finalKioskProductsForSave);
+      
+      // Also save categories since their positions might have changed
+      await saveCategories();
     }
   };
 
@@ -597,7 +692,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     setNewDividerName('');
   };
 
-  const handleSaveNewDivider = () => {
+  const handleSaveNewDivider = async () => {
     if (!newDividerName.trim() || addingDividerAfter === undefined) return;
 
     const newDividerId = uuidv4();
@@ -633,14 +728,52 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     };
     
     // Add the new divider to the state
-    setDividers([...dividers, newDivider].sort((a, b) => a.position - b.position));
+    const updatedDividers = [...dividers, newDivider].sort((a, b) => a.position - b.position);
+    setDividers(updatedDividers);
+    
+    // Save to backend
+    try {
+      await supabase
+        .from('kiosk_categories')
+        .insert([{
+          category_id: newDividerId,
+          store_id: storeId,
+          category_name: newDividerName.trim(),
+          position,
+          after_product_id: afterProductId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }]);
+      
+      console.log('New category saved to database');
+    } catch (err) {
+      console.error('Error saving new category:', err);
+      // We'll keep the local state update even if backend fails
+    }
     
     // Reset input state
     handleCancelAddDivider();
   };
 
-  const handleRemoveDivider = (dividerId: string) => {
-    setDividers(dividers.filter(d => d.id !== dividerId));
+  const handleRemoveDivider = async (dividerId: string) => {
+    try {
+      // Remove from local state
+      setDividers(dividers.filter(d => d.id !== dividerId));
+      
+      // Also remove from the database
+      const { error } = await supabase
+        .from('kiosk_categories')
+        .delete()
+        .eq('category_id', dividerId);
+        
+      if (error) {
+        console.error('Error deleting category from database:', error);
+      } else {
+        console.log('Category deleted from database');
+      }
+    } catch (err) {
+      console.error('Error in handleRemoveDivider:', err);
+    }
   };
 
   const handleToggleSoldOut = async (productId: string | number, currentStatus: boolean) => {
@@ -1096,6 +1229,32 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                 <div className="bg-green-50 p-4 rounded-lg mb-4">
                   <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
                   <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
+                  
+                  {/* Add the Save Categories button here */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={saveCategories}
+                      className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center"
+                      disabled={savingCategories || savingProducts}
+                    >
+                      {savingCategories ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          저장 중...
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                          </svg>
+                          카테고리 저장
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 
                 <DroppableContainer 
@@ -1141,9 +1300,17 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                 </div>
               )}
               {activeDivider && (
-                <div className="p-3 my-2 rounded-md border bg-blue-100 border-blue-400 shadow-xl opacity-90">
-                  <div className="flex items-center justify-center">
-                    <span className="font-semibold text-blue-700">{activeDivider.name}</span>
+                <div className="p-3 my-2 rounded-md border-2 border-blue-400 bg-blue-50 shadow-xl opacity-90">
+                  <div className="flex items-center">
+                    <div className="mr-2 text-blue-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-blue-700">{activeDivider.name}</span>
+                      <span className="text-xs text-blue-500">카테고리</span>
+                    </div>
                   </div>
                 </div>
               )}
