@@ -17,12 +17,13 @@ interface Product {
   is_kiosk_enabled: boolean;
   kiosk_order?: number;
   is_sold_out: boolean;
-  product_category?: string;
+  product_category?: string; // This general category is NOT used for kiosk grouping/filtering
 }
 
-interface Category {
+interface Category { // This represents KioskCategory for the kiosk page
   category_id: string;
   category_name: string;
+  position?: number; // Added to store the position from kiosk_categories
 }
 
 interface CartItem {
@@ -55,7 +56,7 @@ export default function KioskPage() {
   const [error, setError] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string>('');
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]); // Will hold kiosk_categories with position
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [selectedCategory, setSelectedCategory] = useState<string | null>('all');
@@ -64,6 +65,9 @@ export default function KioskPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
   const [cartIconAnimate, setCartIconAnimate] = useState<boolean>(false);
+  
+  // New state for mapping products to their effective kiosk category
+  const [effectiveProductToKioskCategoryMap, setEffectiveProductToKioskCategoryMap] = useState<Map<string, string | null>>(new Map());
   
   // Initialize kiosk session
   const initKioskSession = useCallback(async () => {
@@ -159,22 +163,20 @@ export default function KioskPage() {
       try {
         const { data: categoryData, error: categoryError } = await supabase
           .from('kiosk_categories')
-          .select('category_id, category_name')
+          .select('category_id, category_name, position') // Ensure position is fetched
           .eq('store_id', storeId)
           .order('position', { ascending: true });
           
         if (!categoryError && categoryData && categoryData.length > 0) {
           setCategories(categoryData as Category[]);
-          // setSelectedCategory(categoryData[0].category_id); // Keep 'all' as default
         } else {
-          // If categories don't exist, clear any existing categories
           setCategories([]);
-          setSelectedCategory('all'); // Default to 'all'
+          setSelectedCategory('all'); 
         }
       } catch (err) {
         console.error('Error fetching categories (optional):', err);
         setCategories([]);
-        setSelectedCategory('all'); // Default to 'all'
+        setSelectedCategory('all');
       }
       
       // Fetch products - match the mobile app query format
@@ -393,16 +395,47 @@ export default function KioskPage() {
     return price.toLocaleString();
   };
   
+  // useEffect to compute product to kiosk category mapping
+  useEffect(() => {
+    const newMap = new Map<string, string | null>();
+    
+    // Ensure categories (kiosk_categories) are sorted by position
+    const sortedKioskCategories = [...categories].sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity));
+
+    products.forEach(product => {
+      if (product.kiosk_order === undefined || product.kiosk_order === null) {
+        newMap.set(product.product_id, null); // Products without order can't be mapped easily
+        return;
+      }
+
+      let assignedKioskCategoryId: string | null = null;
+      for (const kc of sortedKioskCategories) {
+        if (kc.position !== undefined && product.kiosk_order >= kc.position) {
+          assignedKioskCategoryId = kc.category_id; // Last one wins
+        } else {
+          // Since KCs are sorted, if product.kiosk_order < kc.position, it won't be in this or subsequent KCs
+           // However, if a product's order is 2, and categories are at 0 and 5, it belongs to category at 0.
+           // The "last one wins" by iterating through all should handle this if categories are sorted.
+        }
+      }
+      newMap.set(product.product_id, assignedKioskCategoryId);
+    });
+    setEffectiveProductToKioskCategoryMap(newMap);
+  }, [products, categories]);
+  
   // Filter products by selected category
   const filteredProducts = products.filter(product => {
+    if (!product.is_kiosk_enabled) {
+      return false; // Always filter out non-kiosk-enabled products
+    }
+  
     if (selectedCategory === 'all' || selectedCategory === null) {
-      return product.is_kiosk_enabled; // Show all kiosk-enabled products if 'all' or no category selected
+      return true; // Show all kiosk-enabled products
     }
-    // Handle products that might not have a category assigned - they only show in 'all'
-    if (!product.product_category && selectedCategory !== 'all') {
-        return false;
-    }
-    return product.product_category === selectedCategory && product.is_kiosk_enabled;
+    
+    // Use the new map for filtering
+    const productKioskCategory = effectiveProductToKioskCategoryMap.get(product.product_id);
+    return productKioskCategory === selectedCategory;
   });
   
   // Add product subscription useEffect
