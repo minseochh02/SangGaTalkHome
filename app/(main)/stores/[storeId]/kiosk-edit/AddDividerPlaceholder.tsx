@@ -57,10 +57,11 @@ const AddDividerPlaceholder: React.FC<AddDividerPlaceholderProps> = ({
   return (
     <div
       onClick={onClick}
-      className="relative my-1 h-10 group cursor-pointer flex items-center justify-center"
+      className="relative my-1 group cursor-pointer flex items-center justify-center"
     >
       <div
-        className="w-full h-full flex items-center justify-center
+        className="w-full flex items-center justify-center
+                   h-2 group-hover:h-10
                    opacity-0 group-hover:opacity-100
                    transform scale-95 group-hover:scale-100
                    transition-all duration-200 ease-in-out"
