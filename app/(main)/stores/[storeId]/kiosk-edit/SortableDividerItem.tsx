@@ -1,10 +1,10 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Product } from '@/utils/type'; // Assuming Product type is augmented
+import { Product } from '@/utils/type'; // Use Product type directly
 
 interface SortableDividerItemProps {
-  divider: Product; // item_type must be 'divider', product_id must be a string (UUID)
+  divider: Pick<Product, 'product_id' | 'product_name'>; // Only need these two properties for dividers
   onRemove: (dividerId: string) => void;
 }
 
@@ -16,7 +16,7 @@ const SortableDividerItem: React.FC<SortableDividerItemProps> = ({ divider, onRe
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: `kiosk-${divider.product_id}` });
+  } = useSortable({ id: `divider-${divider.product_id}` });
 
   const style = {
     transform: CSS.Transform.toString(transform),
