@@ -1,9 +1,7 @@
 import React, { useEffect, useState, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { Product, ProductOptionCategory, ProductOptionChoice, ProductOptionGroup } from '@/utils/type'; 
+import { Product, ProductOptionCategory, ProductOptionChoice } from '@/utils/type'; 
 import ProductOptionEditor from './ProductOptionEditor';
-import { fetchProductOptions, saveProductOptions, transformCategoriesToGroups, transformGroupsToCategories } from '@/utils/supabase/product-options';
-import { createClient } from '@/utils/supabase/client';
 
 // Product Edit Modal Component
 const ProductEditModal = ({ 
@@ -25,10 +23,7 @@ const ProductEditModal = ({
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' or 'options'
   const [productOptions, setProductOptions] = useState<ProductOptionCategory[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(false);
-  const supabase = createClient();
 
-  // Load product data when the modal opens
   useEffect(() => {
     if (product) {
       setName(product.product_name || '');
@@ -36,110 +31,31 @@ const ProductEditModal = ({
       setSgtPrice(product.sgt_price ? product.sgt_price.toString() : '');
       setWonPrice(product.won_price ? product.won_price.toString() : '');
       setImageUrl(product.image_url || '');
-      
-      // Load product options from the database
-      if (isOpen) {
-        loadProductOptions(product.product_id);
-      }
+      // We would load actual options here if they were stored in the product
+      setProductOptions(product.options || []);
     }
-  }, [product, isOpen]);
+  }, [product]);
 
-  // Load product options from the database
-  const loadProductOptions = async (productId: string) => {
-    if (!productId) return;
-    
-    setLoadingOptions(true);
-    try {
-      // Fetch product options from the database
-      const optionGroups = await fetchProductOptions(productId);
-      
-      // Convert ProductOptionGroup[] to ProductOptionCategory[] for the existing editor
-      const categories = transformGroupsToCategories(optionGroups);
-      setProductOptions(categories);
-      
-      console.log('Loaded product options:', categories);
-    } catch (error) {
-      console.error('Error loading product options:', error);
-      // Show a user-friendly error message if needed
-    } finally {
-      setLoadingOptions(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!product) return;
     
     setIsSaving(true);
     
-    try {
-      // First, save the product details
-      const updatedProduct: Product = {
-        ...product,
-        product_name: name,
-        description,
-        sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
-        won_price: wonPrice ? parseFloat(wonPrice) : 0,
-        image_url: imageUrl,
-        // Don't include options in the updatedProduct, we handle them separately
-      };
-      
-      // Call the parent component's onSave function to save the basic product details
-      // This onSave is from KioskEditPage and saves the main product attributes
-      await onSave(updatedProduct); 
-      console.log("ProductEditModal: Basic product details saved via parent onSave.");
-      
-      // Check if we have any options to save
-      if (productOptions && productOptions.length > 0 && product.product_id && product.store_id) {
-        console.log("ProductEditModal: Saving options for product:", product.product_id);
-        console.log("ProductEditModal: Current productOptions state:", productOptions); 
-        try {
-          // Transform ProductOptionCategory[] (from editor state) to ProductOptionGroup[] (for DB)
-          const optionGroupsToSave = transformCategoriesToGroups(
-            productOptions, 
-            product.product_id, 
-            product.store_id
-          );
-          
-          console.log("ProductEditModal: Transformed optionGroups to save:", optionGroupsToSave); 
-          
-          // Save the product options to the database
-          await saveProductOptions(product.product_id, product.store_id, optionGroupsToSave);
-          console.log('Product options saved successfully to DB.');
-          
-          // Test direct DB fetch to verify connectivity
-          console.log("Testing direct Supabase query to verify connection...");
-          const { data, error } = await supabase
-            .from('product_option_groups')
-            .select('*')
-            .eq('product_id', product.product_id);
-            
-          console.log("Direct Supabase query result:", { data, error });
-        } catch (optionsError) {
-          console.error('Error saving product options to DB:', optionsError);
-          alert('상품 옵션 저장 중 오류가 발생했습니다.'); 
-        }
-      } else {
-        // If there are no productOptions, but we might need to clear existing options in DB
-        // This handles the case where all options were removed.
-        if (product.product_id && product.store_id) {
-            console.log("ProductEditModal: No options in editor, ensuring options are cleared in DB for product:", product.product_id);
-            await saveProductOptions(product.product_id, product.store_id, []); // Pass empty array to delete existing
-            console.log('Ensured no options are present in DB for this product.');
-        } else {
-            console.warn("ProductEditModal: product_id or store_id missing, cannot clear options.");
-        }
-      }
-      
-      // Close the modal on successful save
-      onClose();
-    } catch (error) {
-      console.error('Error saving product:', error);
-      alert('상품 정보 저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
+    const updatedProduct: Product = {
+      ...product,
+      product_name: name,
+      description,
+      sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
+      won_price: wonPrice ? parseFloat(wonPrice) : 0,
+      image_url: imageUrl,
+      options: productOptions,
+    };
+    
+    onSave(updatedProduct);
+    
+    setIsSaving(false);
   };
 
   const handleSaveOptions = (productId: string | number, options: ProductOptionCategory[]) => {
@@ -297,19 +213,11 @@ const ProductEditModal = ({
                     </div>
                   </form>
                 ) : (
-                  <div>
-                    {loadingOptions ? (
-                      <div className="flex justify-center items-center h-40">
-                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-                      </div>
-                    ) : (
-                      <ProductOptionEditor 
-                        productId={product?.product_id || ''}
-                        initialOptions={productOptions}
-                        onSave={handleSaveOptions}
-                      />
-                    )}
-                  </div>
+                  <ProductOptionEditor 
+                    productId={product?.product_id || ''}
+                    initialOptions={productOptions}
+                    onSave={handleSaveOptions}
+                  />
                 )}
               </Dialog.Panel>
             </Transition.Child>
