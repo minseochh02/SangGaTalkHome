@@ -82,7 +82,7 @@ const ProductEditModal = ({
         sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
         won_price: wonPrice ? parseFloat(wonPrice) : 0,
         image_url: imageUrl,
-        // options: productOptions, // productOptions are saved separately now
+        // Don't include options in the updatedProduct, we handle them separately
       };
       
       // Call the parent component's onSave function to save the basic product details
@@ -92,7 +92,8 @@ const ProductEditModal = ({
       
       // Check if we have any options to save
       if (productOptions && productOptions.length > 0 && product.product_id && product.store_id) {
-        console.log("ProductEditModal: Attempting to save options:", JSON.stringify(productOptions, null, 2)); 
+        console.log("ProductEditModal: Saving options for product:", product.product_id);
+        console.log("ProductEditModal: Current productOptions state:", productOptions); 
         try {
           // Transform ProductOptionCategory[] (from editor state) to ProductOptionGroup[] (for DB)
           const optionGroupsToSave = transformCategoriesToGroups(
@@ -101,7 +102,7 @@ const ProductEditModal = ({
             product.store_id
           );
           
-          console.log("ProductEditModal: Transformed optionGroups for DB:", JSON.stringify(optionGroupsToSave, null, 2)); 
+          console.log("ProductEditModal: Transformed optionGroups to save:", optionGroupsToSave); 
           
           // Save the product options to the database
           await saveProductOptions(product.product_id, product.store_id, optionGroupsToSave);

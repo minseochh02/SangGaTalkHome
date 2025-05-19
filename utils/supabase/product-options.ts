@@ -92,24 +92,38 @@ export const saveProductOptions = async (
   const supabase = createClient();
   
   try {
+    console.log(`[saveProductOptions] Starting save process for product ${productId}`);
+    console.log(`[saveProductOptions] Number of option groups to save: ${optionGroups.length}`);
+    
     // Start by fetching existing group IDs for this product
     const { data: existingGroups, error: fetchError } = await supabase
       .from('product_option_groups')
       .select('option_group_id')
       .eq('product_id', productId);
       
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error(`[saveProductOptions] Error fetching existing groups:`, fetchError);
+      throw fetchError;
+    }
+    
+    console.log(`[saveProductOptions] Found ${existingGroups?.length || 0} existing option groups`);
     
     // If we have existing groups, delete their choices first
     if (existingGroups && existingGroups.length > 0) {
       const existingGroupIds = existingGroups.map(g => g.option_group_id);
+      console.log(`[saveProductOptions] Deleting choices for existing groups:`, existingGroupIds);
       
       const { error: deleteChoicesError } = await supabase
         .from('product_option_choices')
         .delete()
         .in('option_group_id', existingGroupIds);
         
-      if (deleteChoicesError) throw deleteChoicesError;
+      if (deleteChoicesError) {
+        console.error(`[saveProductOptions] Error deleting existing choices:`, deleteChoicesError);
+        throw deleteChoicesError;
+      }
+      
+      console.log(`[saveProductOptions] Successfully deleted existing choices`);
       
       // Then delete the groups
       const { error: deleteGroupsError } = await supabase
@@ -117,11 +131,17 @@ export const saveProductOptions = async (
         .delete()
         .eq('product_id', productId);
         
-      if (deleteGroupsError) throw deleteGroupsError;
+      if (deleteGroupsError) {
+        console.error(`[saveProductOptions] Error deleting existing groups:`, deleteGroupsError);
+        throw deleteGroupsError;
+      }
+      
+      console.log(`[saveProductOptions] Successfully deleted existing groups`);
     }
     
     // Early exit if there are no option groups to save
     if (!optionGroups || optionGroups.length === 0) {
+      console.log(`[saveProductOptions] No new option groups to save, exiting early`);
       return;
     }
     
@@ -140,13 +160,20 @@ export const saveProductOptions = async (
       };
     });
     
+    console.log(`[saveProductOptions] Inserting ${groupsToInsert.length} option groups`);
+    
     // Insert the groups
     const { error: insertGroupsError, data: insertedGroups } = await supabase
       .from('product_option_groups')
       .insert(groupsToInsert)
       .select();
       
-    if (insertGroupsError) throw insertGroupsError;
+    if (insertGroupsError) {
+      console.error(`[saveProductOptions] Error inserting option groups:`, insertGroupsError);
+      throw insertGroupsError;
+    }
+    
+    console.log(`[saveProductOptions] Successfully inserted ${insertedGroups?.length || 0} groups`);
     
     // Prepare choices data for insert
     let choicesToInsert: any[] = [];
@@ -157,7 +184,7 @@ export const saveProductOptions = async (
       const groupId = insertedGroup?.option_group_id || group.option_group_id;
       
       if (!groupId) {
-        console.error('Missing group ID for choices', group);
+        console.error('[saveProductOptions] Missing group ID for choices', group);
         return;
       }
       
@@ -175,15 +202,23 @@ export const saveProductOptions = async (
       choicesToInsert = [...choicesToInsert, ...groupChoices];
     });
     
+    console.log(`[saveProductOptions] Inserting ${choicesToInsert.length} option choices`);
+    
     // Insert the choices
     if (choicesToInsert.length > 0) {
       const { error: insertChoicesError } = await supabase
         .from('product_option_choices')
         .insert(choicesToInsert);
         
-      if (insertChoicesError) throw insertChoicesError;
+      if (insertChoicesError) {
+        console.error(`[saveProductOptions] Error inserting option choices:`, insertChoicesError);
+        throw insertChoicesError;
+      }
+      
+      console.log(`[saveProductOptions] Successfully inserted all choices`);
     }
     
+    console.log(`[saveProductOptions] Completed save process for product ${productId}`);
   } catch (error) {
     console.error('Error saving product options:', error);
     throw error;
