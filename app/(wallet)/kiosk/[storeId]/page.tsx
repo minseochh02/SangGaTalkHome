@@ -58,7 +58,7 @@ export default function KioskPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [totalAmount, setTotalAmount] = useState<number>(0);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>('all');
   const [showCart, setShowCart] = useState<boolean>(false);
   const [deviceNumber, setDeviceNumber] = useState<number | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -165,22 +165,22 @@ export default function KioskPage() {
           
         if (!categoryError && categoryData && categoryData.length > 0) {
           setCategories(categoryData);
-          setSelectedCategory(categoryData[0].category_id);
+          // setSelectedCategory(categoryData[0].category_id); // Keep 'all' as default
         } else {
           // If categories don't exist, clear any existing categories
           setCategories([]);
-          setSelectedCategory(null);
+          setSelectedCategory('all'); // Default to 'all'
         }
       } catch (err) {
         console.error('Error fetching categories (optional):', err);
         setCategories([]);
-        setSelectedCategory(null);
+        setSelectedCategory('all'); // Default to 'all'
       }
       
       // Fetch products - match the mobile app query format
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('product_id, product_name, description, sgt_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out')
+        .select('product_id, product_name, description, sgt_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out, product_category')
         .eq('store_id', storeId)
         .eq('status', 1)
         .eq('is_kiosk_enabled', true)
@@ -393,9 +393,17 @@ export default function KioskPage() {
     return price.toLocaleString();
   };
   
-  // Filter products (note: we're not filtering by category since product_category isn't available)
-  // Display all products for now, categorization can be added later if needed
-  const filteredProducts = products;
+  // Filter products by selected category
+  const filteredProducts = products.filter(product => {
+    if (selectedCategory === 'all' || selectedCategory === null) {
+      return product.is_kiosk_enabled; // Show all kiosk-enabled products if 'all' or no category selected
+    }
+    // Handle products that might not have a category assigned - they only show in 'all'
+    if (!product.product_category && selectedCategory !== 'all') {
+        return false;
+    }
+    return product.product_category === selectedCategory && product.is_kiosk_enabled;
+  });
   
   // Add product subscription useEffect
   useEffect(() => {
@@ -645,11 +653,22 @@ export default function KioskPage() {
         </div>
       </header>
       
-      {/* Category tabs - hiding for now since we're not filtering by category yet
-      {categories.length > 0 && (
-        <div className="bg-white shadow-sm overflow-x-auto">
+      {/* Category tabs */}
+      {(categories.length > 0 || selectedCategory === 'all') && ( // Show if categories exist or 'all' is an option
+        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-5"> {/* Added sticky top-0 z-5 for visibility */}
           <div className="container mx-auto">
             <div className="flex space-x-2 p-2">
+              <button
+                key="all-categories"
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
+                  selectedCategory === 'all' || selectedCategory === null
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                }`}
+                onClick={() => setSelectedCategory('all')}
+              >
+                전체
+              </button>
               {categories.map((category) => (
                 <button
                   key={category.category_id}
@@ -667,7 +686,6 @@ export default function KioskPage() {
           </div>
         </div>
       )}
-      */}
       
       {/* Main content */}
       <div className="flex-1 container mx-auto p-4">
@@ -678,7 +696,7 @@ export default function KioskPage() {
               <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
-              <p className="text-gray-600">해당 카테고리에 상품이 없습니다.</p>
+              <p className="text-gray-600">{selectedCategory === 'all' || selectedCategory === null ? '등록된 상품이 없습니다.' : '해당 카테고리에 상품이 없습니다.'}</p>
             </div>
           ) : (
             filteredProducts.map((product) => {
