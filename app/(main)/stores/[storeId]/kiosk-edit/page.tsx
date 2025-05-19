@@ -696,59 +696,117 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     if (!newDividerName.trim() || addingDividerAfter === undefined) return;
 
     const newDividerId = uuidv4();
-    let afterProductId = addingDividerAfter;
-    let position = 0;
     
-    // Get the current combined list to calculate correct position
-    const combinedItems = createCombinedMenuItems(kioskProducts, dividers);
-    
-    // Calculate the position of the new divider
-    if (afterProductId === null) {
-      // Add to the end
-      position = combinedItems.length;
-      if (kioskProducts.length > 0) {
-        afterProductId = kioskProducts[kioskProducts.length - 1].product_id.toString();
-      }
-    } else if (afterProductId === '__first__') {
-      // Add at the beginning
-      afterProductId = null;
-      position = 0;
-    } else {
-      // Find the exact position after the specified product in the combined list
-      const productItemId = `kiosk-${afterProductId}`;
-      const insertAfterIndex = combinedItems.findIndex(item => item.id === productItemId);
-      position = insertAfterIndex + 1;
+    // 1. Determine the insertion index in the *current* combined list
+    let insertionIndex = 0;
+    const originalCombinedItems = createCombinedMenuItems(kioskProducts, dividers);
+    let intendedAfterProductIdForDB: string | null = null;
+
+    if (addingDividerAfter === '__first__') {
+        insertionIndex = 0;
+        intendedAfterProductIdForDB = null;
+    } else if (addingDividerAfter === null) { // Add to very end
+        insertionIndex = originalCombinedItems.length;
+        // Determine afterProductId for DB: last product in combined list or null
+        const lastProductInCombined = [...originalCombinedItems].reverse().find(item => item.type === 'product');
+        intendedAfterProductIdForDB = lastProductInCombined ? lastProductInCombined.itemId : null;
+    } else { // Add after a specific product
+        const targetProductId = addingDividerAfter;
+        intendedAfterProductIdForDB = targetProductId; // This is the product it's intended to be after
+        const targetProductItemId = `kiosk-${targetProductId}`;
+        const idx = originalCombinedItems.findIndex(item => item.id === targetProductItemId);
+        
+        if (idx !== -1) {
+            insertionIndex = idx + 1; // Insert *after* the found product
+        } else { 
+            console.warn(`Could not find item ID ${targetProductItemId} to insert divider after. Adding to end of current items.`);
+            insertionIndex = originalCombinedItems.length;
+            // Fallback for intendedAfterProductIdForDB if target not found
+            const lastProductInCombined = [...originalCombinedItems].reverse().find(item => item.type === 'product');
+            intendedAfterProductIdForDB = lastProductInCombined ? lastProductInCombined.itemId : null;
+        }
     }
-    
-    const newDivider: KioskDivider = {
-      id: newDividerId,
-      name: newDividerName.trim(),
-      position,
-      afterProductId
+
+    // 2. Create the new KioskDivider object (position will be set in step 4)
+    const newDividerObject: KioskDivider = {
+        id: newDividerId,
+        name: newDividerName.trim(),
+        position: 0, // Placeholder, will be correctly set during re-indexing
+        afterProductId: intendedAfterProductIdForDB // For DB, reflecting user intent
     };
+
+    // 3. Create the CombinedMenuItem for the new divider
+    const newCombinedDividerItem: CombinedMenuItem = {
+        id: `divider-${newDividerObject.id}`,
+        type: 'divider',
+        itemId: newDividerObject.id,
+        position: 0, // Placeholder, will be set
+        item: newDividerObject
+    };
+
+    // 4. Insert the new combined item into a temporary list and re-index everything
+    const tempCombinedItemsWithNew = [...originalCombinedItems];
+    tempCombinedItemsWithNew.splice(insertionIndex, 0, newCombinedDividerItem);
+
+    const finalKioskProducts: Product[] = [];
+    const finalDividers: KioskDivider[] = [];
+
+    tempCombinedItemsWithNew.forEach((combinedItem, index) => {
+        if (combinedItem.type === 'product') {
+            const product = combinedItem.item as Product;
+            finalKioskProducts.push({
+                ...product,
+                kiosk_order: index // Assign new sequential order
+            });
+        } else { // type === 'divider'
+            const divider = combinedItem.item as KioskDivider;
+            let currentAfterProductId: string | null = null;
+            // Determine the actual preceding product ID for this divider in the new list
+            if (index > 0) {
+                for (let i = index - 1; i >= 0; i--) {
+                    if (tempCombinedItemsWithNew[i].type === 'product') {
+                        currentAfterProductId = tempCombinedItemsWithNew[i].itemId;
+                        break;
+                    }
+                }
+            }
+            // If this is the newly added divider, ensure its item object gets the updated position
+            if (divider.id === newDividerId) {
+                 finalDividers.push({
+                    ...newDividerObject, // Use the base object
+                    position: index,      // Set its final position
+                    afterProductId: currentAfterProductId // And its actual afterProductId based on new list
+                });
+            } else {
+                 finalDividers.push({
+                    ...divider,
+                    position: index, // Update position for existing dividers
+                    afterProductId: currentAfterProductId // Update actual afterProductId
+                });
+            }
+        }
+    });
     
-    // Add the new divider to the state
-    const updatedDividers = [...dividers, newDivider].sort((a, b) => a.position - b.position);
-    setDividers(updatedDividers);
+    setKioskProducts(finalKioskProducts);
+    setDividers(finalDividers);
     
     // Save to backend
     try {
-      await supabase
-        .from('kiosk_categories')
-        .insert([{
-          category_id: newDividerId,
-          store_id: storeId,
-          category_name: newDividerName.trim(),
-          position,
-          after_product_id: afterProductId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }]);
+      // The saveCategories and handleSaveKioskProducts functions will save the entire current state
+      // including the new divider and updated positions/orders of all items.
       
-      console.log('New category saved to database');
+      // We need to ensure the new category is in the database first if saveCategories relies on existing IDs.
+      // However, saveCategories is designed to delete all and re-insert.
+      
+      console.log('New divider added, preparing to save all categories and product orders.');
+      await saveCategories(); // This will save all dividers, including the new one with its final position
+      await handleSaveKioskProducts(finalKioskProducts); // This will save all product orders
+      
+      console.log('New category and all item positions/orders saved to database');
     } catch (err) {
-      console.error('Error saving new category:', err);
-      // We'll keep the local state update even if backend fails
+      console.error('Error saving new category and updating all items:', err);
+      alert('카테고리 추가 및 전체 항목 업데이트 중 오류가 발생했습니다.');
+      // Consider reverting local state or re-fetching if the save fails critically.
     }
     
     // Reset input state
