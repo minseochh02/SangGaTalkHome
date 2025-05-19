@@ -107,6 +107,15 @@ const ProductEditModal = ({
           // Save the product options to the database
           await saveProductOptions(product.product_id, product.store_id, optionGroupsToSave);
           console.log('Product options saved successfully to DB.');
+          
+          // Test direct DB fetch to verify connectivity
+          console.log("Testing direct Supabase query to verify connection...");
+          const { data, error } = await supabase
+            .from('product_option_groups')
+            .select('*')
+            .eq('product_id', product.product_id);
+            
+          console.log("Direct Supabase query result:", { data, error });
         } catch (optionsError) {
           console.error('Error saving product options to DB:', optionsError);
           alert('상품 옵션 저장 중 오류가 발생했습니다.'); 

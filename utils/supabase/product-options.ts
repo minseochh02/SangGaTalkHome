@@ -1,4 +1,4 @@
-import { createClient } from './client';
+import { createClient } from '@/utils/supabase/client';
 import { ProductOptionGroup, ProductOptionChoice } from '@/utils/type';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -93,6 +93,23 @@ export const saveProductOptions = async (
   
   try {
     console.log(`[saveProductOptions] Starting save process for product ${productId}`);
+    
+    // Test direct DB connection with a simple query
+    console.log(`[saveProductOptions] Testing database connection...`);
+    const testResult = await supabase
+      .from('products')
+      .select('product_id')
+      .eq('product_id', productId)
+      .single();
+      
+    console.log(`[saveProductOptions] Connection test result:`, testResult);
+    
+    if (testResult.error) {
+      console.error(`[saveProductOptions] Warning: Connection test query failed:`, testResult.error);
+    } else {
+      console.log(`[saveProductOptions] Connection test successful, found product:`, testResult.data?.product_id);
+    }
+    
     console.log(`[saveProductOptions] Number of option groups to save: ${optionGroups.length}`);
     
     // Start by fetching existing group IDs for this product
