@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
+// Import FontAwesome components and icons
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { fas } from '@fortawesome/free-solid-svg-icons';
+import { far } from '@fortawesome/free-regular-svg-icons';
 // import { createClient } from '@/utils/supabase/client'; // Assuming this is your Supabase client setup
 // import { ProductOptionCategory, ProductOptionChoice, Product } from '@/utils/type'; // Assuming these types are defined in your project
+
+// Add all FontAwesome solid and regular icons to the library
+library.add(fas, far);
 
 // Mock Supabase client for demonstration if not available
 const supabaseMock = {
@@ -38,16 +46,16 @@ interface Product {
 // For a real app, you'd want a more comprehensive list or a search/filter mechanism.
 // Using a mix of solid and regular for variety. Ensure you have Font Awesome Free or Pro set up.
 const faIcons = [
-  "fa-solid fa-ice-cream", "fa-solid fa-mug-hot", "fa-solid fa-martini-glass-citrus", "fa-solid fa-beer-mug-empty",
-  "fa-solid fa-burger", "fa-solid fa-pizza-slice", "fa-solid fa-hotdog", "fa-solid fa-drumstick-bite",
-  "fa-solid fa-apple-whole", "fa-solid fa-carrot", "fa-solid fa-leaf", "fa-solid fa-seedling",
-  "fa-solid fa-store", "fa-solid fa-tags", "fa-solid fa-percent", "fa-solid fa-star",
-  "fa-regular fa-heart", "fa-regular fa-thumbs-up", "fa-regular fa-face-smile", "fa-solid fa-fire",
-  "fa-solid fa-pepper-hot", "fa-solid fa-lemon", "fa-solid fa-bread-slice", "fa-solid fa-cheese",
-  "fa-solid fa-blender", "fa-solid fa-utensils", "fa-solid fa-receipt", "fa-solid fa-gift",
-  "fa-solid fa-truck-fast", "fa-solid fa-clock", "fa-solid fa-calendar-days", "fa-solid fa-credit-card",
-  "fa-solid fa-bell-concierge", "fa-solid fa-temperature-high", "fa-solid fa-temperature-low", "fa-solid fa-snowflake",
-  "fa-solid fa-sun", "fa-solid fa-moon", "fa-solid fa-cloud", "fa-solid fa-droplet"
+  "ice-cream", "mug-hot", "martini-glass-citrus", "beer-mug-empty",
+  "burger", "pizza-slice", "hotdog", "drumstick-bite",
+  "apple-whole", "carrot", "leaf", "seedling",
+  "store", "tags", "percent", "star",
+  "heart", "thumbs-up", "face-smile", "fire",
+  "pepper-hot", "lemon", "bread-slice", "cheese",
+  "blender", "utensils", "receipt", "gift",
+  "truck-fast", "clock", "calendar-days", "credit-card",
+  "bell-concierge", "temperature-high", "temperature-low", "snowflake",
+  "sun", "moon", "cloud", "droplet"
 ];
 
 
@@ -177,9 +185,18 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   // Helper to render icon (checks if it's a FA class or emoji)
   const renderIcon = (iconString?: string) => {
     if (!iconString) return null;
-    if (iconString.startsWith('fa-')) { // Font Awesome icon
-      return <i className={`${iconString} text-xl`}></i>;
+
+    // Check if it's a Font Awesome icon reference
+    if (iconString.startsWith('fa-')) {
+      const iconName = iconString.replace(/^fa-(solid|regular) fa-/, '');
+      
+      // Determine if it's a regular or solid icon
+      const iconStyle = iconString.includes('fa-regular') ? 'far' : 'fas';
+      
+      // Remove 'fa-' prefix to get the actual icon name
+      return <FontAwesomeIcon icon={[iconStyle as any, iconName as any]} className="text-xl" />;
     }
+    
     // Assume emoji if not a Font Awesome class
     return <span className="text-2xl">{iconString}</span>; 
   };
@@ -314,11 +331,11 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                             <button
                                 key={iconClass}
                                 type="button"
-                                onClick={() => handleIconSelect(iconClass)}
+                                onClick={() => handleIconSelect(`fa-solid fa-${iconClass}`)}
                                 className="p-3 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-blue-100 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all aspect-square"
                                 title={iconClass}
                             >
-                                <i className={`${iconClass} text-2xl text-gray-700`}></i>
+                                <FontAwesomeIcon icon={['fas', iconClass as any]} className="text-2xl text-gray-700" />
                             </button>
                         ))}
                     </div>
