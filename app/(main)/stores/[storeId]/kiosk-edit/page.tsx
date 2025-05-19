@@ -31,7 +31,7 @@ import KioskSalesHistory from './KioskSalesHistory';
 import KioskActiveSessions from './KioskActiveSessions';
 import KioskOrdersManagement from './KioskOrdersManagement';
 import ProductEditModal from './ProductEditModal';
-import SortableProductItem from './SortableProductItem';
+import SortableProductItem, { EnhancedProductList } from './SortableProductItem';
 import DroppableContainer from './DroppableContainer';
 import { QRCodeSVG } from 'qrcode.react';
 import GlobalOptionEditor from './GlobalOptionEditor';
@@ -753,112 +753,13 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       {/* Dynamic section content */}
       {activeSection === 'menu' && (
         <div>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
-          >
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Available Products Column */}
-              <div className="flex-1">
-                <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
-                  <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
-                </div>
-                
-                <DroppableContainer 
-                  id="availableProducts" 
-                  items={availableProducts.map(p => p.product_id.toString())}
-                >
-                  {availableProducts.length === 0 ? (
-                    <div className="flex justify-center items-center h-32 text-gray-400">
-                      모든 상품이 키오스크에 추가되었습니다.
-                    </div>
-                  ) : (
-                    <SortableContext
-                      items={availableProducts.map(p => p.product_id.toString())}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {availableProducts.map(product => (
-                        <SortableProductItem 
-                          key={product.product_id} 
-                          product={product}
-                          onToggleSoldOut={handleToggleSoldOut}
-                          onEditProduct={handleEditProduct}
-                        />
-                      ))}
-                    </SortableContext>
-                  )}
-                </DroppableContainer>
-              </div>
-
-              {/* Kiosk Products Column */}
-              <div className="flex-1">
-                <div className="bg-green-50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
-                  <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
-                </div>
-                
-                <DroppableContainer 
-                  id="kioskProducts" 
-                  items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
-                >
-                  {kioskProducts.length === 0 ? (
-                    <div className="flex justify-center items-center h-32 text-gray-400">
-                      키오스크에 표시할 상품을 추가하세요.
-                    </div>
-                  ) : (
-                    <SortableContext
-                      items={kioskProducts.map(p => `kiosk-${p.product_id}`)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {kioskProducts.map((product) => (
-                        <SortableProductItem 
-                          key={`kiosk-${product.product_id}`} 
-                          product={product} 
-                          isKioskProduct={true}
-                          onToggleSoldOut={handleToggleSoldOut}
-                          onEditProduct={handleEditProduct}
-                        />
-                      ))}
-                    </SortableContext>
-                  )}
-                </DroppableContainer>
-              </div>
-            </div>
-
-            {/* Drag overlay for visual feedback */}
-            <DragOverlay>
-              {activeProduct && (
-                <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
-                  <div className="flex items-center gap-3">
-                    {activeProduct.image_url ? (
-                      <img 
-                        src={activeProduct.image_url} 
-                        alt={activeProduct.product_name}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                        No Image
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <h4 className="font-medium">{activeProduct.product_name}</h4>
-                      <div className="flex text-sm gap-2">
-                        <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
-                        {activeProduct.sgt_price && (
-                          <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
+          <EnhancedProductList 
+            storeId={storeId}
+            initialProducts={allProducts}
+            onSaveKioskProducts={handleSaveKioskProducts}
+            onToggleSoldOut={handleToggleSoldOut}
+            onEditProduct={handleEditProduct}
+          />
         </div>
       )}
       

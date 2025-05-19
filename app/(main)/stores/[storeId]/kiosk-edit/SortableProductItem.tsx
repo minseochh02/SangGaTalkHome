@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -264,82 +264,52 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ category, onUpdateName, onR
 
 
 // --- MAIN ENHANCED PRODUCT LIST COMPONENT ---
-const EnhancedProductList: React.FC = () => {
-  // Sample initial product data - adding additional required fields
-  const initialProductsData: Partial<Product>[] = [
-    { 
-      product_id: '101', 
-      product_name: '아메리카노', 
-      won_price: 3000, 
-      sgt_price: 3, 
-      image_url: 'https://placehold.co/100x100/e0e0e0/777?text=Coffee', 
-      is_sold_out: false, 
-      kiosk_order: 0,
-      // Adding minimal required fields
-      description: '',
-      category_id: '',
-      store_id: '',
-      is_sgt_product: false,
-      status: 1
-    },
-    { 
-      product_id: '102', 
-      product_name: '카페라떼', 
-      won_price: 3500, 
-      sgt_price: 3.5, 
-      image_url: 'https://placehold.co/100x100/e0e0e0/777?text=Latte', 
-      is_sold_out: true, 
-      kiosk_order: 1,
-      description: '',
-      category_id: '',
-      store_id: '',
-      is_sgt_product: false,
-      status: 1
-    },
-    { 
-      product_id: '103', 
-      product_name: '카푸치노', 
-      won_price: 3500, 
-      sgt_price: 3.5, 
-      image_url: null, 
-      is_sold_out: false, 
-      kiosk_order: 2,
-      description: '',
-      category_id: '',
-      store_id: '',
-      is_sgt_product: false,
-      status: 1
-    },
-    { 
-      product_id: '104', 
-      product_name: '딸기 스무디', 
-      won_price: 4500, 
-      sgt_price: 4.5, 
-      image_url: 'https://placehold.co/100x100/e0e0e0/777?text=Smoothie', 
-      is_sold_out: false, 
-      kiosk_order: 3,
-      description: '',
-      category_id: '',
-      store_id: '',
-      is_sgt_product: false,
-      status: 1
-    },
-  ];
+interface EnhancedProductListProps {
+  storeId: string;
+  initialProducts: Product[];
+  onSaveKioskProducts: (products: Product[]) => Promise<void>;
+  onToggleSoldOut: (productId: string | number, currentStatus: boolean) => Promise<void>;
+  onEditProduct: (product: Product) => void;
+}
 
-  // Type assertion to treat the partial products as full Products for demo purposes
-  const typedProducts = initialProductsData as unknown as Product[];
+const EnhancedProductList: React.FC<EnhancedProductListProps> = ({
+  storeId,
+  initialProducts,
+  onSaveKioskProducts,
+  onToggleSoldOut,
+  onEditProduct
+}) => {
+  // Instead of using sample data, use the provided initial products
+  const [allProducts, setAllProducts] = useState<Product[]>(initialProducts || []);
+  
+  // Filter products for kiosk
+  const [kioskProducts, setKioskProducts] = useState<Product[]>(
+    initialProducts.filter(p => p.is_kiosk_enabled).sort((a, b) => {
+      if (a.kiosk_order === null || a.kiosk_order === undefined) return 1;
+      if (b.kiosk_order === null || b.kiosk_order === undefined) return -1;
+      return a.kiosk_order - b.kiosk_order;
+    })
+  );
 
-  // Assume this list is for a kiosk, so isKioskProduct is true for all products
-  const IS_KIOSK_MODE = true;
+  // State for categories
+  const [categories, setCategories] = useState<CategoryDividerItem[]>([]);
+  
+  // Combined items list with both products and categories
+  const [items, setItems] = useState<ListItem[]>([]);
 
-  const initialListItems: ListItem[] = typedProducts.map(p => ({
-    id: IS_KIOSK_MODE ? `kiosk-${p.product_id}` : p.product_id.toString(),
-    type: 'product',
-    data: p,
-    isKioskProduct: IS_KIOSK_MODE,
-  }));
-
-  const [items, setItems] = useState<ListItem[]>(initialListItems);
+  // Initialize items from kioskProducts
+  useEffect(() => {
+    // Convert Products to ListItems
+    const productItems: ProductListItem[] = kioskProducts.map(p => ({
+      id: `kiosk-${p.product_id}`,
+      type: 'product',
+      data: p,
+      isKioskProduct: true,
+    }));
+    
+    // Combine with any existing categories
+    setItems([...productItems, ...categories]);
+  }, [kioskProducts, categories]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -354,12 +324,17 @@ const EnhancedProductList: React.FC = () => {
       type: 'category',
       name: '', // Initially empty, user will type
     };
+    
     const newItems = [...items];
     newItems.splice(index, 0, newCategory);
     setItems(newItems);
+    
+    // Also update categories list
+    setCategories([...categories, newCategory]);
   };
 
   const handleUpdateCategoryName = (id: string, newName: string) => {
+    // Update in items list
     setItems(prevItems =>
       prevItems.map(item =>
         item.id === id && item.type === 'category'
@@ -367,79 +342,80 @@ const EnhancedProductList: React.FC = () => {
           : item
       )
     );
+    
+    // Also update in categories list
+    setCategories(prevCategories =>
+      prevCategories.map(category =>
+        category.id === id ? { ...category, name: newName } : category
+      )
+    );
   };
   
   const handleRemoveCategory = (id: string) => {
     setItems(prevItems => prevItems.filter(item => item.id !== id));
+    setCategories(prevCategories => prevCategories.filter(category => category.id !== id));
   };
 
-  const handleToggleSoldOut = (productId: string | number, currentStatus: boolean) => {
-    setItems(prevItems =>
-      prevItems.map(item => {
-        if (item.type === 'product' && item.data.product_id === productId) {
-          return {
-            ...item,
-            data: { ...item.data, is_sold_out: !currentStatus },
-          };
-        }
-        return item;
-      })
-    );
-    console.log(`Toggled sold out for ${productId} to ${!currentStatus}`);
-  };
-
-  const handleEditProduct = (product: Product) => {
-    console.log('Editing product:', product);
-    // Implement your product editing logic here (e.g., open a modal)
-    alert(`상품 수정: ${product.product_name}`);
-  };
-  
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setItems((currentItems) => {
-        const activeItem = currentItems.find(item => item.id === active.id);
-        const overItem = currentItems.find(item => item.id === over.id);
-
-        // Only allow reordering of product items with other product items
-        if (activeItem?.type === 'product' && overItem?.type === 'product') {
-            const oldIndex = currentItems.findIndex(item => item.id === active.id);
-            const newIndex = currentItems.findIndex(item => item.id === over.id);
-            const reorderedItems = arrayMove(currentItems, oldIndex, newIndex);
-            
-            // Update kiosk_order for products after reordering
-            let currentKioskOrder = 0;
-            return reorderedItems.map(item => {
-                if (item.type === 'product') {
-                    return {
-                        ...item,
-                        data: {
-                            ...item.data,
-                            kiosk_order: currentKioskOrder++
-                        }
-                    };
-                }
-                return item;
-            });
+        const oldIndex = currentItems.findIndex(item => item.id === active.id);
+        const newIndex = currentItems.findIndex(item => item.id === over.id);
+        
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const reorderedItems = arrayMove(currentItems, oldIndex, newIndex);
+          
+          // Extract kiosk products and update their order
+          const updatedKioskProducts = reorderedItems
+            .filter(item => item.type === 'product')
+            .map((item, index) => {
+              if (item.type === 'product') {
+                return {
+                  ...item.data,
+                  is_kiosk_enabled: true,
+                  kiosk_order: index
+                };
+              }
+              return item.data; // Shouldn't happen but TypeScript wants it
+            }) as Product[];
+          
+          // Update kioskProducts state
+          setKioskProducts(updatedKioskProducts);
+          
+          // Save to backend
+          onSaveKioskProducts(updatedKioskProducts);
+          
+          return reorderedItems;
         }
-        return currentItems; // No change if dragging category or mixing types in unsupported way
+        return currentItems;
       });
     }
   };
 
-  // Get IDs of only the sortable items (products) for SortableContext
-  const productItemIds = items.filter(item => item.type === 'product').map(item => item.id);
+  // Get IDs of all items for SortableContext
+  const itemIds = items.map(item => item.id);
 
+  // Remove debugging output for production use
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <div className="max-w-2xl mx-auto p-4 font-sans">
-        <h1 className="text-2xl font-semibold mb-6 text-gray-700">키오스크 상품 관리</h1>
-        <SortableContext items={productItemIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-0"> {/* Reduced space here, InsertionPoint has its own margin */}
+      <div className="max-w-full mx-auto font-sans">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-700">키오스크 상품 관리</h1>
+          <button 
+            onClick={() => onSaveKioskProducts(kioskProducts)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm"
+          >
+            변경사항 저장
+          </button>
+        </div>
+        
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-0">
             {items.map((item, index) => (
               <React.Fragment key={item.id}>
                 {/* Insertion point BEFORE each item */}
@@ -448,14 +424,14 @@ const EnhancedProductList: React.FC = () => {
                 {item.type === 'product' ? (
                   <SortableProductItem
                     productItem={item}
-                    onToggleSoldOut={handleToggleSoldOut}
-                    onEditProduct={handleEditProduct}
+                    onToggleSoldOut={onToggleSoldOut}
+                    onEditProduct={onEditProduct}
                   />
                 ) : (
                   <CategoryItem
                     category={item}
                     onUpdateName={handleUpdateCategoryName}
-                    onRemove={handleRemoveCategory} // Added remove functionality
+                    onRemove={handleRemoveCategory}
                   />
                 )}
               </React.Fragment>
@@ -464,20 +440,13 @@ const EnhancedProductList: React.FC = () => {
             <InsertionPoint onInsert={() => handleAddCategory(items.length)} />
           </div>
         </SortableContext>
+        
         {items.length === 0 && (
-             <InsertionPoint onInsert={() => handleAddCategory(0)} />
+          <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-gray-500 mb-4">상품이 없습니다. 키오스크에 표시할 상품을 추가하세요.</p>
+            <InsertionPoint onInsert={() => handleAddCategory(0)} />
+          </div>
         )}
-         <div className="mt-8 p-4 bg-gray-50 rounded-lg border">
-            <h3 className="text-sm font-medium text-gray-600 mb-2">Current List State (for debugging):</h3>
-            <pre className="text-xs bg-white p-2 rounded border border-gray-200 overflow-x-auto">
-                {JSON.stringify(items.map(item => ({
-                    id: item.id, 
-                    type: item.type, 
-                    name: item.type === 'category' ? item.name : item.data.product_name,
-                    order: item.type === 'product' ? item.data.kiosk_order : undefined
-                })), null, 2)}
-            </pre>
-        </div>
       </div>
     </DndContext>
   );
