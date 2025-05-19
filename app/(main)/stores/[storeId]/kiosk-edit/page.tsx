@@ -172,7 +172,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         .from('products')
         .select('*, is_kiosk_enabled, kiosk_order, is_sold_out, item_type') // Ensure item_type is selected
         .eq('store_id', storeId)
-        // .eq('status', 1) // Only active products, dividers don't have status? Or assume status 1 for active.
+        .eq('status', 1) // Re-enabled: Only active products
         // We fetch all kiosk_enabled items initially to build the kiosk list,
         // and all status=1 items for the "all products" list.
         // For dividers, they should also have is_kiosk_enabled = true if they are on the kiosk.
@@ -190,7 +190,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
       // Products for the "all products" list (non-dividers, status 1)
       const storeProducts = allFetchedItems.filter(
-        item => (!item.item_type || item.item_type === 'product') && item.status === 1
+        item => !item.item_type || item.item_type === 'product'
       );
       setAllProducts(storeProducts);
 
