@@ -55,20 +55,22 @@ const AddDividerPlaceholder: React.FC<AddDividerPlaceholderProps> = ({
   }
 
   return (
-    <div className="my-2 h-8 group hover:h-12 transition-all duration-200 ease-in-out">
-      {/* Created a more stable container with fixed height */}
-      <div 
-        onClick={onClick}
-        className="w-full h-full flex items-center justify-center cursor-pointer"
+    <div
+      onClick={onClick}
+      className="relative my-1 group cursor-pointer flex items-center justify-center"
+    >
+      <div
+        className="w-full flex items-center justify-center
+                   h-2 group-hover:h-10
+                   opacity-0 group-hover:opacity-100
+                   transform scale-95 group-hover:scale-100
+                   transition-all duration-200 ease-in-out"
       >
-        {/* The visible element that appears on hover */}
-        <div className="w-full max-w-md mx-auto opacity-0 group-hover:opacity-100 transform scale-95 group-hover:scale-100 transition-all duration-150 ease-in-out">
-          <div className="bg-blue-50 hover:bg-blue-100 rounded-md px-4 py-2 flex items-center justify-center text-blue-500 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            <span className="text-sm font-medium">메뉴 카테고리 추가</span>
-          </div>
+        <div className="bg-blue-50 group-hover:bg-blue-100 rounded-md px-4 py-2 flex items-center text-blue-500 shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span className="text-sm font-medium">메뉴 카테고리 추가</span>
         </div>
       </div>
     </div>
