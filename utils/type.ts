@@ -99,15 +99,67 @@ export interface Product {
 
 // Product Options - For customizing products (e.g., ice level, size, etc.)
 export interface ProductOptionChoice {
-	id: string;
-	name: string;
+  option_choice_id: string; 
+  option_group_id: string;  
+  choice_name: string;
+  price_adjustment: number;
+  display_order: number;
+  is_default: boolean;
+  is_sold_out: boolean;
+  choice_icon?: string | null; 
+  created_at?: string; 
+  updated_at?: string; 
 }
 
-export interface ProductOptionCategory {
-	id: string;
-	name: string;
-	choices: ProductOptionChoice[];
+export interface ProductOptionGroup {
+  option_group_id: string; 
+  product_id: string;      
+  store_id: string;        
+  group_name: string;
+  display_order: number;
+  selection_type: 'single' | 'multiple'; 
+  group_icon?: string | null;   
+  created_at?: string;    
+  updated_at?: string;    
+  
+  choices: ProductOptionChoice[]; 
 }
+
+// Adjust existing ProductOptionCategory to align or be replaced by ProductOptionGroup
+// For now, we'll assume ProductOptionEditor will be updated to use ProductOptionGroup
+export interface ProductOptionCategory { // This type will be refactored/replaced
+  id: string; // Will map to option_group_id
+  name: string; // Will map to group_name
+  // Add new fields from ProductOptionGroup that ProductOptionEditor needs to manage
+  display_order?: number;
+  selection_type?: 'single' | 'multiple';
+  group_icon?: string | null;
+  choices: ProductOptionChoice[]; // Ensure this uses the new detailed ProductOptionChoice
+}
+
+// The original simpler choice type in ProductOptionEditor if it existed separately
+// export interface SimpleProductOptionChoice {
+//   id: string; // Will map to option_choice_id
+//   name: string; // Will map to choice_name
+//   // Add new fields from ProductOptionChoice that ProductOptionEditor needs to manage
+//   price_adjustment?: number;
+//   display_order?: number;
+//   is_default?: boolean;
+//   is_sold_out?: boolean;
+//   choice_icon?: string | null;
+// }
+
+// Original types from the user's file (for reference, to be updated/removed)
+// interface ProductOptionCategory {
+//   id: string;
+//   name: string;
+//   choices: ProductOptionChoice[];
+// }
+// 
+// interface ProductOptionChoice {
+//   id: string;
+//   name: string;
+// }
 
 // 1-2-2. ORDERS
 export interface Order {
