@@ -71,6 +71,7 @@ export interface Store {
 
 // 1-2-1. PRODUCTS
 export interface Product {
+  item_type: any;
 	product_id: string;
 	product_name: string;
 	description: string | null;

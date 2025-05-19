@@ -1,20 +1,14 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { UniqueIdentifier } from '@dnd-kit/core';
-
-export interface DividerItemData {
-  id: UniqueIdentifier;
-  type: 'divider';
-  name: string;
-  // onRemove?: (id: UniqueIdentifier) => void; // Optional: if you want a remove button on dividers
-}
+import { Product } from '@/utils/type'; // Assuming Product type is augmented
 
 interface SortableDividerItemProps {
-  divider: DividerItemData;
+  divider: Product; // item_type must be 'divider', product_id must be a string (UUID)
+  onRemove: (dividerId: string) => void;
 }
 
-const SortableDividerItem: React.FC<SortableDividerItemProps> = ({ divider }) => {
+const SortableDividerItem: React.FC<SortableDividerItemProps> = ({ divider, onRemove }) => {
   const {
     attributes,
     listeners,
@@ -22,44 +16,48 @@ const SortableDividerItem: React.FC<SortableDividerItemProps> = ({ divider }) =>
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: divider.id });
+  } = useSortable({ id: `kiosk-${divider.product_id}` });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.7 : 1,
-    zIndex: isDragging ? 100 : 'auto', // Ensure dragging item is on top
+    zIndex: isDragging ? 100 : 'auto',
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`p-3 my-2 rounded-md border shadow-sm transition-shadow ${
-        isDragging ? 'bg-blue-100 border-blue-400' : 'bg-gray-100 border-gray-300'
-      }`}
+      className={`my-2 p-3 rounded-lg border bg-gray-100 border-gray-300 ${isDragging ? 'shadow-xl' : 'shadow-sm'}`}
     >
       <div className="flex items-center justify-between">
-        <div 
-            {...attributes} // Make only part of it draggable if needed, or whole thing
-            {...listeners} // Spread listeners for drag handle
-            className="flex-grow text-center text-sm font-semibold text-gray-700 cursor-grab py-1"
-        >
-          {divider.name}
+        <div className="flex items-center flex-grow">
+          {/* Drag Handle Icon */}
+          <button 
+            {...attributes} 
+            {...listeners} 
+            className="cursor-move mr-3 p-1 text-gray-500 hover:text-gray-700 touch-none" // Added touch-none for better mobile dnd
+            aria-label="Drag to reorder divider"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <span className="font-semibold text-gray-700 truncate" title={divider.product_name}>
+            {divider.product_name}
+          </span>
         </div>
-        {/* Optional: Remove button for the divider 
-        {divider.onRemove && (
-            <button 
-                onClick={() => divider.onRemove && divider.onRemove(divider.id)}
-                className="ml-2 p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-200"
-                aria-label={`Remove category ${divider.name}`}
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        )}
-        */}
+        <button
+          onClick={() => onRemove(divider.product_id.toString())}
+          className="ml-2 p-1 text-red-500 hover:text-red-700 flex-shrink-0"
+          title="Remove Divider"
+          aria-label="Remove divider"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       </div>
     </div>
   );
