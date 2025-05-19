@@ -95,15 +95,6 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return (
-      <div className="flex items-center justify-end">
-        <span>{amount.toLocaleString()}</span>
-        <span className="text-xs text-gray-500 ml-1">SGT</span>
-      </div>
-    );
-  };
-
   if (isLoading) {
     return (
       <div className="mt-8 p-4">
@@ -147,10 +138,7 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
                       )}
                     </div>
                     <div className="flex items-center">
-                      <div className="mr-4 font-bold flex items-center">
-                        <span>{Number(order.total_amount).toLocaleString()}</span>
-                        <span className="text-xs text-gray-500 ml-1">SGT</span>
-                      </div>
+                      <span className="mr-4 font-bold flex items-center gap-1 flex-row">{Number(order.total_amount).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></span>
                       <ChevronUpIcon
                         className={`${open ? 'rotate-180 transform' : ''} h-5 w-5 text-gray-500`}
                       />
@@ -169,51 +157,41 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
                             <span className="font-semibold">주문 유형:</span> {getOrderTypeLabel(order.order_type)}
                           </span>
                         </div>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full border-collapse">
-                            <thead>
-                              <tr className="border-b">
-                                <th className="py-2 text-left">상품</th>
-                                <th className="py-2 text-right w-24">가격</th>
-                                <th className="py-2 text-right w-20">수량</th>
-                                <th className="py-2 text-right w-28">소계</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {expandedOrderItems[order.kiosk_order_id].map((item) => (
-                                <tr key={item.kiosk_order_item_id} className="border-b">
-                                  <td className="py-2">
-                                    <div className="flex items-center">
-                                      {item.product?.image_url && (
-                                        <img
-                                          src={item.product.image_url}
-                                          alt={item.product?.product_name || '상품 이미지'}
-                                          className="w-10 h-10 object-cover rounded mr-2"
-                                        />
-                                      )}
-                                      <span>{item.product?.product_name || `상품 #${item.product_id.substring(0, 8)}`}</span>
-                                    </div>
-                                  </td>
-                                  <td className="py-2 text-right">
-                                    {formatCurrency(Number(item.price_at_purchase))}
-                                  </td>
-                                  <td className="py-2 text-right">{item.quantity}개</td>
-                                  <td className="py-2 text-right">
-                                    {formatCurrency(Number(item.price_at_purchase) * item.quantity)}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            <tfoot>
-                              <tr className="font-bold">
-                                <td colSpan={3} className="py-2 text-right">총계:</td>
-                                <td className="py-2 text-right">
-                                  {formatCurrency(Number(order.total_amount))}
+                        <table className="min-w-full border-collapse">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="py-2 text-left">상품</th>
+                              <th className="py-2 text-right">가격</th>
+                              <th className="py-2 text-right">수량</th>
+                              <th className="py-2 text-right">소계</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {expandedOrderItems[order.kiosk_order_id].map((item) => (
+                              <tr key={item.kiosk_order_item_id} className="border-b">
+                                <td className="py-2 flex items-center">
+                                  {item.product?.image_url && (
+                                    <img
+                                      src={item.product.image_url}
+                                      alt={item.product?.product_name || '상품 이미지'}
+                                      className="w-10 h-10 object-cover rounded mr-2"
+                                    />
+                                  )}
+                                  <span>{item.product?.product_name || `상품 #${item.product_id.substring(0, 8)}`}</span>
                                 </td>
+                                <td className="py-2 text-right flex items-center gap-1 flex-row">{Number(item.price_at_purchase).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></td>
+                                <td className="py-2 text-right">{item.quantity}개</td>
+                                <td className="py-2 text-right">{(Number(item.price_at_purchase) * item.quantity).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></td>
                               </tr>
-                            </tfoot>
-                          </table>
-                        </div>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="font-bold">
+                              <td colSpan={3} className="py-2 text-right">총계:</td>
+                              <td className="py-2 text-right">{Number(order.total_amount).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></td>
+                            </tr>
+                          </tfoot>
+                        </table>
                       </div>
                     ) : (
                       <div className="flex justify-center items-center p-4">
@@ -230,4 +208,4 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
       )}
     </div>
   );
-}
+} 
