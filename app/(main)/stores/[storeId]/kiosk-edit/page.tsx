@@ -699,25 +699,25 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     let afterProductId = addingDividerAfter;
     let position = 0;
     
+    // Get the current combined list to calculate correct position
+    const combinedItems = createCombinedMenuItems(kioskProducts, dividers);
+    
     // Calculate the position of the new divider
     if (afterProductId === null) {
       // Add to the end
+      position = combinedItems.length;
       if (kioskProducts.length > 0) {
         afterProductId = kioskProducts[kioskProducts.length - 1].product_id.toString();
-        position = kioskProducts.length;
-      } else {
-        // Empty kiosk, add at position 0
-        afterProductId = null;
-        position = 0;
       }
     } else if (afterProductId === '__first__') {
       // Add at the beginning
       afterProductId = null;
       position = 0;
     } else {
-      // Add after specific product
-      const productIndex = kioskProducts.findIndex(p => p.product_id.toString() === afterProductId);
-      position = productIndex + 1;
+      // Find the exact position after the specified product in the combined list
+      const productItemId = `kiosk-${afterProductId}`;
+      const insertAfterIndex = combinedItems.findIndex(item => item.id === productItemId);
+      position = insertAfterIndex + 1;
     }
     
     const newDivider: KioskDivider = {
