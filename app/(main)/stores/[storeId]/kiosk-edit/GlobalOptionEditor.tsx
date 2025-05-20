@@ -36,6 +36,11 @@ interface Product {
   product_name: string;
 }
 
+interface LinkedProductInfo {
+  id: string;
+  name: string;
+}
+
 // Curated list of Font Awesome icon names (without prefix)
 const faIconNames: IconName[] = [
   "ice-cream", "mug-hot", "martini-glass-citrus", "beer-mug-empty",
@@ -85,6 +90,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [pickingIconFor, setPickingIconFor] = useState<'category' | number | null>(null); 
 
+  const [linkedProductsStoreMap, setLinkedProductsStoreMap] = useState<Map<string, LinkedProductInfo[]>>(new Map());
+
   const showNotification = (message: string, type: 'success' | 'error', duration: number = 3000) => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), duration);
@@ -92,76 +99,95 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   
 
   useEffect(() => {
-    const fetchGlobalOptions = async () => {
+    const fetchGlobalOptionsAndLinks = async () => {
       setLoading(true);
-      
-      if (storeId) {
-        try {
-          // Fetch store option groups
-          const { data: groups, error: groupsError } = await supabase
-            .from('store_option_groups')
-            .select('*')
-            .eq('store_id', storeId)
-            .order('display_order', { ascending: true });
-          
-          if (groupsError) {
-            throw groupsError;
-          }
-          
-          if (!groups || groups.length === 0) {
-            setGlobalOptions([]);
-            setLoading(false);
-            return;
-          }
-          
-          // Fetch all choices for these groups
-          const { data: choices, error: choicesError } = await supabase
-            .from('store_option_choices')
-            .select('*')
-            .in('group_id', groups.map(g => g.id))
-            .order('display_order', { ascending: true });
-          
-          if (choicesError) {
-            throw choicesError;
-          }
-          
-          // Map to our component data structure
-          const mappedOptions: ProductOptionCategory[] = groups.map(group => ({
-            name: group.name,
-            icon: group.icon || undefined,
-            store_id: storeId,
-            choices: choices
-              ? choices
-                  .filter(choice => choice.group_id === group.id)
-                  .map(choice => ({
-                    name: choice.name,
-                    icon: choice.icon || undefined,
-                    price_impact: choice.price_impact || 0,
-                    isDefault: choice.is_default || false
-                  }))
-              : []
-          }));
-          
-          setGlobalOptions(mappedOptions);
-        } catch (error) {
-          console.error('Error fetching global options:', error);
-          showNotification('옵션을 불러오는 중 오류가 발생했습니다.', 'error');
-        } finally {
-          setLoading(false);
-        }
-      } else {
+      if (!storeId) {
         setLoading(false);
         showNotification('Store ID가 제공되지 않았습니다. 옵션을 불러올 수 없습니다.', 'error');
+        return;
+      }
+
+      try {
+        // Fetch store option groups
+        const { data: groups, error: groupsError } = await supabase
+          .from('store_option_groups')
+          .select('*')
+          .eq('store_id', storeId)
+          .order('display_order', { ascending: true });
+
+        if (groupsError) throw groupsError;
+
+        if (!groups || groups.length === 0) {
+          setGlobalOptions([]);
+          setLinkedProductsStoreMap(new Map());
+          setLoading(false);
+          return;
+        }
+
+        const groupIds = groups.map(g => g.id);
+
+        // Fetch all choices for these groups
+        const { data: choices, error: choicesError } = await supabase
+          .from('store_option_choices')
+          .select('*')
+          .in('group_id', groupIds)
+          .order('display_order', { ascending: true });
+
+        if (choicesError) throw choicesError;
+
+        // Fetch all product links for these groups
+        const { data: links, error: linksError } = await supabase
+          .from('product_global_option_links')
+          .select('store_option_group_id, product_id')
+          .in('store_option_group_id', groupIds);
+        
+        if (linksError) throw linksError;
+
+        // Create a map for easy lookup of linked products
+        const newLinkedProductsStoreMap = new Map<string, LinkedProductInfo[]>();
+        if (links) {
+          links.forEach(link => {
+            const productInfo = products.find(p => p.product_id === link.product_id);
+            if (productInfo) {
+              const currentLinks = newLinkedProductsStoreMap.get(link.store_option_group_id) || [];
+              currentLinks.push({ id: productInfo.product_id, name: productInfo.product_name });
+              newLinkedProductsStoreMap.set(link.store_option_group_id, currentLinks);
+            }
+          });
+        }
+        setLinkedProductsStoreMap(newLinkedProductsStoreMap);
+
+        // Map to our component data structure for global options
+        const mappedOptions: ProductOptionCategory[] = groups.map(group => ({
+          id: group.id, // Ensure ID is mapped
+          name: group.name,
+          icon: group.icon || undefined,
+          store_id: storeId,
+          choices: choices
+            ? choices
+                .filter(choice => choice.group_id === group.id)
+                .map(choice => ({
+                  id: choice.id, // Ensure ID is mapped
+                  name: choice.name,
+                  icon: choice.icon || undefined,
+                  price_impact: choice.price_impact || 0,
+                  isDefault: choice.is_default || false,
+                }))
+            : []
+        }));
+        
+        setGlobalOptions(mappedOptions);
+
+      } catch (error) {
+        console.error('Error fetching global options and links:', error);
+        showNotification('옵션 및 연결된 상품 정보를 불러오는 중 오류가 발생했습니다.', 'error');
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (storeId) {
-      fetchGlobalOptions();
-    } else {
-      setLoading(false);
-      showNotification('Store ID가 제공되지 않았습니다. 옵션을 불러올 수 없습니다.', 'error');
-    }
-  }, [storeId]);
+    fetchGlobalOptionsAndLinks();
+  }, [storeId, supabase, products]); // Add products to dependency array
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) {
@@ -273,7 +299,6 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     setSaving(true);
     
     try {
-      // 1. Delete all existing store option groups for this store
       const { error: deleteGroupsError } = await supabase
         .from('store_option_groups')
         .delete()
@@ -286,7 +311,6 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       
       console.log('[GlobalOptionEditor] Deleted existing store option groups');
       
-      // 2. Insert all option groups and get their new IDs
       const groupsToInsert = globalOptions.map((option, index) => ({
         store_id: storeId,
         name: option.name,
@@ -310,10 +334,9 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       
       console.log('[GlobalOptionEditor] Inserted store option groups:', insertedGroups);
       
-      // 3. Insert all option choices with the new group IDs
       const choicesToInsert = globalOptions.flatMap((option, groupIndex) => 
         option.choices.map((choice, index) => ({
-          group_id: insertedGroups[groupIndex].id, // Use the new group ID
+          group_id: insertedGroups[groupIndex].id, 
           name: choice.name,
           icon: choice.icon || null,
           price_impact: choice.price_impact || 0,
@@ -335,13 +358,15 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         console.log('[GlobalOptionEditor] Inserted store option choices:', choicesToInsert);
       }
       
-      // Update the globalOptions state with the new IDs
       const updatedGlobalOptions = globalOptions.map((option, index) => ({
         ...option,
         id: insertedGroups[index].id
       }));
       setGlobalOptions(updatedGlobalOptions);
       
+      // Refetch links after saving options to update UI for connected products
+      await fetchProductLinksForCurrentOptions(updatedGlobalOptions.map(opt => opt.id || '').filter(id => id));
+
       console.log('[GlobalOptionEditor] Successfully saved all global options');
       showNotification('글로벌 옵션이 성공적으로 저장되었습니다.', 'success');
     } catch (e) {
@@ -352,6 +377,37 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     }
   };
   
+  const fetchProductLinksForCurrentOptions = async (groupIds: string[]) => {
+    if (groupIds.length === 0) {
+      setLinkedProductsStoreMap(new Map());
+      return;
+    }
+    try {
+      const { data: links, error: linksError } = await supabase
+        .from('product_global_option_links')
+        .select('store_option_group_id, product_id')
+        .in('store_option_group_id', groupIds);
+
+      if (linksError) throw linksError;
+
+      const newLinkedMap = new Map<string, LinkedProductInfo[]>();
+      if (links) {
+        links.forEach(link => {
+          const productInfo = products.find(p => p.product_id === link.product_id);
+          if (productInfo) {
+            const currentLinks = newLinkedMap.get(link.store_option_group_id) || [];
+            currentLinks.push({ id: productInfo.product_id, name: productInfo.product_name });
+            newLinkedMap.set(link.store_option_group_id, currentLinks);
+          }
+        });
+      }
+      setLinkedProductsStoreMap(newLinkedMap);
+    } catch (error) {
+      console.error('Error fetching product links:', error);
+      showNotification('연결된 상품 정보 업데이트 중 오류 발생', 'error');
+    }
+  };
+
   const openLinkModal = (option: ProductOptionCategory) => {
     if (!option.id) {
       showNotification('먼저 옵션을 저장해야 상품을 연결할 수 있습니다.', 'error');
@@ -397,33 +453,19 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   };
   
   const handleSaveLinking = async () => {
-    if (!selectedOption || !storeId) return;
+    if (!selectedOption || !storeId || !selectedOption.id) return;
     setSaving(true);
-    
+    const optionGroupId = selectedOption.id;
     try {
-      console.log('[GlobalOptionEditor] Linking option', selectedOption.id, 'to products:', selectedProducts);
+      console.log('[GlobalOptionEditor] Linking option', optionGroupId, 'to products:', selectedProducts);
       
-      // Check if we have a valid ID from Supabase (it should be a UUID)
-      if (!selectedOption.id) {
-        showNotification('유효하지 않은 옵션 ID입니다. 먼저 옵션을 저장해주세요.', 'error');
-        setShowLinkModal(false);
-        return;
-      }
-      
-      const optionGroupId = selectedOption.id;
-      
-      // First, delete existing links for this option
       const { error: deleteError } = await supabase
         .from('product_global_option_links')
         .delete()
         .eq('store_option_group_id', optionGroupId);
       
-      if (deleteError) {
-        console.error('Error deleting existing links:', deleteError);
-        throw deleteError;
-      }
+      if (deleteError) throw deleteError;
       
-      // Then insert new links if any products are selected
       if (selectedProducts.length > 0) {
         const linksToInsert = selectedProducts.map(productId => ({
           product_id: productId,
@@ -431,17 +473,23 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           store_id: storeId
         }));
         
-        console.log('[GlobalOptionEditor] Inserting links with data:', linksToInsert);
-        
         const { error: insertError } = await supabase
           .from('product_global_option_links')
           .insert(linksToInsert);
         
-        if (insertError) {
-          console.error('Error inserting product links:', insertError);
-          throw insertError;
-        }
+        if (insertError) throw insertError;
       }
+      
+      // Update the map for the UI
+      const productInfos: LinkedProductInfo[] = selectedProducts
+        .map(pid => {
+          const product = products.find(p => p.product_id === pid);
+          // Ensure product exists and map to LinkedProductInfo structure
+          return product ? { id: product.product_id, name: product.product_name } : null;
+        })
+        .filter((p): p is LinkedProductInfo => p !== null); // Type guard to filter out nulls and assert type
+
+      setLinkedProductsStoreMap(prev => new Map(prev).set(optionGroupId, productInfos));
       
       showNotification('상품 연결이 성공적으로 저장되었습니다.', 'success');
       setShowLinkModal(false);
@@ -616,10 +664,17 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
 
                   <div className="text-sm text-gray-600 mt-auto pt-5 border-t border-gray-200">
                     <span className="font-semibold">연결된 상품:</span>
-                    <span className="italic ml-1.5 text-gray-500">
-                      {/* This part would ideally show actual linked product count or names */}
-                      아직 연결된 상품 정보가 없습니다. '상품 연결' 버튼을 사용하세요.
-                    </span>
+                    {(linkedProductsStoreMap.get(category.id || '') || []).length > 0 ? (
+                      <ul className="list-disc list-inside ml-1.5 text-gray-500 text-xs">
+                        {(linkedProductsStoreMap.get(category.id || '') || []).map(p => (
+                          <li key={p.id}>{p.name}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="italic ml-1.5 text-gray-500">
+                        연결된 상품 없음. '상품 연결' 버튼을 사용하세요.
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
