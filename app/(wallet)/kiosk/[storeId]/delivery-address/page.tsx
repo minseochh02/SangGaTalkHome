@@ -57,7 +57,7 @@ export default function DeliveryAddressPage() {
           store_id: storeId,
           order_type: 'kiosk_delivery',
           total_amount: totalWithDelivery, // Include delivery fee
-          status: 'completed',
+          status: 'pending',
           device_number: deviceNumber ? parseInt(deviceNumber) : null,
           delivery_address: address,
           delivery_address_detail: detailAddress,

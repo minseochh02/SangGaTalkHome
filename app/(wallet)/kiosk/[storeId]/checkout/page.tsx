@@ -278,7 +278,7 @@ export default function CheckoutPage() {
           store_id: storeId,
           order_type: orderType,
           total_amount: totalAmount,
-          status: 'completed',
+          status: 'pending',
           device_number: deviceNumber ? parseInt(deviceNumber) : null,
           // Include any additional fields that might be required
           created_at: new Date().toISOString()
