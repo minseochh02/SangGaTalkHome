@@ -116,9 +116,19 @@ const ProductEditModal = ({
 
   // Save product options to database
   const saveProductOptions = async (productId: string, options: ProductOptionCategory[]) => {
-    if (!productId) return;
+    console.log('[ProductEditModal] Attempting to saveProductOptions. Product ID:', productId, 'Options:', JSON.stringify(options));
+    if (!productId) {
+      console.log('[ProductEditModal] saveProductOptions: No productId provided, exiting.');
+      return false; 
+    }
     
+    if (!options || options.length === 0) {
+      console.log('[ProductEditModal] saveProductOptions: No options to save. Proceeding to delete any existing options only.');
+      // Still proceed to delete existing options if any, then return true as technically "saving no options" is a success.
+    }
+
     try {
+      console.log('[ProductEditModal] saveProductOptions: Starting delete phase.');
       // 1. Delete all existing option choices for this product's groups
       const { data: existingGroups, error: groupsQueryError } = await supabase
         .from('product_option_groups')
@@ -157,7 +167,9 @@ const ProductEditModal = ({
       }
       
       // 2. Insert new option groups and their choices
+      console.log('[ProductEditModal] saveProductOptions: Starting insert phase. Number of groups to insert:', options.length);
       for (const group of options) {
+        console.log('[ProductEditModal] saveProductOptions: Inserting group:', group.name);
         // Insert the group
         const { error: groupInsertError } = await supabase
           .from('product_option_groups')
@@ -178,6 +190,7 @@ const ProductEditModal = ({
         
         // 3. Insert choices for this group
         if (group.choices && group.choices.length > 0) {
+          console.log('[ProductEditModal] saveProductOptions: Inserting choices for group:', group.name, 'Number of choices:', group.choices.length);
           const choicesToInsert = group.choices.map(choice => ({
             option_choice_id: choice.id,
             option_group_id: group.id,
@@ -207,6 +220,7 @@ const ProductEditModal = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('[ProductEditModal] handleSubmit triggered.');
     e.preventDefault();
     
     if (!product) return;
@@ -233,6 +247,7 @@ const ProductEditModal = ({
   };
 
   const handleSaveOptions = async (productId: string | number, options: ProductOptionCategory[]) => {
+    console.log('[ProductEditModal] handleSaveOptions (from ProductOptionEditor) triggered. Product ID:', productId);
     setProductOptions(options);
     
     // Save options to database immediately
