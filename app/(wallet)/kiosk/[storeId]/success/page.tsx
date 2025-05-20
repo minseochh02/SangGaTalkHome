@@ -6,6 +6,23 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SafeImage } from '@/components/ui/image';
 
+// Interfaces for order items
+interface OrderItem {
+  kiosk_order_item_id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  price_at_purchase: number;
+  options?: OrderItemOption[];
+}
+
+interface OrderItemOption {
+  option_id: string;
+  option_group_name: string;
+  option_choice_name: string;
+  price_impact: number;
+}
+
 interface KioskOrder {
   kiosk_order_id: string;
   store_id: string;
@@ -14,7 +31,7 @@ interface KioskOrder {
   device_number?: number;
   total_amount?: number;
   order_type?: string;
-  // Add other fields as necessary
+  order_items?: OrderItem[]; // Add order items array
 }
 
 export default function SuccessPage() {
@@ -199,9 +216,62 @@ export default function SuccessPage() {
           console.error('Error fetching session orders:', ordersError);
           setError('세션 주문 정보를 불러오는데 실패했습니다.');
         } else if (ordersData) {
-          setDisplayedOrders(ordersData as KioskOrder[]);
+          // For each order, fetch its items
+          const ordersWithItems = await Promise.all(ordersData.map(async (order) => {
+            // Fetch order items with product information
+            const { data: itemsData, error: itemsError } = await supabase
+              .from('kiosk_order_items')
+              .select(`
+                kiosk_order_item_id,
+                product_id,
+                quantity,
+                price_at_purchase,
+                products:product_id (product_name)
+              `)
+              .eq('kiosk_order_id', order.kiosk_order_id);
+              
+            if (itemsError || !itemsData) {
+              console.error('Error fetching order items:', itemsError);
+              return order;
+            }
+            
+            // Format items with product names
+            const formattedItems = itemsData.map(item => ({
+              kiosk_order_item_id: item.kiosk_order_item_id,
+              product_id: item.product_id,
+              product_name: (item.products as any)?.product_name || '알 수 없는 상품',
+              quantity: item.quantity,
+              price_at_purchase: item.price_at_purchase,
+              options: [] // Initialize empty options array
+            }));
+            
+            // Fetch options for each item if needed
+            const itemsWithOptions = await Promise.all(formattedItems.map(async (item) => {
+              const { data: optionsData, error: optionsError } = await supabase
+                .from('kiosk_order_item_options')
+                .select('*')
+                .eq('kiosk_order_item_id', item.kiosk_order_item_id);
+                
+              if (optionsError || !optionsData) {
+                return item;
+              }
+              
+              return {
+                ...item,
+                options: optionsData
+              };
+            }));
+            
+            return {
+              ...order,
+              order_items: itemsWithOptions
+            };
+          }));
+          
+          setDisplayedOrders(ordersWithItems);
+          
           // Check if the latest order (from URL) is already ready
-          const currentLatestOrder = ordersData.find(o => o.kiosk_order_id === latestOrderId);
+          const currentLatestOrder = ordersWithItems.find(o => o.kiosk_order_id === latestOrderId);
           if (currentLatestOrder?.status === 'ready') {
             setShowReadyNotification(true); // Potentially show notification without sound if already ready on load
           }
@@ -350,32 +420,67 @@ export default function SuccessPage() {
             )}
           </div>
 
-          {displayedOrders.map((order, index) => (
+          {displayedOrders.map((order) => (
             <div key={order.kiosk_order_id} className={`border rounded-lg p-4 mb-4 ${order.kiosk_order_id === latestOrderId ? 'border-blue-500 shadow-lg' : 'border-gray-200'}`}>
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold text-gray-700">{getOrderTypeText(order.order_type)} 주문 #{index + 1}</h3>
+                <h3 className="text-lg font-semibold text-gray-700">
+                  {order.device_number 
+                    ? `단말기 ${order.device_number}번 ${getOrderTypeText(order.order_type)}` 
+                    : `${getOrderTypeText(order.order_type)} 주문`}
+                </h3>
                 <span className={`font-medium px-2 py-0.5 rounded-full text-sm ${order.status === 'ready' ? 'bg-green-100 text-green-700' : order.status === 'pending' || order.status === 'processing' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
                   {getOrderStatusText(order.status)}
                 </span>
               </div>
+              
               <div className="text-sm text-gray-600">
-                {order.device_number && (
-                  <div className="flex justify-between">
-                    <span>키오스크 번호:</span>
-                    <span>단말기 {order.device_number}번</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span>주문 시간:</span>
+                  <span>{new Date(order.created_at).toLocaleString('ko-KR')}</span>
+                </div>
+                
                 {order.total_amount && (
                   <div className="flex justify-between">
                     <span>결제 금액:</span>
                     <span className="font-bold text-gray-800 flex items-center gap-1 flex-row">{Number(order.total_amount).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span>주문 시간:</span>
-                  <span>{new Date(order.created_at).toLocaleString('ko-KR')}</span>
-                </div>
               </div>
+              
+              {/* Order Items Section */}
+              {order.order_items && order.order_items.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="font-medium text-gray-700 mb-2">주문 항목:</p>
+                  <div className="space-y-2">
+                    {order.order_items.map((item) => (
+                      <div key={item.kiosk_order_item_id} className="bg-gray-50 p-2 rounded">
+                        <div className="flex justify-between">
+                          <div className="flex items-center">
+                            <span className="text-gray-800">{item.product_name}</span>
+                            <span className="text-gray-500 mx-2">x{item.quantity}</span>
+                          </div>
+                          <span className="text-gray-800">{Number(item.price_at_purchase * item.quantity).toLocaleString()} SGT</span>
+                        </div>
+                        {item.options && item.options.length > 0 && (
+                          <div className="ml-4 mt-1 text-xs text-gray-600">
+                            {item.options.map((option) => (
+                              <div key={option.option_id} className="flex justify-between">
+                                <span>{option.option_group_name}: {option.option_choice_name}</span>
+                                {option.price_impact !== 0 && (
+                                  <span className={option.price_impact > 0 ? 'text-green-600' : 'text-red-600'}>
+                                    {option.price_impact > 0 ? '+' : ''}{option.price_impact.toLocaleString()} SGT
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {order.status === 'ready' && (
                 <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
                   <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
