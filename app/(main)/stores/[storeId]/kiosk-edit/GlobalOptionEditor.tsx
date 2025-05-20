@@ -284,8 +284,6 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         throw deleteGroupsError;
       }
       
-      console.log('[GlobalOptionEditor] Deleted existing store option groups');
-      
       // 2. Insert all option groups and get their new IDs
       const groupsToInsert = globalOptions.map((option, index) => ({
         store_id: storeId,
@@ -304,23 +302,56 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         throw insertGroupsError;
       }
       
-      if (!insertedGroups) {
-        throw new Error('No groups were inserted');
+      if (!insertedGroups || insertedGroups.length === 0) {
+        throw new Error('No groups were inserted or no IDs returned');
       }
       
-      console.log('[GlobalOptionEditor] Inserted store option groups with IDs:', insertedGroups.map(g => g.id));
+      console.log('[GlobalOptionEditor] Successfully inserted groups with IDs:', insertedGroups);
+      
+      // Create a copy of the current options to update with new IDs
+      let updatedOptions = [...globalOptions];
+      
+      // Update each option with its new ID from the database
+      for (let i = 0; i < updatedOptions.length; i++) {
+        if (i < insertedGroups.length) {
+          updatedOptions[i] = {
+            ...updatedOptions[i],
+            id: insertedGroups[i].id
+          };
+          console.log(`[GlobalOptionEditor] Option "${updatedOptions[i].name}" assigned ID: ${updatedOptions[i].id}`);
+        }
+      }
       
       // 3. Insert all option choices with the new group IDs
-      const choicesToInsert = globalOptions.flatMap((option, groupIndex) => 
-        option.choices.map((choice, index) => ({
-          group_id: insertedGroups[groupIndex].id, // Use the new group ID
-          name: choice.name,
-          icon: choice.icon || null,
-          price_impact: choice.price_impact || 0,
-          is_default: choice.isDefault || false,
-          display_order: index
-        }))
-      );
+      interface ChoiceToInsert {
+        group_id: string;
+        name: string;
+        icon: string | null;
+        price_impact: number;
+        is_default: boolean;
+        display_order: number;
+      }
+      
+      const choicesToInsert: ChoiceToInsert[] = [];
+      
+      for (let i = 0; i < updatedOptions.length; i++) {
+        const groupId = updatedOptions[i].id;
+        if (!groupId) {
+          console.error(`[GlobalOptionEditor] Missing group ID for option at index ${i}`);
+          continue;
+        }
+        
+        updatedOptions[i].choices.forEach((choice, choiceIndex) => {
+          choicesToInsert.push({
+            group_id: groupId,
+            name: choice.name,
+            icon: choice.icon || null,
+            price_impact: choice.price_impact || 0,
+            is_default: choice.isDefault || false,
+            display_order: choiceIndex
+          });
+        });
+      }
       
       if (choicesToInsert.length > 0) {
         const { error: insertChoicesError } = await supabase
@@ -332,31 +363,20 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           throw insertChoicesError;
         }
         
-        console.log('[GlobalOptionEditor] Inserted store option choices:', choicesToInsert);
+        console.log(`[GlobalOptionEditor] Successfully inserted ${choicesToInsert.length} choices`);
       }
       
-      // Update the globalOptions state with the new IDs
-      const updatedGlobalOptions = globalOptions.map((option, index) => {
-        console.log(`[GlobalOptionEditor] Assigning ID ${insertedGroups[index].id} to option "${option.name}"`);
-        return {
-          ...option,
-          id: insertedGroups[index].id
-        };
-      });
+      // Important: Set state with the updated options that include IDs
+      console.log('[GlobalOptionEditor] Setting global options with IDs:', updatedOptions);
+      setGlobalOptions(updatedOptions);
       
-      console.log('[GlobalOptionEditor] Current globalOptions before update:', globalOptions);
-      console.log('[GlobalOptionEditor] New updatedGlobalOptions with IDs:', updatedGlobalOptions);
-      
-      // Use the setGlobalOptions function directly with a callback to ensure we're updating based on current state
-      setGlobalOptions(updatedGlobalOptions);
-      
-      // Add a timeout to check if the state was actually updated
-      setTimeout(() => {
-        console.log('[GlobalOptionEditor] globalOptions state after update (timeout check):', globalOptions);
-      }, 100);
-      
-      console.log('[GlobalOptionEditor] Successfully saved all global options');
       showNotification('글로벌 옵션이 성공적으로 저장되었습니다.', 'success');
+      
+      // Verify state update with a timeout
+      setTimeout(() => {
+        console.log('[GlobalOptionEditor] STATE CHECK - Current global options:', globalOptions);
+      }, 500);
+      
     } catch (e) {
       console.error('Error saving options:', e);
       showNotification('옵션 저장 중 오류가 발생했습니다.', 'error');
