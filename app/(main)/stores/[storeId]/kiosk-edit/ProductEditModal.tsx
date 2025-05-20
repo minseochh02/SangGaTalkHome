@@ -156,9 +156,10 @@ const ProductEditModal = ({
         }
       }
       
-      // 2. Insert new option groups
+      // 2. Insert new option groups and their choices
       for (const group of options) {
-        const { data: newGroup, error: groupInsertError } = await supabase
+        // Insert the group
+        const { error: groupInsertError } = await supabase
           .from('product_option_groups')
           .insert({
             option_group_id: group.id,
@@ -168,9 +169,7 @@ const ProductEditModal = ({
             display_order: group.displayOrder || 0,
             selection_type: group.selectionType || 'single',
             group_icon: group.groupIcon
-          })
-          .select()
-          .single();
+          });
           
         if (groupInsertError) {
           console.error('Error inserting option group:', groupInsertError);
