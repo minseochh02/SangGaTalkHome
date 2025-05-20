@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SafeImage } from '@/components/ui/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -83,6 +83,7 @@ interface CartItemWithOptions extends CartItem {
 export default function KioskPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const storeId = params.storeId as string;
   const supabase = createClient();
   
@@ -97,7 +98,7 @@ export default function KioskPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>('all');
   const [showCart, setShowCart] = useState<boolean>(false);
   const [deviceNumber, setDeviceNumber] = useState<number | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(searchParams.get('sessionId'));
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
   const [cartIconAnimate, setCartIconAnimate] = useState<boolean>(false);
   
@@ -112,53 +113,60 @@ export default function KioskPage() {
   const [cartItemsWithOptions, setCartItemsWithOptions] = useState<CartItemWithOptions[]>([]);
   
   // Initialize kiosk session
-  const initKioskSession = useCallback(async () => {
+  const initKioskSession = useCallback(async (urlSessionId: string | null) => {
     try {
-      // Generate a device ID based on browser info or use a cookie
+      if (urlSessionId) {
+        // Try to fetch and validate the session from URL
+        const { data: existingSession, error: existingSessionError } = await supabase
+          .from('kiosk_sessions')
+          .select('kiosk_session_id, device_number, status, expired_at')
+          .eq('kiosk_session_id', urlSessionId)
+          .single();
+
+        if (existingSession && existingSession.status === 'active' && new Date(existingSession.expired_at) > new Date()) {
+          console.log('Using existing active session from URL:', existingSession.kiosk_session_id);
+          setSessionId(existingSession.kiosk_session_id);
+          setDeviceNumber(existingSession.device_number);
+          // Optionally update last_active_at
+          await supabase.from('kiosk_sessions').update({ last_active_at: new Date().toISOString() }).eq('kiosk_session_id', existingSession.kiosk_session_id);
+          return; // Session from URL is valid and used
+        } else {
+          console.log('Session ID from URL is invalid, expired, or not found. Proceeding to create/find new session.', existingSessionError?.message);
+        }
+      }
+
+      // Fallback to deviceIdentifier logic if no valid URL session ID
       const getDeviceIdentifier = (): string => {
-        // Try to get existing device id from localStorage
         const existingId = localStorage.getItem('kiosk-device-id');
         if (existingId) return existingId;
-        
-        // Otherwise create a new one
         const newId = Math.random().toString(36).substring(2) + Date.now().toString(36);
         localStorage.setItem('kiosk-device-id', newId);
         return newId;
       };
-      
       const deviceIdentifier = getDeviceIdentifier();
-      
-      // Get the next available device number for this store - try using RPC function first
+
       let nextDeviceNumber = 1;
       try {
-        const { data: sessionData, error: sessionError } = await supabase.rpc(
-          'get_next_device_number',
-          { p_store_id: storeId }
-        );
-        
-        if (!sessionError) {
-          nextDeviceNumber = sessionData;
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_next_device_number', { p_store_id: storeId });
+        if (!rpcError && rpcData != null) {
+          nextDeviceNumber = rpcData;
         } else {
-          // Fallback to manual calculation if RPC fails
-          console.error('Error using RPC, falling back to manual calculation:', sessionError);
-          const { data: deviceData, error: deviceError } = await supabase
+          console.error('Error using RPC for device number, falling back:', rpcError?.message);
+          const { data: manualDeviceData, error: manualDeviceError } = await supabase
             .from('kiosk_sessions')
             .select('device_number')
             .eq('store_id', storeId)
             .order('device_number', { ascending: false })
             .limit(1);
-          
-          if (!deviceError && deviceData && deviceData.length > 0) {
-            nextDeviceNumber = (deviceData[0].device_number || 0) + 1;
+          if (!manualDeviceError && manualDeviceData && manualDeviceData.length > 0) {
+            nextDeviceNumber = (manualDeviceData[0].device_number || 0) + 1;
           }
         }
       } catch (err) {
         console.error('Error getting device number:', err);
-        // Continue with default device number 1
       }
-      
-      // Create or update kiosk session
-      const { data: sessionData, error: sessionError } = await supabase
+
+      const { data: newSessionData, error: newSessionError } = await supabase
         .from('kiosk_sessions')
         .insert({
           store_id: storeId,
@@ -166,21 +174,32 @@ export default function KioskPage() {
           device_number: nextDeviceNumber,
           status: 'active',
           last_active_at: new Date().toISOString(),
-          expired_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString() // 4 hours from now
+          expired_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // 4 hours
         })
-        .select()
+        .select('kiosk_session_id, device_number')
         .single();
-        
-      if (sessionError) {
-        console.error('Error creating kiosk session:', sessionError);
-      } else if (sessionData) {
-        setDeviceNumber(sessionData.device_number);
-        setSessionId(sessionData.kiosk_session_id);
+
+      if (newSessionError) {
+        console.error('Error creating new kiosk session:', newSessionError.message);
+        setError('키오스크 세션 시작에 실패했습니다.');
+      } else if (newSessionData) {
+        console.log('New kiosk session started:', newSessionData.kiosk_session_id);
+        setSessionId(newSessionData.kiosk_session_id);
+        setDeviceNumber(newSessionData.device_number);
       }
     } catch (err) {
       console.error('Error in initKioskSession:', err);
+      setError('키오스크 세션 초기화 중 오류 발생');
     }
   }, [storeId, supabase]);
+
+  // useEffect to call initKioskSession with sessionId from URL
+  useEffect(() => {
+    const initialSessionIdFromUrl = searchParams.get('sessionId');
+    if (!sessionId) { // Only run if sessionId is not already set (e.g. by direct state initialization)
+      initKioskSession(initialSessionIdFromUrl);
+    }
+  }, [initKioskSession, searchParams, sessionId]);
   
   // Fetch store data and products
   const fetchStoreData = useCallback(async () => {
@@ -249,11 +268,10 @@ export default function KioskPage() {
     try {
       const storedCart = localStorage.getItem(`kiosk-cart-${storeId}`);
       if (storedCart) {
-        const parsedCart = JSON.parse(storedCart);
-        setCartItemsWithOptions(parsedCart);
+        setCartItemsWithOptions(JSON.parse(storedCart));
         
         // Calculate total including options price impacts
-        const total = parsedCart.reduce(
+        const total = JSON.parse(storedCart).reduce(
           (sum: number, item: CartItemWithOptions) => sum + (item.total_price * item.quantity), 0
         );
         setTotalAmount(total);
@@ -269,7 +287,7 @@ export default function KioskPage() {
     
     const init = async () => {
       if (!isActive) return;
-      await initKioskSession();
+      await initKioskSession(sessionId);
       await fetchStoreData();
       loadCart();
     };
@@ -459,67 +477,35 @@ export default function KioskPage() {
   
   // Function to add product with selected options to cart
   const addToCartWithOptions = (product: Product, options: SelectedOption[]) => {
-    // Calculate total price including options
-    const optionsPriceImpact = options.reduce((sum, option) => sum + option.price_impact, 0);
-    const totalPrice = product.sgt_price + optionsPriceImpact;
-    
-    setCartItemsWithOptions(prevItems => {
-      // Try to find an exact match (same product with same options)
-      const existingItemIndex = prevItems.findIndex(item => {
-        if (item.product_id !== product.product_id) return false;
-        
-        // If options count doesn't match, it's not the same
-        if ((item.options?.length || 0) !== options.length) return false;
-        
-        // Check if all options match
-        if (options.length === 0 && (!item.options || item.options.length === 0)) return true;
-        
-        if (!item.options) return false;
-        
-        // Check each option
-        return options.every(option => 
-          item.options?.some(itemOption => 
-            itemOption.groupId === option.groupId && itemOption.choiceId === option.choiceId
-          )
+    setCartItemsWithOptions(prevCart => {
+      const existingItemIndex = prevCart.findIndex(item => 
+        item.product_id === product.product_id && 
+        JSON.stringify(item.options?.sort((a,b) => a.choiceId.localeCompare(b.choiceId))) === JSON.stringify(options.sort((a,b) => a.choiceId.localeCompare(b.choiceId)))
+      );
+
+      let newCart;
+      const optionPrice = options.reduce((sum, opt) => sum + opt.price_impact, 0);
+      const itemBasePrice = product.sgt_price;
+      const itemTotalPrice = itemBasePrice + optionPrice;
+
+      if (existingItemIndex > -1) {
+        newCart = prevCart.map((item, index) => 
+          index === existingItemIndex ? { ...item, quantity: item.quantity + 1 } : item
         );
-      });
-      
-      if (existingItemIndex !== -1) {
-        // Item with exact same options already in cart, increment quantity
-        const updatedItems = [...prevItems];
-        updatedItems[existingItemIndex] = {
-          ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + 1
-        };
-        return updatedItems;
       } else {
-        // Add new item to cart
-        return [...prevItems, {
-          product_id: product.product_id,
-          product_name: product.product_name,
-          sgt_price: product.sgt_price,
-          quantity: 1,
+        newCart = [...prevCart, { 
+          product_id: product.product_id, 
+          product_name: product.product_name, 
+          sgt_price: itemBasePrice, // Store base price
+          quantity: 1, 
           image_url: product.image_url,
-          options: options.length > 0 ? options : undefined,
-          total_price: totalPrice
+          options: options,
+          total_price: itemTotalPrice // Store total price per unit including options
         }];
       }
+      triggerCartAnimation(product.product_id);
+      return newCart;
     });
-    
-    // Set recently added product to trigger animation
-    setRecentlyAdded(product.product_id);
-    
-    // Animate cart icon
-    setCartIconAnimate(true);
-    
-    // Clear animation states after a delay
-    setTimeout(() => {
-      setRecentlyAdded(null);
-      setCartIconAnimate(false);
-    }, 700);
-    
-    // Close the options modal if it was open
-    setShowOptionsModal(false);
   };
   
   const handleOptionChange = (groupId: string, choice: ProductOptionChoice) => {
@@ -877,6 +863,15 @@ export default function KioskPage() {
     
     // Fallback for unknown icon format
     return <span className="text-gray-400 text-sm mr-2">{iconString}</span>;
+  };
+  
+  const triggerCartAnimation = (productId: string) => {
+    setRecentlyAdded(productId);
+    setCartIconAnimate(true);
+    setTimeout(() => {
+      setCartIconAnimate(false);
+      setRecentlyAdded(null);
+    }, 1000); // Animation duration
   };
   
   if (loading) {
