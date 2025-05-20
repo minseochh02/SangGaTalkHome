@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -20,6 +20,8 @@ export default function SuccessPage() {
   const [loading, setLoading] = useState(true);
   const [storeName, setStoreName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showReadyNotification, setShowReadyNotification] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   // Make sure to clear cart when the success page loads
   useEffect(() => {
@@ -36,6 +38,74 @@ export default function SuccessPage() {
       isActive = false;
     };
   }, [storeId]);
+  
+  // Create audio element for notification sound
+  useEffect(() => {
+    audioRef.current = new Audio('/notification-sound.mp3');
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+  
+  // Play notification sound
+  const playNotificationSound = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(err => {
+        console.error('Error playing notification sound:', err);
+      });
+    }
+  };
+  
+  // Set up real-time subscription for order status changes
+  useEffect(() => {
+    if (!orderId) return;
+    
+    console.log('[KioskSuccess] Setting up real-time subscription for order:', orderId);
+    
+    // Create channel for listening to order status changes
+    const channel = supabase
+      .channel(`order-status-${orderId}`)
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'kiosk_orders',
+          filter: `kiosk_order_id=eq.${orderId}`
+        }, 
+        (payload) => {
+          console.log('[KioskSuccess] Order status update received:', payload);
+          const newStatus = payload.new.status;
+          
+          // Update order details
+          setOrderDetails((prevDetails: any) => ({
+            ...prevDetails,
+            status: newStatus
+          }));
+          
+          // If order is marked as ready, show notification and play sound
+          if (newStatus === 'ready') {
+            playNotificationSound();
+            setShowReadyNotification(true);
+          }
+        })
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[KioskSuccess] Subscribed to updates for order ${orderId}`);
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`[KioskSuccess] Channel error for order ${orderId}:`, err);
+        }
+      });
+      
+    // Clean up subscription when component unmounts
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId, supabase]);
   
   // Fetch order details and store name only once
   useEffect(() => {
@@ -84,6 +154,11 @@ export default function SuccessPage() {
           setError('주문 정보를 불러오는데 실패했습니다.');
         } else if (orderData) {
           setOrderDetails(orderData);
+          
+          // If order is already ready when we load the page, show notification
+          if (orderData.status === 'ready') {
+            setShowReadyNotification(true);
+          }
         }
       } catch (err) {
         console.error('Error in fetchData:', err);
@@ -154,8 +229,24 @@ export default function SuccessPage() {
     }
   };
   
+  // Get order status text
+  const getOrderStatusText = (status: string | undefined) => {
+    switch (status) {
+      case 'pending': return '접수됨';
+      case 'processing': return '처리 중';
+      case 'ready': return '준비 완료';
+      case 'completed': return '완료됨';
+      case 'cancelled': return '취소됨';
+      default: return '처리 중';
+    }
+  };
+  
   const handleNewOrder = () => {
     router.push(`/kiosk/${storeId}`);
+  };
+  
+  const closeNotification = () => {
+    setShowReadyNotification(false);
   };
 
   if (loading) {
@@ -191,6 +282,27 @@ export default function SuccessPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 py-12">
+      {/* Order Ready Notification */}
+      {showReadyNotification && (
+        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4 animate-bounce-in">
+            <div className="text-center">
+              <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <h2 className="text-2xl font-bold mb-2">주문이 준비되었습니다!</h2>
+              <p className="text-gray-600 mb-6">지금 카운터에서 주문을 수령하실 수 있습니다.</p>
+              <button 
+                onClick={closeNotification}
+                className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 focus:outline-none"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
         <div className="bg-green-500 p-6 text-center">
           <svg className="w-16 h-16 text-white mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -218,6 +330,13 @@ export default function SuccessPage() {
               </div>
             )}
             
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-600">주문 상태:</span>
+              <span className={`font-medium ${orderDetails?.status === 'ready' ? 'text-green-600 font-bold' : ''}`}>
+                {getOrderStatusText(orderDetails?.status)}
+              </span>
+            </div>
+            
             {orderDetails?.total_amount && (
               <div className="flex justify-between">
                 <span className="text-gray-600">결제 금액:</span>
@@ -225,6 +344,18 @@ export default function SuccessPage() {
               </div>
             )}
           </div>
+          
+          {orderDetails?.status === 'ready' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-start">
+              <svg className="w-6 h-6 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <div>
+                <p className="text-green-800 font-medium">주문이 준비되었습니다!</p>
+                <p className="text-green-600 text-sm">카운터에서 주문을 수령하실 수 있습니다.</p>
+              </div>
+            </div>
+          )}
           
           <div className="text-center mb-6">
             <p className="text-gray-600">이용해 주셔서 감사합니다!</p>
