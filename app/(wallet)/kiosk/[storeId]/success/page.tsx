@@ -378,20 +378,20 @@ export default function SuccessPage() {
   const latestOrderForHeader = displayedOrders.find(o => o.kiosk_order_id === latestOrderId) || displayedOrders[0];
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4">
+    <div className="min-h-screen bg-gray-100 py-6 px-2 sm:py-8 sm:px-4">
       {/* Order Ready Notification for the LATEST order */}
       {showReadyNotification && latestOrderId && (
         <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4 animate-bounce-in">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 max-w-md w-[95%] mx-2 animate-bounce-in">
             <div className="text-center">
-              <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-12 h-12 sm:w-16 sm:h-16 text-green-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <h2 className="text-2xl font-bold mb-2">주문 #{latestOrderId?.substring(0,8)} 준비 완료!</h2>
-              <p className="text-gray-600 mb-6">카운터에서 수령해주세요.</p>
+              <h2 className="text-xl sm:text-2xl font-bold mb-2">주문 #{latestOrderId?.substring(0,8)} 준비 완료!</h2>
+              <p className="text-gray-600 mb-4">카운터에서 수령해주세요.</p>
               <button 
                 onClick={closeNotification}
-                className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 focus:outline-none"
+                className="w-full px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 focus:outline-none"
               >
                 확인
               </button>
@@ -401,39 +401,39 @@ export default function SuccessPage() {
       )}
       
       <div className="max-w-lg mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-        <div className={`p-6 text-center ${latestOrderForHeader?.status === 'ready' && latestOrderForHeader?.kiosk_order_id === latestOrderId ? 'bg-green-500' : 'bg-blue-600'}`}>
-          <svg className="w-16 h-16 text-white mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <div className={`p-4 sm:p-6 text-center ${latestOrderForHeader?.status === 'ready' && latestOrderForHeader?.kiosk_order_id === latestOrderId ? 'bg-green-500' : 'bg-blue-600'}`}>
+          <svg className="w-12 h-12 sm:w-16 sm:h-16 text-white mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          <h1 className="text-2xl font-bold text-white mt-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-white mt-2">
             {latestOrderForHeader?.status === 'ready' && latestOrderForHeader?.kiosk_order_id === latestOrderId 
               ? `주문 #${latestOrderId?.substring(0,8)} 준비 완료!`
               : displayedOrders.length > 0 ? "주문이 접수되었습니다" : "주문 내역 없음"}
           </h1>
         </div>
         
-        <div className="p-6">
-          <div className="mb-6 text-center">
-            <h2 className="text-xl font-bold text-gray-800">{storeName}</h2>
+        <div className="p-3 sm:p-5">
+          <div className="mb-4 sm:mb-6 text-center">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">{storeName}</h2>
             {displayedOrders.length === 0 && !loading && (
-              <p className="text-gray-500 mt-4">이 세션의 주문 내역이 없습니다.</p>
+              <p className="text-gray-500 mt-3">이 세션의 주문 내역이 없습니다.</p>
             )}
           </div>
 
           {displayedOrders.map((order) => (
-            <div key={order.kiosk_order_id} className={`border rounded-lg p-4 mb-4 ${order.kiosk_order_id === latestOrderId ? 'border-blue-500 shadow-lg' : 'border-gray-200'}`}>
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold text-gray-700">
+            <div key={order.kiosk_order_id} className={`border rounded-lg p-3 mb-3 ${order.kiosk_order_id === latestOrderId ? 'border-blue-500 shadow-lg' : 'border-gray-200'}`}>
+              <div className="flex flex-wrap justify-between items-center mb-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-1 sm:mb-0">
                   {order.device_number 
                     ? `단말기 ${order.device_number}번 ${getOrderTypeText(order.order_type)}` 
                     : `${getOrderTypeText(order.order_type)} 주문`}
                 </h3>
-                <span className={`font-medium px-2 py-0.5 rounded-full text-sm ${order.status === 'ready' ? 'bg-green-100 text-green-700' : order.status === 'pending' || order.status === 'processing' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
+                <span className={`font-medium px-2 py-0.5 rounded-full text-xs ${order.status === 'ready' ? 'bg-green-100 text-green-700' : order.status === 'pending' || order.status === 'processing' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
                   {getOrderStatusText(order.status)}
                 </span>
               </div>
               
-              <div className="text-sm text-gray-600">
+              <div className="text-xs sm:text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>주문 시간:</span>
                   <span>{new Date(order.created_at).toLocaleString('ko-KR')}</span>
@@ -449,23 +449,23 @@ export default function SuccessPage() {
               
               {/* Order Items Section */}
               {order.order_items && order.order_items.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="font-medium text-gray-700 mb-2">주문 항목:</p>
-                  <div className="space-y-2">
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <p className="font-medium text-gray-700 mb-1 text-sm">주문 항목:</p>
+                  <div className="space-y-1.5">
                     {order.order_items.map((item) => (
                       <div key={item.kiosk_order_item_id} className="bg-gray-50 p-2 rounded">
-                        <div className="flex justify-between">
-                          <div className="flex items-center">
+                        <div className="flex flex-wrap justify-between text-xs sm:text-sm">
+                          <div className="flex items-center mr-2 mb-1 sm:mb-0">
                             <span className="text-gray-800">{item.product_name}</span>
-                            <span className="text-gray-500 mx-2">x{item.quantity}</span>
+                            <span className="text-gray-500 mx-1">x{item.quantity}</span>
                           </div>
                           <span className="text-gray-800">{Number(item.price_at_purchase * item.quantity).toLocaleString()} SGT</span>
                         </div>
                         {item.options && item.options.length > 0 && (
-                          <div className="ml-4 mt-1 text-xs text-gray-600">
+                          <div className="ml-2 mt-1 text-xs text-gray-600">
                             {item.options.map((option) => (
-                              <div key={option.option_id} className="flex justify-between">
-                                <span>{option.option_group_name}: {option.option_choice_name}</span>
+                              <div key={option.option_id} className="flex justify-between flex-wrap">
+                                <span className="mr-1">{option.option_group_name}: {option.option_choice_name}</span>
                                 {option.price_impact !== 0 && (
                                   <span className={option.price_impact > 0 ? 'text-green-600' : 'text-red-600'}>
                                     {option.price_impact > 0 ? '+' : ''}{option.price_impact.toLocaleString()} SGT
@@ -482,24 +482,24 @@ export default function SuccessPage() {
               )}
               
               {order.status === 'ready' && (
-                <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-2 flex items-center">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mr-1 sm:mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
-                  <p className="text-green-700 text-sm font-medium">픽업 준비 완료!</p>
+                  <p className="text-green-700 text-xs sm:text-sm font-medium">픽업 준비 완료!</p>
                 </div>
               )}
             </div>
           ))}
           
-          <div className="text-center mt-8 mb-6">
-            <p className="text-gray-600">이용해 주셔서 감사합니다!</p>
+          <div className="text-center mt-6 mb-4">
+            <p className="text-gray-600 text-sm">이용해 주셔서 감사합니다!</p>
           </div>
           
           <div className="flex justify-center">
             <button
-              onClick={handleNewOrder} // Updated to pass sessionId
-              className="px-6 py-3 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"
+              onClick={handleNewOrder}
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"
             >
               추가 주문하기
             </button>
