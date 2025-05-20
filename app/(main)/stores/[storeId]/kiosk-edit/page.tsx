@@ -1398,6 +1398,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       <ProductEditModal 
         isOpen={isEditModalOpen}
         product={editingProduct}
+        storeId={storeId}
         onClose={() => {
           setIsEditModalOpen(false);
           setEditingProduct(null);

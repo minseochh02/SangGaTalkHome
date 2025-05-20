@@ -99,14 +99,25 @@ export interface Product {
 
 // Product Options - For customizing products (e.g., ice level, size, etc.)
 export interface ProductOptionChoice {
-	id: string;
-	name: string;
+	id: string; // Matches option_choice_id in the database
+	name: string; // Matches choice_name in the database
+	priceAdjustment?: number; // Matches price_adjustment in the database (default 0)
+	displayOrder?: number; // Matches display_order in the database (default 0)
+	isDefault?: boolean; // Matches is_default in the database (default false)
+	isSoldOut?: boolean; // Matches is_sold_out in the database (default false)
+	choiceIcon?: string; // Matches choice_icon in the database (nullable)
+	optionGroupId?: string; // Matches option_group_id in the database (only needed when saving)
 }
 
 export interface ProductOptionCategory {
-	id: string;
-	name: string;
-	choices: ProductOptionChoice[];
+	id: string; // Matches option_group_id in the database
+	name: string; // Matches group_name in the database
+	displayOrder?: number; // Matches display_order in the database (default 0)
+	selectionType?: 'single' | 'multiple'; // Matches selection_type in the database (default 'single')
+	groupIcon?: string; // Matches group_icon in the database (nullable)
+	storeId?: string; // Matches store_id in the database (only needed when saving)
+	productId?: string; // Matches product_id in the database (only needed when saving)
+	choices: ProductOptionChoice[]; // Related option choices
 }
 
 // 1-2-2. ORDERS
