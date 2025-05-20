@@ -313,7 +313,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       // 3. Insert all option choices with the new group IDs
       const choicesToInsert = globalOptions.flatMap((option, groupIndex) => 
         option.choices.map((choice, index) => ({
-          group_id: insertedGroups[groupIndex].id, // Use the new group ID
+          group_id: insertedGroups[groupIndex].id,
           name: choice.name,
           icon: choice.icon || null,
           price_impact: choice.price_impact || 0,
@@ -341,6 +341,20 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         id: insertedGroups[index].id
       }));
       setGlobalOptions(updatedGlobalOptions);
+      
+      // If there's a selected option, update it with the new ID
+      if (selectedOption) {
+        const selectedIndex = globalOptions.findIndex(opt => 
+          opt.name === selectedOption.name && 
+          opt.icon === selectedOption.icon
+        );
+        if (selectedIndex !== -1 && insertedGroups[selectedIndex]) {
+          setSelectedOption({
+            ...selectedOption,
+            id: insertedGroups[selectedIndex].id
+          });
+        }
+      }
       
       console.log('[GlobalOptionEditor] Successfully saved all global options');
       showNotification('글로벌 옵션이 성공적으로 저장되었습니다.', 'success');
