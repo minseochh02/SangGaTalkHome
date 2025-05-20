@@ -182,7 +182,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         console.error('Error fetching global options and links:', error);
         showNotification('옵션 및 연결된 상품 정보를 불러오는 중 오류가 발생했습니다.', 'error');
       } finally {
-        setLoading(false);
+      setLoading(false);
       }
     };
 
@@ -521,7 +521,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       showNotification('연결된 상품 정보 업데이트 중 오류 발생', 'error');
     }
   };
-
+  
   const openLinkModal = (option: ProductOptionCategory) => {
     if (!option.id) {
       showNotification('먼저 옵션을 저장해야 상품을 연결할 수 있습니다.', 'error');
@@ -785,9 +785,9 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                         ))}
                       </ul>
                     ) : (
-                      <span className="italic ml-1.5 text-gray-500">
+                    <span className="italic ml-1.5 text-gray-500">
                         연결된 상품 없음. '상품 연결' 버튼을 사용하세요.
-                      </span>
+                    </span>
                     )}
                   </div>
                 </div>

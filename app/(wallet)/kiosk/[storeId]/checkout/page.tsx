@@ -13,6 +13,7 @@ interface CartItem {
   sgt_price: number;
   quantity: number;
   image_url?: string | null;
+  options?: { groupId: string; name: string; choiceId: string; price_impact: number }[];
 }
 
 // Type for store options
@@ -303,13 +304,58 @@ export default function CheckoutPage() {
         created_at: new Date().toISOString()
       }));
       
-      const { error: itemsError } = await supabase
+      const { data: orderItemsData, error: itemsError } = await supabase
         .from('kiosk_order_items')
-        .insert(orderItems);
+        .insert(orderItems)
+        .select('kiosk_order_item_id, product_id');
         
       if (itemsError) {
         console.error('Error creating kiosk order items:', itemsError);
         // Continue to success page even if items have an error
+      }
+      
+      // Save order item options if items were successfully created
+      if (orderItemsData && orderItemsData.length > 0) {
+        try {
+          // Prepare option records for all items with options
+          const allOptionRecords = [];
+          
+          for (const item of cartItems) {
+            if (!item.options || item.options.length === 0) continue;
+            
+            // Find the corresponding order item ID
+            const orderItem = orderItemsData.find(oi => oi.product_id === item.product_id);
+            if (!orderItem) continue;
+            
+            // Create option records for this item
+            const itemOptionRecords = item.options.map(option => ({
+              kiosk_order_item_id: orderItem.kiosk_order_item_id,
+              option_group_id: option.groupId,
+              option_group_name: option.name.split(':')[0].trim(), // Extract group name from the formatted name
+              option_choice_id: option.choiceId,
+              option_choice_name: option.name.split(':')[1]?.trim() || option.name, // Extract choice name or use full name
+              price_impact: option.price_impact,
+              created_at: new Date().toISOString()
+            }));
+            
+            allOptionRecords.push(...itemOptionRecords);
+          }
+          
+          // Save all option records if there are any
+          if (allOptionRecords.length > 0) {
+            const { error: optionsError } = await supabase
+              .from('kiosk_order_item_options')
+              .insert(allOptionRecords);
+              
+            if (optionsError) {
+              console.error('Error saving order item options:', optionsError);
+              // Continue to success page even if options have an error
+            }
+          }
+        } catch (optErr) {
+          console.error('Error processing order options:', optErr);
+          // Continue to success page even if option processing fails
+        }
       }
       
       // Clear cart in localStorage
