@@ -331,7 +331,7 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
         return;
       }
 
-      alert('주문이 준비 완료로 표시되었습니다. 키오스크에 알림이 전송되었습니다.');
+      alert('주문이 준비 완료로 표시되었습니다. 고객의 키오스크 화면에 알림이 전송됩니다.');
     } catch (error) {
       console.error('Failed to mark order as ready:', error);
       alert('주문 상태 업데이트 중 오류가 발생했습니다.');
