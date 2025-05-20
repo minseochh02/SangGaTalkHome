@@ -317,6 +317,20 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
     try {
       console.log(`Marking order ${orderId} as ready for pickup (Device: ${deviceNumber})`);
       
+      // First, get the kiosk_order_id to find the corresponding session
+      const { data: orderData, error: orderError } = await supabase
+        .from('kiosk_orders')
+        .select('kiosk_order_id')
+        .eq('order_id', orderId)
+        .single();
+      
+      if (orderError) {
+        console.error('Error getting order details:', orderError);
+        alert('주문 상태 업데이트 중 오류가 발생했습니다.');
+        return;
+      }
+
+      // Update the order status
       const { error } = await supabase
         .from('kiosk_orders')
         .update({ 
@@ -331,10 +345,87 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
         return;
       }
 
+      // Also update the session to have a proper completion reason
+      if (orderData?.kiosk_order_id) {
+        const { error: sessionError } = await supabase
+          .from('kiosk_sessions')
+          .update({
+            status: 'completed',
+            completion_reason: 'order_completed',
+            last_active_at: new Date().toISOString()
+          })
+          .eq('kiosk_order_id', orderData.kiosk_order_id);
+
+        if (sessionError) {
+          console.error('Error updating session:', sessionError);
+          // Don't block the workflow for this error, just log it
+        }
+      }
+
       alert('주문이 준비 완료로 표시되었습니다. 키오스크에 알림이 전송되었습니다.');
     } catch (error) {
       console.error('Failed to mark order as ready:', error);
       alert('주문 상태 업데이트 중 오류가 발생했습니다.');
+    }
+  };
+
+  // Function to forcefully disconnect a session
+  const handleDisconnectSession = async (orderId: string, deviceNumber?: number) => {
+    try {
+      console.log(`Forcefully disconnecting kiosk for order ${orderId} (Device: ${deviceNumber})`);
+      
+      // First, get the kiosk_order_id to find the corresponding session
+      const { data: orderData, error: orderError } = await supabase
+        .from('kiosk_orders')
+        .select('kiosk_order_id')
+        .eq('order_id', orderId)
+        .single();
+      
+      if (orderError) {
+        console.error('Error getting order details:', orderError);
+        alert('세션 종료 중 오류가 발생했습니다.');
+        return;
+      }
+
+      if (orderData?.kiosk_order_id) {
+        // Find the session for this order
+        const { data: sessionData, error: findSessionError } = await supabase
+          .from('kiosk_sessions')
+          .select('kiosk_session_id')
+          .eq('kiosk_order_id', orderData.kiosk_order_id)
+          .maybeSingle();
+
+        if (findSessionError) {
+          console.error('Error finding session:', findSessionError);
+          alert('세션 종료 중 오류가 발생했습니다.');
+          return;
+        }
+
+        // Disconnect the session
+        if (sessionData?.kiosk_session_id) {
+          const { error: sessionError } = await supabase
+            .from('kiosk_sessions')
+            .update({
+              status: 'completed',
+              completion_reason: 'admin_ended',
+              last_active_at: new Date().toISOString()
+            })
+            .eq('kiosk_session_id', sessionData.kiosk_session_id);
+
+          if (sessionError) {
+            console.error('Error disconnecting session:', sessionError);
+            alert('세션 종료 중 오류가 발생했습니다.');
+            return;
+          }
+
+          alert('키오스크 세션이 종료되었습니다.');
+        } else {
+          alert('이 주문에 연결된 활성 키오스크 세션을 찾을 수 없습니다.');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to disconnect session:', error);
+      alert('세션 종료 중 오류가 발생했습니다.');
     }
   };
 
@@ -511,7 +602,17 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
                   )}
                   
                   {/* Action buttons */}
-                  <div className="flex justify-end mt-4">
+                  <div className="flex justify-end mt-4 space-x-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent toggle
+                        handleDisconnectSession(order.order_id || '', order.device_number);
+                      }}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors shadow-sm"
+                      disabled={!order.order_id}
+                    >
+                      세션 종료
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent toggle
