@@ -5,23 +5,14 @@ import { library, IconPrefix, IconName, findIconDefinition } from '@fortawesome/
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
 import { JSX } from 'react/jsx-runtime';
-// import { createClient } from '@/utils/supabase/client'; // Assuming this is your Supabase client setup
+import { createClient } from '@/utils/supabase/client'; // Remove mock comment, use actual client
 // import { ProductOptionCategory, ProductOptionChoice, Product } from '@/utils/type'; // Assuming these types are defined in your project
 
 // Add all FontAwesome solid and regular icons to the library
 library.add(fas, far);
 
-// Mock Supabase client for demonstration if not available
-const supabaseMock = {
-  from: () => ({
-    select: async () => ({ data: [], error: null }),
-    insert: async (data: unknown) => ({ data, error: null }),
-    update: async (data: unknown) => ({ data, error: null }),
-    delete: async () => ({ data: [], error: null }),
-  }),
-};
-const createClient = () => supabaseMock;
-
+// Remove mock Supabase client
+// ... existing code ...
 
 // Define types here
 interface ProductOptionChoice {
@@ -104,37 +95,67 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   useEffect(() => {
     const fetchGlobalOptions = async () => {
       setLoading(true);
-      // Mock data with one default choice per category
-      const mockOptions: ProductOptionCategory[] = [
-        { 
-          id: 'opt-1', name: '얼음 양', icon: '🧊', 
-          choices: [
-            { id: 'choice-1', name: '적게', icon: 'fas cubes-stacked', isDefault: false },
-            { id: 'choice-2', name: '보통', icon: 'fas cube', isDefault: true }, 
-            { id: 'choice-3', name: '많이', icon: 'fas cubes-stacked', isDefault: false },
-            { id: 'choice-3b', name: '아주 많이', icon: 'fas cubes-stacked', isDefault: false }
-          ] 
-        },
-        { 
-          id: 'opt-2', name: '시럽 추가 옵션', icon: '🍯', 
-          choices: [
-            { id: 'choice-4', name: '추가 안함', isDefault: true }, 
-            { id: 'choice-5', name: '바닐라', icon: '1️⃣', isDefault: false }, 
-            { id: 'choice-6', name: '헤이즐넛', icon: '1️⃣', isDefault: false },
-            { id: 'choice-6b', name: '카라멜', icon: '2️⃣', isDefault: false }
-          ] 
-        },
-        { 
-          id: 'opt-3', name: '컵 선택', icon: 'fas mug-hot', 
-          choices: [
-            { id: 'choice-7', name: '매장컵', icon: 'fas store', isDefault: true }, 
-            { id: 'choice-8', name: '개인컵', icon: 'fas hand-holding-heart', isDefault: false }, 
-            { id: 'choice-9', name: '일회용컵', icon: 'fas trash-alt', isDefault: false }
-          ] 
+      
+      if (storeId) {
+        try {
+          // Fetch store option groups
+          const { data: groups, error: groupsError } = await supabase
+            .from('store_option_groups')
+            .select('*')
+            .eq('store_id', storeId)
+            .order('display_order', { ascending: true });
+          
+          if (groupsError) {
+            throw groupsError;
+          }
+          
+          if (!groups || groups.length === 0) {
+            setGlobalOptions([]);
+            setLoading(false);
+            return;
+          }
+          
+          // Fetch all choices for these groups
+          const { data: choices, error: choicesError } = await supabase
+            .from('store_option_choices')
+            .select('*')
+            .in('group_id', groups.map(g => g.id))
+            .order('display_order', { ascending: true });
+          
+          if (choicesError) {
+            throw choicesError;
+          }
+          
+          // Map to our component data structure
+          const mappedOptions: ProductOptionCategory[] = groups.map(group => ({
+            id: group.id,
+            name: group.name,
+            icon: group.icon || undefined,
+            store_id: storeId,
+            choices: choices
+              ? choices
+                  .filter(choice => choice.group_id === group.id)
+                  .map(choice => ({
+                    id: choice.id,
+                    name: choice.name,
+                    icon: choice.icon || undefined,
+                    price_impact: choice.price_impact || 0,
+                    isDefault: choice.is_default || false
+                  }))
+              : []
+          }));
+          
+          setGlobalOptions(mappedOptions);
+        } catch (error) {
+          console.error('Error fetching global options:', error);
+          showNotification('옵션을 불러오는 중 오류가 발생했습니다.', 'error');
+        } finally {
+          setLoading(false);
         }
-      ];
-      setGlobalOptions(mockOptions);
-      setLoading(false);
+      } else {
+        setLoading(false);
+        showNotification('Store ID가 제공되지 않았습니다. 옵션을 불러올 수 없습니다.', 'error');
+      }
     };
 
     if (storeId) {
@@ -247,12 +268,75 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   };
 
   const handleSaveOptions = async () => {
+    if (!storeId) {
+      showNotification('Store ID가 없어 저장할 수 없습니다.', 'error');
+      return;
+    }
+    
+    console.log('[GlobalOptionEditor] Starting to save global options:', globalOptions);
     setSaving(true);
+    
     try {
-      // Here you would typically send `globalOptions` to your backend/Supabase
-      console.log('Saving global options:', globalOptions);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500)); 
+      // 1. Delete all existing store option groups for this store
+      const { error: deleteGroupsError } = await supabase
+        .from('store_option_groups')
+        .delete()
+        .eq('store_id', storeId);
+      
+      if (deleteGroupsError) {
+        console.error('Error deleting existing option groups:', deleteGroupsError);
+        throw deleteGroupsError;
+      }
+      
+      console.log('[GlobalOptionEditor] Deleted existing store option groups');
+      
+      // 2. Insert all option groups
+      const groupsToInsert = globalOptions.map((option, index) => ({
+        id: option.id,
+        store_id: storeId,
+        name: option.name,
+        icon: option.icon || null,
+        display_order: index
+      }));
+      
+      const { error: insertGroupsError } = await supabase
+        .from('store_option_groups')
+        .insert(groupsToInsert);
+      
+      if (insertGroupsError) {
+        console.error('Error inserting option groups:', insertGroupsError);
+        throw insertGroupsError;
+      }
+      
+      console.log('[GlobalOptionEditor] Inserted store option groups:', groupsToInsert);
+      
+      // 3. Insert all option choices
+      const choicesToInsert = globalOptions.flatMap(option => 
+        option.choices.map((choice, index) => ({
+          id: choice.id,
+          group_id: option.id,
+          name: choice.name,
+          icon: choice.icon || null,
+          price_impact: choice.price_impact || 0,
+          is_default: choice.isDefault || false,
+          display_order: index
+        }))
+      );
+      
+      if (choicesToInsert.length > 0) {
+        const { error: insertChoicesError } = await supabase
+          .from('store_option_choices')
+          .insert(choicesToInsert);
+        
+        if (insertChoicesError) {
+          console.error('Error inserting option choices:', insertChoicesError);
+          throw insertChoicesError;
+        }
+        
+        console.log('[GlobalOptionEditor] Inserted store option choices:', choicesToInsert);
+      }
+      
+      console.log('[GlobalOptionEditor] Successfully saved all global options');
       showNotification('글로벌 옵션이 성공적으로 저장되었습니다.', 'success');
     } catch (e) {
       console.error('Error saving options:', e);
@@ -277,13 +361,41 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   };
   
   const handleSaveLinking = async () => {
-    if (!selectedOption) return;
+    if (!selectedOption || !storeId) return;
     setSaving(true);
+    
     try {
-      // Here you would typically save the link between selectedOption.id and selectedProducts
-      console.log('Linking option', selectedOption.id, 'to products:', selectedProducts);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      console.log('[GlobalOptionEditor] Linking option', selectedOption.id, 'to products:', selectedProducts);
+      
+      // First, delete existing links for this option
+      const { error: deleteError } = await supabase
+        .from('product_global_option_links')
+        .delete()
+        .eq('store_option_group_id', selectedOption.id);
+      
+      if (deleteError) {
+        console.error('Error deleting existing links:', deleteError);
+        throw deleteError;
+      }
+      
+      // Then insert new links if any products are selected
+      if (selectedProducts.length > 0) {
+        const linksToInsert = selectedProducts.map(productId => ({
+          product_id: productId,
+          store_option_group_id: selectedOption.id,
+          store_id: storeId
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('product_global_option_links')
+          .insert(linksToInsert);
+        
+        if (insertError) {
+          console.error('Error inserting product links:', insertError);
+          throw insertError;
+        }
+      }
+      
       showNotification('상품 연결이 성공적으로 저장되었습니다.', 'success');
       setShowLinkModal(false);
       setSelectedOption(null);
