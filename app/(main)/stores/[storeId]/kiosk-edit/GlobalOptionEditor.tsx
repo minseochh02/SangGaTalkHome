@@ -6,6 +6,7 @@ import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
 import { JSX } from 'react/jsx-runtime';
 import { createClient } from '@/utils/supabase/client'; // Remove mock comment, use actual client
+import { v4 as uuidv4 } from 'uuid'; // Import UUID generator
 // import { ProductOptionCategory, ProductOptionChoice, Product } from '@/utils/type'; // Assuming these types are defined in your project
 
 // Add all FontAwesome solid and regular icons to the library
@@ -16,7 +17,7 @@ library.add(fas, far);
 
 // Define types here
 interface ProductOptionChoice {
-  id: string;
+  id?: string; // Make ID optional - let DB generate for new items
   name: string;
   icon?: string; // Icon for the choice (FA class "prefix icon-name" or emoji)
   price_impact?: number;
@@ -24,7 +25,7 @@ interface ProductOptionChoice {
 }
 
 interface ProductOptionCategory {
-  id:string;
+  id?: string; // Make ID optional - let DB generate for new items
   name: string;
   icon?: string; // Icon for the category (FA class "prefix icon-name" or emoji)
   choices: ProductOptionChoice[];
@@ -90,7 +91,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     setTimeout(() => setNotification(null), duration);
   };
   
-  const generateId = () => `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  const generateId = () => uuidv4();
 
   useEffect(() => {
     const fetchGlobalOptions = async () => {
@@ -177,8 +178,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           icon: c.icon?.trim() || undefined,
           isDefault: c.isDefault
         }))
-        .filter(c => c.name !== '')
-        .map(c => ({ id: generateId(), name: c.name, icon: c.icon, isDefault: c.isDefault }));
+        .filter(c => c.name !== '');
 
     if (validChoices.length === 0) {
       showNotification('최소 하나의 옵션을 입력해주세요.', 'error');
@@ -200,7 +200,6 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     }
     
     const newCategory: ProductOptionCategory = {
-      id: generateId(),
       name: newCategoryName.trim(),
       icon: newCategoryIcon.trim() || undefined,
       choices: validChoices,
@@ -277,66 +276,205 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     setSaving(true);
     
     try {
-      // 1. Delete all existing store option groups for this store
-      const { error: deleteGroupsError } = await supabase
-        .from('store_option_groups')
-        .delete()
-        .eq('store_id', storeId);
+      // 1. Separate existing options (with IDs) from new options (without IDs)
+      const existingOptions = globalOptions.filter(option => option.id);
+      const newOptions = globalOptions.filter(option => !option.id);
       
-      if (deleteGroupsError) {
-        console.error('Error deleting existing option groups:', deleteGroupsError);
-        throw deleteGroupsError;
+      // 2. First, delete any option groups that aren't in our existingOptions list
+      if (existingOptions.length > 0) {
+        // Make sure the IDs exist and convert to string array
+        const existingIds = existingOptions.map(opt => opt.id).filter(id => id !== undefined) as string[];
+        
+        if (existingIds.length > 0) {
+          const { error: deleteOldGroupsError } = await supabase
+            .from('store_option_groups')
+            .delete()
+            .eq('store_id', storeId)
+            .not('id', 'in', `(${existingIds.join(',')})`);
+          
+          if (deleteOldGroupsError) {
+            console.error('Error deleting old option groups:', deleteOldGroupsError);
+            throw deleteOldGroupsError;
+          }
+        } else {
+          // Fall back to deleting all if we somehow have "existing options" with no IDs
+          const { error: deleteAllGroupsError } = await supabase
+            .from('store_option_groups')
+            .delete()
+            .eq('store_id', storeId);
+          
+          if (deleteAllGroupsError) {
+            console.error('Error deleting all option groups:', deleteAllGroupsError);
+            throw deleteAllGroupsError;
+          }
+        }
+      } else {
+        // If no existing options, delete all for this store
+        const { error: deleteAllGroupsError } = await supabase
+          .from('store_option_groups')
+          .delete()
+          .eq('store_id', storeId);
+        
+        if (deleteAllGroupsError) {
+          console.error('Error deleting all option groups:', deleteAllGroupsError);
+          throw deleteAllGroupsError;
+        }
       }
       
-      console.log('[GlobalOptionEditor] Deleted existing store option groups');
+      console.log('[GlobalOptionEditor] Deleted no-longer-used store option groups');
       
-      // 2. Insert all option groups
-      const groupsToInsert = globalOptions.map((option, index) => ({
-        id: option.id,
-        store_id: storeId,
-        name: option.name,
-        icon: option.icon || null,
-        display_order: index
-      }));
-      
-      const { error: insertGroupsError } = await supabase
-        .from('store_option_groups')
-        .insert(groupsToInsert);
-      
-      if (insertGroupsError) {
-        console.error('Error inserting option groups:', insertGroupsError);
-        throw insertGroupsError;
-      }
-      
-      console.log('[GlobalOptionEditor] Inserted store option groups:', groupsToInsert);
-      
-      // 3. Insert all option choices
-      const choicesToInsert = globalOptions.flatMap(option => 
-        option.choices.map((choice, index) => ({
-          id: choice.id,
+      // 3. Update existing option groups
+      for (let i = 0; i < existingOptions.length; i++) {
+        const option = existingOptions[i];
+        const { error: updateGroupError } = await supabase
+          .from('store_option_groups')
+          .update({
+            name: option.name,
+            icon: option.icon || null,
+            display_order: i
+          })
+          .eq('id', option.id);
+        
+        if (updateGroupError) {
+          console.error('Error updating option group:', updateGroupError);
+          throw updateGroupError;
+        }
+        
+        // Delete and recreate all choices for this group for simplicity
+        const { error: deleteChoicesError } = await supabase
+          .from('store_option_choices')
+          .delete()
+          .eq('group_id', option.id);
+        
+        if (deleteChoicesError) {
+          console.error('Error deleting choices for group:', deleteChoicesError);
+          throw deleteChoicesError;
+        }
+        
+        // Insert updated choices
+        const choicesToInsert = option.choices.map((choice, index) => ({
+          // Don't include id field - let Supabase generate new UUIDs
           group_id: option.id,
           name: choice.name,
           icon: choice.icon || null,
           price_impact: choice.price_impact || 0,
           is_default: choice.isDefault || false,
           display_order: index
-        }))
-      );
-      
-      if (choicesToInsert.length > 0) {
-        const { error: insertChoicesError } = await supabase
-          .from('store_option_choices')
-          .insert(choicesToInsert);
+        }));
         
-        if (insertChoicesError) {
-          console.error('Error inserting option choices:', insertChoicesError);
-          throw insertChoicesError;
+        if (choicesToInsert.length > 0) {
+          const { error: insertChoicesError } = await supabase
+            .from('store_option_choices')
+            .insert(choicesToInsert);
+          
+          if (insertChoicesError) {
+            console.error('Error inserting choices for existing group:', insertChoicesError);
+            throw insertChoicesError;
+          }
+        }
+      }
+      
+      // 4. Insert new option groups
+      for (let i = 0; i < newOptions.length; i++) {
+        const option = newOptions[i];
+        
+        // Insert the new group
+        const { data: insertedGroup, error: insertGroupError } = await supabase
+          .from('store_option_groups')
+          .insert({
+            store_id: storeId,
+            name: option.name,
+            icon: option.icon || null,
+            display_order: existingOptions.length + i
+          })
+          .select();
+        
+        if (insertGroupError) {
+          console.error('Error inserting new option group:', insertGroupError);
+          throw insertGroupError;
         }
         
-        console.log('[GlobalOptionEditor] Inserted store option choices:', choicesToInsert);
+        if (!insertedGroup || insertedGroup.length === 0) {
+          console.error('No group ID returned after insertion');
+          throw new Error('Failed to get inserted group ID');
+        }
+        
+        const newGroupId = insertedGroup[0].id;
+        
+        // Insert choices for this new group
+        const choicesToInsert = option.choices.map((choice, index) => ({
+          // Don't include id - let Supabase generate new UUIDs
+          group_id: newGroupId,
+          name: choice.name,
+          icon: choice.icon || null,
+          price_impact: choice.price_impact || 0,
+          is_default: choice.isDefault || false,
+          display_order: index
+        }));
+        
+        if (choicesToInsert.length > 0) {
+          const { error: insertChoicesError } = await supabase
+            .from('store_option_choices')
+            .insert(choicesToInsert);
+          
+          if (insertChoicesError) {
+            console.error('Error inserting choices for new group:', insertChoicesError);
+            throw insertChoicesError;
+          }
+        }
       }
       
       console.log('[GlobalOptionEditor] Successfully saved all global options');
+      
+      // Reload options to get the server-generated IDs
+      const fetchGlobalOptions = async () => {
+        try {
+          const { data: groups, error: groupsError } = await supabase
+            .from('store_option_groups')
+            .select('*')
+            .eq('store_id', storeId)
+            .order('display_order', { ascending: true });
+          
+          if (groupsError) throw groupsError;
+          
+          if (!groups || groups.length === 0) {
+            setGlobalOptions([]);
+            return;
+          }
+          
+          const { data: choices, error: choicesError } = await supabase
+            .from('store_option_choices')
+            .select('*')
+            .in('group_id', groups.map(g => g.id))
+            .order('display_order', { ascending: true });
+          
+          if (choicesError) throw choicesError;
+          
+          const mappedOptions: ProductOptionCategory[] = groups.map(group => ({
+            id: group.id,
+            name: group.name,
+            icon: group.icon || undefined,
+            store_id: storeId,
+            choices: choices
+              ? choices
+                  .filter(choice => choice.group_id === group.id)
+                  .map(choice => ({
+                    id: choice.id,
+                    name: choice.name,
+                    icon: choice.icon || undefined,
+                    price_impact: choice.price_impact || 0,
+                    isDefault: choice.is_default || false
+                  }))
+              : []
+          }));
+          
+          setGlobalOptions(mappedOptions);
+        } catch (error) {
+          console.error('Error reloading options after save:', error);
+        }
+      };
+      await fetchGlobalOptions();
+      
       showNotification('글로벌 옵션이 성공적으로 저장되었습니다.', 'success');
     } catch (e) {
       console.error('Error saving options:', e);
@@ -361,7 +499,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   };
   
   const handleSaveLinking = async () => {
-    if (!selectedOption || !storeId) return;
+    if (!selectedOption || !selectedOption.id || !storeId) return;
+    
     setSaving(true);
     
     try {
@@ -381,6 +520,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       // Then insert new links if any products are selected
       if (selectedProducts.length > 0) {
         const linksToInsert = selectedProducts.map(productId => ({
+          // No ID field - let Supabase generate it
           product_id: productId,
           store_option_group_id: selectedOption.id,
           store_id: storeId
