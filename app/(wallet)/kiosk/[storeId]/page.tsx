@@ -5,6 +5,13 @@ import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { SafeImage } from '@/components/ui/image';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { library, IconPrefix, IconName, findIconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { fas } from '@fortawesome/free-solid-svg-icons';
+import { far } from '@fortawesome/free-regular-svg-icons';
+
+// Add all FontAwesome icons to the library
+library.add(fas, far);
 
 // Types
 interface Product {
@@ -45,6 +52,34 @@ interface KioskOrder {
   // other relevant order fields
 }
 
+// Add new interfaces for product options
+interface ProductOptionChoice {
+  id: string;
+  name: string;
+  icon?: string;
+  price_impact: number;
+  is_default: boolean;
+}
+
+interface ProductOptionGroup {
+  id: string;
+  name: string;
+  icon?: string;
+  choices: ProductOptionChoice[];
+}
+
+interface SelectedOption {
+  groupId: string;
+  choiceId: string;
+  name: string;
+  price_impact: number;
+}
+
+interface CartItemWithOptions extends CartItem {
+  options?: SelectedOption[];
+  total_price: number; // Base price + all option price impacts
+}
+
 export default function KioskPage() {
   const params = useParams();
   const router = useRouter();
@@ -68,6 +103,13 @@ export default function KioskPage() {
   
   // New state for mapping products to their effective kiosk category
   const [effectiveProductToKioskCategoryMap, setEffectiveProductToKioskCategoryMap] = useState<Map<string, string | null>>(new Map());
+  
+  // New state for options
+  const [productOptions, setProductOptions] = useState<Map<string, ProductOptionGroup[]>>(new Map());
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
+  const [cartItemsWithOptions, setCartItemsWithOptions] = useState<CartItemWithOptions[]>([]);
   
   // Initialize kiosk session
   const initKioskSession = useCallback(async () => {
@@ -202,17 +244,17 @@ export default function KioskPage() {
     }
   }, [storeId, supabase]);
   
-  // Load cart from localStorage
+  // Load cart from localStorage with options support
   const loadCart = useCallback(() => {
     try {
       const storedCart = localStorage.getItem(`kiosk-cart-${storeId}`);
       if (storedCart) {
         const parsedCart = JSON.parse(storedCart);
-        setCartItems(parsedCart);
+        setCartItemsWithOptions(parsedCart);
         
-        // Calculate total
+        // Calculate total including options price impacts
         const total = parsedCart.reduce(
-          (sum: number, item: CartItem) => sum + (item.sgt_price * item.quantity), 0
+          (sum: number, item: CartItemWithOptions) => sum + (item.total_price * item.quantity), 0
         );
         setTotalAmount(total);
       }
@@ -295,27 +337,155 @@ export default function KioskPage() {
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem(`kiosk-cart-${storeId}`, JSON.stringify(cartItems));
+      localStorage.setItem(`kiosk-cart-${storeId}`, JSON.stringify(cartItemsWithOptions));
       
       // Update total amount
-      const total = cartItems.reduce(
-        (sum, item) => sum + (item.sgt_price * item.quantity), 0
+      const total = cartItemsWithOptions.reduce(
+        (sum, item) => sum + (item.total_price * item.quantity), 0
       );
       setTotalAmount(total);
     } catch (err) {
       console.error('Error saving cart to localStorage:', err);
     }
-  }, [cartItems, storeId]);
+  }, [cartItemsWithOptions, storeId]);
   
-  // Cart functions
-  const addToCart = (product: Product) => {
+  // New function to fetch product options
+  const fetchProductOptions = async (productId: string) => {
+    if (productOptions.has(productId)) {
+      // Already fetched options for this product
+      return productOptions.get(productId) || [];
+    }
+    
+    try {
+      // Fetch linked global option groups for this product
+      const { data: linkedOptions, error: linkError } = await supabase
+        .from('product_global_option_links')
+        .select('store_option_group_id')
+        .eq('product_id', productId);
+      
+      if (linkError || !linkedOptions || linkedOptions.length === 0) {
+        console.log(`No options found for product ${productId}`);
+        setProductOptions(prev => new Map(prev).set(productId, []));
+        return [];
+      }
+      
+      const groupIds = linkedOptions.map(link => link.store_option_group_id);
+      
+      // Fetch option groups
+      const { data: groups, error: groupError } = await supabase
+        .from('store_option_groups')
+        .select('*')
+        .in('id', groupIds)
+        .order('display_order', { ascending: true });
+      
+      if (groupError || !groups) {
+        console.error('Error fetching option groups:', groupError);
+        return [];
+      }
+      
+      // Fetch option choices for these groups
+      const { data: choices, error: choicesError } = await supabase
+        .from('store_option_choices')
+        .select('*')
+        .in('group_id', groupIds)
+        .order('display_order', { ascending: true });
+      
+      if (choicesError || !choices) {
+        console.error('Error fetching option choices:', choicesError);
+        return [];
+      }
+      
+      // Map data to our component structure
+      const productOptionGroups: ProductOptionGroup[] = groups.map(group => ({
+        id: group.id,
+        name: group.name,
+        icon: group.icon || undefined,
+        choices: choices
+          .filter(choice => choice.group_id === group.id)
+          .map(choice => ({
+            id: choice.id,
+            name: choice.name,
+            icon: choice.icon || undefined,
+            price_impact: choice.price_impact || 0,
+            is_default: choice.is_default || false
+          }))
+      }));
+      
+      // Update state
+      setProductOptions(prev => new Map(prev).set(productId, productOptionGroups));
+      return productOptionGroups;
+    } catch (err) {
+      console.error('Error fetching product options:', err);
+      return [];
+    }
+  };
+  
+  // Helper to select default options
+  const selectDefaultOptions = (optionGroups: ProductOptionGroup[]) => {
+    const defaultOptions: SelectedOption[] = [];
+    
+    optionGroups.forEach(group => {
+      const defaultChoice = group.choices.find(choice => choice.is_default);
+      if (defaultChoice) {
+        defaultOptions.push({
+          groupId: group.id,
+          choiceId: defaultChoice.id,
+          name: `${group.name}: ${defaultChoice.name}`,
+          price_impact: defaultChoice.price_impact
+        });
+      }
+    });
+    
+    return defaultOptions;
+  };
+  
+  // Modified addToCart to handle options
+  const addToCart = async (product: Product) => {
     if (product.is_sold_out) return;
     
-    setCartItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(item => item.product_id === product.product_id);
+    // Fetch options for this product
+    const options = await fetchProductOptions(product.product_id);
+    
+    if (options && options.length > 0) {
+      // Product has options, show selection modal
+      setSelectedProduct(product);
+      setSelectedOptions(selectDefaultOptions(options));
+      setShowOptionsModal(true);
+    } else {
+      // No options, add directly to cart
+      addToCartWithOptions(product, []);
+    }
+  };
+  
+  // Function to add product with selected options to cart
+  const addToCartWithOptions = (product: Product, options: SelectedOption[]) => {
+    // Calculate total price including options
+    const optionsPriceImpact = options.reduce((sum, option) => sum + option.price_impact, 0);
+    const totalPrice = product.sgt_price + optionsPriceImpact;
+    
+    setCartItemsWithOptions(prevItems => {
+      // Try to find an exact match (same product with same options)
+      const existingItemIndex = prevItems.findIndex(item => {
+        if (item.product_id !== product.product_id) return false;
+        
+        // If options count doesn't match, it's not the same
+        if ((item.options?.length || 0) !== options.length) return false;
+        
+        // Check if all options match
+        if (options.length === 0 && (!item.options || item.options.length === 0)) return true;
+        
+        if (!item.options) return false;
+        
+        // Check each option
+        return options.every(option => 
+          item.options?.some(itemOption => 
+            itemOption.groupId === option.groupId && itemOption.choiceId === option.choiceId
+          )
+        );
+      });
       
       if (existingItemIndex !== -1) {
-        // Item already in cart, increment quantity
+        // Item with exact same options already in cart, increment quantity
         const updatedItems = [...prevItems];
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
@@ -329,7 +499,9 @@ export default function KioskPage() {
           product_name: product.product_name,
           sgt_price: product.sgt_price,
           quantity: 1,
-          image_url: product.image_url
+          image_url: product.image_url,
+          options: options.length > 0 ? options : undefined,
+          total_price: totalPrice
         }];
       }
     });
@@ -345,48 +517,73 @@ export default function KioskPage() {
       setRecentlyAdded(null);
       setCartIconAnimate(false);
     }, 700);
+    
+    // Close the options modal if it was open
+    setShowOptionsModal(false);
   };
   
-  // Check if item is in cart
+  const handleOptionChange = (groupId: string, choice: ProductOptionChoice) => {
+    setSelectedOptions(prev => {
+      // Remove any existing choice for this group
+      const filtered = prev.filter(option => option.groupId !== groupId);
+      
+      // Add the new choice
+      return [...filtered, {
+        groupId,
+        choiceId: choice.id,
+        name: `${productOptions.get(selectedProduct?.product_id || '')?.find(g => g.id === groupId)?.name || ''}: ${choice.name}`,
+        price_impact: choice.price_impact
+      }];
+    });
+  };
+  
+  // Modified cart functions to handle options
   const isInCart = (productId: string): boolean => {
-    return cartItems.some(item => item.product_id === productId);
+    return cartItemsWithOptions.some(item => item.product_id === productId);
   };
   
-  // Get quantity of item in cart
   const getCartQuantity = (productId: string): number => {
-    const item = cartItems.find(item => item.product_id === productId);
-    return item ? item.quantity : 0;
+    // Sum up quantities for all items with this product ID (could have different options)
+    return cartItemsWithOptions
+      .filter(item => item.product_id === productId)
+      .reduce((sum, item) => sum + item.quantity, 0);
   };
   
-  const incrementItem = (productId: string) => {
-    setCartItems(prevItems => 
-      prevItems.map(item => 
-        item.product_id === productId
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      )
-    );
+  const incrementItem = (index: number) => {
+    setCartItemsWithOptions(prevItems => {
+      const updatedItems = [...prevItems];
+      updatedItems[index] = {
+        ...updatedItems[index],
+        quantity: updatedItems[index].quantity + 1
+      };
+      return updatedItems;
+    });
   };
   
-  const decrementItem = (productId: string) => {
-    setCartItems(prevItems => 
-      prevItems.map(item => 
-        item.product_id === productId && item.quantity > 1
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
-      ).filter(item => item.quantity > 0)
-    );
+  const decrementItem = (index: number) => {
+    setCartItemsWithOptions(prevItems => {
+      const updatedItems = [...prevItems];
+      if (updatedItems[index].quantity > 1) {
+        updatedItems[index] = {
+          ...updatedItems[index],
+          quantity: updatedItems[index].quantity - 1
+        };
+        return updatedItems;
+      } else {
+        return updatedItems.filter((_, i) => i !== index);
+      }
+    });
   };
   
-  const removeItem = (productId: string) => {
-    setCartItems(prevItems => 
-      prevItems.filter(item => item.product_id !== productId)
+  const removeItem = (index: number) => {
+    setCartItemsWithOptions(prevItems => 
+      prevItems.filter((_, i) => i !== index)
     );
   };
   
   const clearCart = () => {
     if (confirm('장바구니를 비우시겠습니까?')) {
-      setCartItems([]);
+      setCartItemsWithOptions([]);
     }
   };
   
@@ -460,10 +657,10 @@ export default function KioskPage() {
           console.log(`[KioskPage] Product update received: ${updatedProduct.product_id} (${updatedProduct.product_name}), kiosk_enabled: ${updatedProduct.is_kiosk_enabled}, sold_out: ${updatedProduct.is_sold_out}`);
           
           // Check for sold-out state changes first, which affect the cart
-          const cartItemExists = cartItems.find(item => item.product_id === updatedProduct.product_id);
+          const cartItemExists = cartItemsWithOptions.find(item => item.product_id === updatedProduct.product_id);
           if (updatedProduct.is_sold_out && cartItemExists) {
             // Automatically remove the sold-out item from cart
-            setCartItems(prevItems => prevItems.filter(item => item.product_id !== updatedProduct.product_id));
+            setCartItemsWithOptions(prevItems => prevItems.filter(item => item.product_id !== updatedProduct.product_id));
             
             // Inform the user that the item was removed
             alert(
@@ -525,7 +722,7 @@ export default function KioskPage() {
       supabase.removeChannel(productChannel);
       console.log(`[KioskPage] Unsubscribed from product updates for store ${storeId}`);
     };
-  }, [storeId, supabase, cartItems]); // Add cartItems dependency to access the most up-to-date cart
+  }, [storeId, supabase, cartItemsWithOptions]); // Add cartItemsWithOptions dependency to access the most up-to-date cart
   
   // Real-time subscription for session status changes (remote disconnect by admin)
   useEffect(() => {
@@ -630,6 +827,58 @@ export default function KioskPage() {
     };
   }, [storeId, sessionId, deviceNumber]); // Dependencies for this effect
   
+  // Utility function to render icons
+  const renderIcon = (iconString?: string, size: string = "text-2xl") => {
+    if (!iconString || iconString.trim() === '') return null;
+    
+    // Check for emoji (simplified check)
+    if (
+      iconString.length <= 2 || 
+      iconString.match(/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]/)
+    ) {
+      return <span className={`${size} mr-2`}>{iconString}</span>;
+    }
+    
+    // Process FontAwesome icon
+    const parts = iconString.split(' ');
+    if (parts.length > 0) {
+      const firstPart = parts[0].toLowerCase();
+      let prefix: IconPrefix | undefined = undefined;
+      let iconName: IconName | undefined = undefined;
+      
+      // Parse prefix
+      if (firstPart === 'fas' || firstPart === 'fa-solid' || firstPart === 'solid') {
+        prefix = 'fas';
+      } else if (firstPart === 'far' || firstPart === 'fa-regular' || firstPart === 'regular') {
+        prefix = 'far';
+      }
+      
+      // Parse icon name
+      if (parts.length > 1) {
+        let nameCandidate = parts.slice(1).join(' ');
+        if (nameCandidate.startsWith('fa-')) {
+          nameCandidate = nameCandidate.substring(3);
+        }
+        iconName = nameCandidate as IconName;
+      }
+      
+      if (prefix && iconName) {
+        try {
+          // Check if the icon is in the library
+          const iconLookup = findIconDefinition({ prefix, iconName });
+          if (iconLookup) {
+            return <FontAwesomeIcon icon={[prefix, iconName]} className={`${size} mr-2`} />;
+          }
+        } catch (e) {
+          console.warn(`Error rendering FA icon: ${iconString}`, e);
+        }
+      }
+    }
+    
+    // Fallback for unknown icon format
+    return <span className="text-gray-400 text-sm mr-2">{iconString}</span>;
+  };
+  
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
@@ -677,9 +926,9 @@ export default function KioskPage() {
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            {cartItems.length > 0 && (
+            {cartItemsWithOptions.length > 0 && (
               <span className="absolute -top-2 -right-2 bg-white text-red-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                {cartItems.length}
+                {cartItemsWithOptions.length}
               </span>
             )}
           </div>
@@ -817,7 +1066,108 @@ export default function KioskPage() {
         </div>
       </div>
       
-      {/* Cart sidebar */}
+      {/* Options Modal */}
+      {showOptionsModal && selectedProduct && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold">{selectedProduct.product_name}</h3>
+                <button 
+                  onClick={() => setShowOptionsModal(false)}
+                  className="text-gray-500 hover:text-gray-800"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-5">
+              {productOptions.get(selectedProduct.product_id)?.map((group) => (
+                <div key={group.id} className="mb-6">
+                  <div className="flex items-center mb-3">
+                    {group.icon && renderIcon(group.icon)}
+                    <h4 className="text-lg font-medium">{group.name}</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    {group.choices.map((choice) => {
+                      const isSelected = selectedOptions.some(
+                        opt => opt.groupId === group.id && opt.choiceId === choice.id
+                      );
+                      
+                      return (
+                        <button
+                          key={choice.id}
+                          className={`p-3 rounded-lg border ${
+                            isSelected 
+                              ? 'border-red-500 bg-red-50' 
+                              : 'border-gray-200 hover:bg-gray-50'
+                          } flex items-center justify-between`}
+                          onClick={() => handleOptionChange(group.id, choice)}
+                        >
+                          <div className="flex items-center">
+                            {choice.icon && renderIcon(choice.icon, "text-xl")}
+                            <span>{choice.name}</span>
+                          </div>
+                          
+                          {choice.price_impact !== 0 && (
+                            <span className={`text-sm font-medium ${
+                              choice.price_impact > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {choice.price_impact > 0 ? '+' : ''}
+                              {formatPrice(choice.price_impact)}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              
+              <div className="mt-6 border-t pt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-gray-700">기본 가격</span>
+                  <span className="font-medium">{formatPrice(selectedProduct.sgt_price)}</span>
+                </div>
+                
+                {selectedOptions.length > 0 && selectedOptions.map((option, index) => (
+                  <div key={index} className="flex justify-between items-center py-1">
+                    <span className="text-gray-600 text-sm">{option.name}</span>
+                    <span className={`text-sm ${
+                      option.price_impact > 0 ? 'text-green-600' : option.price_impact < 0 ? 'text-red-600' : 'text-gray-600'
+                    }`}>
+                      {option.price_impact > 0 ? '+' : ''}
+                      {formatPrice(option.price_impact)}
+                    </span>
+                  </div>
+                ))}
+                
+                <div className="flex justify-between items-center mt-4 pt-4 border-t font-bold">
+                  <span>총 가격</span>
+                  <span className="text-lg text-red-600">{formatPrice(
+                    selectedProduct.sgt_price + selectedOptions.reduce((sum, opt) => sum + opt.price_impact, 0)
+                  )}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-5 border-t">
+              <button
+                className="w-full py-3 bg-red-600 text-white font-bold rounded-md hover:bg-red-700"
+                onClick={() => addToCartWithOptions(selectedProduct, selectedOptions)}
+              >
+                장바구니에 담기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modify cart sidebar */}
       <div 
         className={`fixed inset-0 bg-black bg-opacity-50 z-10 transition-opacity duration-300 ${
           showCart ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -846,7 +1196,7 @@ export default function KioskPage() {
           
           {/* Cart items */}
           <div className="flex-1 overflow-y-auto p-4">
-            {cartItems.length === 0 ? (
+            {cartItemsWithOptions.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-gray-500">
                 <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -854,60 +1204,81 @@ export default function KioskPage() {
                 <p className="text-center">장바구니가 비어있습니다.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {cartItems.map((item) => (
-                  <div key={item.product_id} className="flex items-center bg-gray-50 p-3 rounded-lg">
-                    <div className="w-16 h-16 bg-gray-200 rounded overflow-hidden flex-shrink-0 mr-3">
-                      {item.image_url ? (
-                        <div className="relative h-full w-full">
-                          <SafeImage
-                            src={item.image_url}
-                            alt={item.product_name}
-                            fill
-                            style={{ objectFit: 'cover' }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium">{item.product_name}</h4>
-                      <p className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(item.sgt_price)}<p className="text-xs text-gray-500">SGT</p></p>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <button 
-                        className="text-gray-500 hover:text-red-600 mb-2"
-                        onClick={() => removeItem(item.product_id)}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                      <div className="flex items-center border rounded-md">
+              <div className="space-y-5">
+                {cartItemsWithOptions.map((item, index) => (
+                  <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="w-16 h-16 bg-gray-200 rounded overflow-hidden flex-shrink-0 mr-3">
+                        {item.image_url ? (
+                          <div className="relative h-full w-full">
+                            <SafeImage
+                              src={item.image_url}
+                              alt={item.product_name}
+                              fill
+                              style={{ objectFit: 'cover' }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.product_name}</h4>
+                        <p className="text-red-600 font-bold">{formatPrice(item.total_price)}<span className="text-xs text-gray-500 ml-1">SGT</span></p>
+                      </div>
+                      <div className="flex flex-col items-end">
                         <button 
-                          className="px-2 py-1 text-gray-600 hover:bg-gray-100" 
-                          onClick={() => decrementItem(item.product_id)}
+                          className="text-gray-500 hover:text-red-600 mb-2"
+                          onClick={() => removeItem(index)}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
-                        <span className="px-2 min-w-[2rem] text-center">{item.quantity}</span>
-                        <button 
-                          className="px-2 py-1 text-gray-600 hover:bg-gray-100"
-                          onClick={() => incrementItem(item.product_id)}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                        </button>
+                        <div className="flex items-center border rounded-md">
+                          <button 
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100" 
+                            onClick={() => decrementItem(index)}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                            </svg>
+                          </button>
+                          <span className="px-2 min-w-[2rem] text-center">{item.quantity}</span>
+                          <button 
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+                            onClick={() => incrementItem(index)}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Show selected options */}
+                    {item.options && item.options.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <ul className="text-xs text-gray-600 pl-2">
+                          {item.options.map((option, optionIndex) => (
+                            <li key={optionIndex} className="flex justify-between py-1">
+                              <span>{option.name}</span>
+                              {option.price_impact !== 0 && (
+                                <span className={option.price_impact > 0 ? 'text-green-600' : 'text-red-600'}>
+                                  {option.price_impact > 0 ? '+' : ''}
+                                  {formatPrice(option.price_impact)}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -918,15 +1289,15 @@ export default function KioskPage() {
           <div className="p-4 border-t">
             <div className="flex justify-between items-center mb-4">
               <span className="text-gray-700 font-medium">총 금액</span>
-              <span className="text-xl font-bold text-red-600">{formatPrice(totalAmount)}<p className="text-xs text-gray-500">SGT</p></span>
+              <span className="text-xl font-bold text-red-600">{formatPrice(totalAmount)}<span className="text-xs text-gray-500 ml-1">SGT</span></span>
             </div>
             
             <div className="space-y-2">
               <button
                 className={`w-full py-3 bg-red-600 text-white font-bold rounded-md ${
-                  cartItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700'
+                  cartItemsWithOptions.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700'
                 }`}
-                disabled={cartItems.length === 0}
+                disabled={cartItemsWithOptions.length === 0}
                 onClick={() => {
                   setShowCart(false);
                   router.push(`/kiosk/${storeId}/checkout?sessionId=${sessionId}&deviceNumber=${deviceNumber}`);
@@ -937,9 +1308,9 @@ export default function KioskPage() {
               
               <button
                 className={`w-full py-2 border border-gray-300 text-gray-700 rounded-md ${
-                  cartItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                  cartItemsWithOptions.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
                 }`}
-                disabled={cartItems.length === 0}
+                disabled={cartItemsWithOptions.length === 0}
                 onClick={clearCart}
               >
                 장바구니 비우기
