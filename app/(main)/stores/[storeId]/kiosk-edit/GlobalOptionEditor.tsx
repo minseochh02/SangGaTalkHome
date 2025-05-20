@@ -284,6 +284,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         throw deleteGroupsError;
       }
       
+      console.log('[GlobalOptionEditor] Deleted existing store option groups');
+      
       // 2. Insert all option groups and get their new IDs
       const groupsToInsert = globalOptions.map((option, index) => ({
         store_id: storeId,
@@ -302,56 +304,23 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         throw insertGroupsError;
       }
       
-      if (!insertedGroups || insertedGroups.length === 0) {
-        throw new Error('No groups were inserted or no IDs returned');
+      if (!insertedGroups) {
+        throw new Error('No groups were inserted');
       }
       
-      console.log('[GlobalOptionEditor] Successfully inserted groups with IDs:', insertedGroups);
-      
-      // Create a copy of the current options to update with new IDs
-      let updatedOptions = [...globalOptions];
-      
-      // Update each option with its new ID from the database
-      for (let i = 0; i < updatedOptions.length; i++) {
-        if (i < insertedGroups.length) {
-          updatedOptions[i] = {
-            ...updatedOptions[i],
-            id: insertedGroups[i].id
-          };
-          console.log(`[GlobalOptionEditor] Option "${updatedOptions[i].name}" assigned ID: ${updatedOptions[i].id}`);
-        }
-      }
+      console.log('[GlobalOptionEditor] Inserted store option groups:', insertedGroups);
       
       // 3. Insert all option choices with the new group IDs
-      interface ChoiceToInsert {
-        group_id: string;
-        name: string;
-        icon: string | null;
-        price_impact: number;
-        is_default: boolean;
-        display_order: number;
-      }
-      
-      const choicesToInsert: ChoiceToInsert[] = [];
-      
-      for (let i = 0; i < updatedOptions.length; i++) {
-        const groupId = updatedOptions[i].id;
-        if (!groupId) {
-          console.error(`[GlobalOptionEditor] Missing group ID for option at index ${i}`);
-          continue;
-        }
-        
-        updatedOptions[i].choices.forEach((choice, choiceIndex) => {
-          choicesToInsert.push({
-            group_id: groupId,
-            name: choice.name,
-            icon: choice.icon || null,
-            price_impact: choice.price_impact || 0,
-            is_default: choice.isDefault || false,
-            display_order: choiceIndex
-          });
-        });
-      }
+      const choicesToInsert = globalOptions.flatMap((option, groupIndex) => 
+        option.choices.map((choice, index) => ({
+          group_id: insertedGroups[groupIndex].id, // Use the new group ID
+          name: choice.name,
+          icon: choice.icon || null,
+          price_impact: choice.price_impact || 0,
+          is_default: choice.isDefault || false,
+          display_order: index
+        }))
+      );
       
       if (choicesToInsert.length > 0) {
         const { error: insertChoicesError } = await supabase
@@ -363,20 +332,18 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           throw insertChoicesError;
         }
         
-        console.log(`[GlobalOptionEditor] Successfully inserted ${choicesToInsert.length} choices`);
+        console.log('[GlobalOptionEditor] Inserted store option choices:', choicesToInsert);
       }
       
-      // Important: Set state with the updated options that include IDs
-      console.log('[GlobalOptionEditor] Setting global options with IDs:', updatedOptions);
-      setGlobalOptions(updatedOptions);
+      // Update the globalOptions state with the new IDs
+      const updatedGlobalOptions = globalOptions.map((option, index) => ({
+        ...option,
+        id: insertedGroups[index].id
+      }));
+      setGlobalOptions(updatedGlobalOptions);
       
+      console.log('[GlobalOptionEditor] Successfully saved all global options');
       showNotification('글로벌 옵션이 성공적으로 저장되었습니다.', 'success');
-      
-      // Verify state update with a timeout
-      setTimeout(() => {
-        console.log('[GlobalOptionEditor] STATE CHECK - Current global options:', globalOptions);
-      }, 500);
-      
     } catch (e) {
       console.error('Error saving options:', e);
       showNotification('옵션 저장 중 오류가 발생했습니다.', 'error');
@@ -386,17 +353,41 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   };
   
   const openLinkModal = (option: ProductOptionCategory) => {
-    console.log('[GlobalOptionEditor] Opening link modal for option:', option);
-    
     if (!option.id) {
-      console.warn('[GlobalOptionEditor] Cannot link - option has no ID:', option);
       showNotification('먼저 옵션을 저장해야 상품을 연결할 수 있습니다.', 'error');
       return;
     }
     
     setSelectedOption(option);
-    setSelectedProducts([]); 
+    // Fetch currently linked products for this option
+    fetchLinkedProducts(option.id);
     setShowLinkModal(true);
+  };
+  
+  // New function to fetch products already linked to this option
+  const fetchLinkedProducts = async (optionId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_global_option_links')
+        .select('product_id')
+        .eq('store_option_group_id', optionId);
+        
+      if (error) {
+        console.error('Error fetching linked products:', error);
+        return;
+      }
+      
+      // Set the selected products state with currently linked products
+      if (data) {
+        const linkedProductIds = data.map(link => link.product_id);
+        setSelectedProducts(linkedProductIds);
+      } else {
+        setSelectedProducts([]);
+      }
+    } catch (e) {
+      console.error('Error in fetchLinkedProducts:', e);
+      setSelectedProducts([]);
+    }
   };
   
   const handleToggleProduct = (id: string) => {
@@ -406,33 +397,26 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   };
   
   const handleSaveLinking = async () => {
-    if (!selectedOption) {
-      console.error('No option selected for linking');
-      return;
-    }
-    
-    if (!selectedOption.id) {
-      console.error('Selected option has no ID - cannot link');
-      showNotification('옵션 ID가 없습니다. 먼저 옵션을 저장해주세요.', 'error');
-      return;
-    }
-    
-    if (!storeId) {
-      console.error('No store ID available');
-      return;
-    }
-    
+    if (!selectedOption || !storeId) return;
     setSaving(true);
     
     try {
       console.log('[GlobalOptionEditor] Linking option', selectedOption.id, 'to products:', selectedProducts);
       
+      // Check if we have a valid ID from Supabase (it should be a UUID)
+      if (!selectedOption.id) {
+        showNotification('유효하지 않은 옵션 ID입니다. 먼저 옵션을 저장해주세요.', 'error');
+        setShowLinkModal(false);
+        return;
+      }
+      
+      const optionGroupId = selectedOption.id;
+      
       // First, delete existing links for this option
       const { error: deleteError } = await supabase
         .from('product_global_option_links')
         .delete()
-        .eq('store_option_group_id', selectedOption.id)
-        .eq('store_id', storeId);
+        .eq('store_option_group_id', optionGroupId);
       
       if (deleteError) {
         console.error('Error deleting existing links:', deleteError);
@@ -443,11 +427,11 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       if (selectedProducts.length > 0) {
         const linksToInsert = selectedProducts.map(productId => ({
           product_id: productId,
-          store_id: storeId,
-          store_option_group_id: selectedOption.id
+          store_option_group_id: optionGroupId,
+          store_id: storeId
         }));
         
-        console.log('[GlobalOptionEditor] Inserting links:', linksToInsert);
+        console.log('[GlobalOptionEditor] Inserting links with data:', linksToInsert);
         
         const { error: insertError } = await supabase
           .from('product_global_option_links')
