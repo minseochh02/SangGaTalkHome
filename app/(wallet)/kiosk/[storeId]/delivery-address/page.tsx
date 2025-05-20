@@ -64,7 +64,8 @@ export default function DeliveryAddressPage() {
           delivery_phone: phoneNumber,
           delivery_note: deliveryNote,
           delivery_fee: PLACEHOLDER_DELIVERY_FEE,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          kiosk_session_id: sessionId,
         })
         .select('kiosk_order_id')
         .single();

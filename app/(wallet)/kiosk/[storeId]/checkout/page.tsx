@@ -281,7 +281,8 @@ export default function CheckoutPage() {
           status: 'pending',
           device_number: deviceNumber ? parseInt(deviceNumber) : null,
           // Include any additional fields that might be required
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          kiosk_session_id: sessionId,
         })
         .select('kiosk_order_id')
         .single();
