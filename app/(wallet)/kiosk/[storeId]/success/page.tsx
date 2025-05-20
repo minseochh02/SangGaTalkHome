@@ -353,7 +353,7 @@ export default function SuccessPage() {
           {displayedOrders.map((order, index) => (
             <div key={order.kiosk_order_id} className={`border rounded-lg p-4 mb-4 ${order.kiosk_order_id === latestOrderId ? 'border-blue-500 shadow-lg' : 'border-gray-200'}`}>
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold text-gray-700">{getOrderTypeText(order.order_type)} 주문 #${index + 1}</h3>
+                <h3 className="text-lg font-semibold text-gray-700">{getOrderTypeText(order.order_type)} 주문 #{index + 1}</h3>
                 <span className={`font-medium px-2 py-0.5 rounded-full text-sm ${order.status === 'ready' ? 'bg-green-100 text-green-700' : order.status === 'pending' || order.status === 'processing' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
                   {getOrderStatusText(order.status)}
                 </span>
