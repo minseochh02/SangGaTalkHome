@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { KioskOrder as BaseKioskOrder, KioskOrderItem, Product } from '@/utils/type';
-import { format, startOfDay, endOfDay, subDays, formatDistanceToNow } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Disclosure } from '@headlessui/react';
 import { ChevronUpIcon } from '@heroicons/react/24/solid';
@@ -26,45 +26,29 @@ interface KioskOrderItemWithOptions extends KioskOrderItem {
   options?: OrderItemOption[];
 }
 
-// Add interfaces for filters and session information
-interface OrderFilters {
-  dateFrom?: string;
-  dateTo?: string;
-  orderType?: string;
-  status?: string;
-}
-
-interface KioskSession {
-  kiosk_session_id: string;
-  status: string;
-  completion_reason?: string;
-}
-
-// Update the KioskOrder interface to fix the order_type property type
-interface LocalKioskOrder {
-  order_id: string;
-  kiosk_order_id: string;
-  store_id: string;
-  status: string;
-  created_at: string;
-  device_number?: number;
-  total_amount?: number;
-  order_type?: 'kiosk_dine_in' | 'kiosk_takeout' | 'kiosk_delivery';
+// Extend KioskOrder to include delivery-related properties
+interface KioskOrder extends BaseKioskOrder {
   delivery_address?: string;
   delivery_address_detail?: string;
   delivery_phone?: string;
   delivery_note?: string;
-  order_items?: KioskOrderItem[];
-  kiosk_sessions?: KioskSession[];
 }
 
 interface KioskSalesHistoryProps {
   storeId: string;
 }
 
+// Filter interface
+interface OrderFilters {
+  dateFrom: string;
+  dateTo: string;
+  orderType: string;
+  status: string;
+}
+
 export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [orders, setOrders] = useState<LocalKioskOrder[]>([]);
+  const [orders, setOrders] = useState<KioskOrder[]>([]);
   const [expandedOrderItems, setExpandedOrderItems] = useState<Record<string, KioskOrderItemWithOptions[]>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -82,29 +66,14 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
     fetchKioskOrders();
   }, [storeId, currentPage, filters]);
 
-  const fetchKioskOrders = async (page = 0, filters: OrderFilters = {}) => {
+  async function fetchKioskOrders() {
     setIsLoading(true);
     try {
-      // Build the query with filters
+      // Start building the query
       let query = supabase
         .from('kiosk_orders')
-        .select(`
-          *,
-          kiosk_order_items(
-            kiosk_order_item_id,
-            product_id,
-            quantity,
-            price_at_purchase,
-            products:product_id (product_name)
-          ),
-          kiosk_sessions(
-            kiosk_session_id,
-            status,
-            completion_reason
-          )
-        `)
-        .eq('store_id', storeId)
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .eq('store_id', storeId);
 
       // Apply date filters
       if (filters.dateFrom) {
@@ -128,11 +97,12 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
       }
 
       // Add pagination
-      const from = page * ordersPerPage;
+      const from = (currentPage - 1) * ordersPerPage;
       const to = from + ordersPerPage - 1;
       
       // Execute query with pagination and sorting
       const { data, error, count } = await query
+        .order('created_at', { ascending: false })
         .range(from, to);
 
       if (error) {
@@ -147,7 +117,7 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const fetchOrderItems = async (kioskOrderId: string) => {
     try {
@@ -208,16 +178,10 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
     }
   };
 
-  const formatTimeAgo = (dateString: string) => {
-    if (!dateString) return '';
-    return formatDistanceToNow(new Date(dateString), { addSuffix: true, locale: ko });
-  };
-
-  const getOrderTypeLabel = (orderType?: string) => {
-    if (!orderType) return '-';
+  const getOrderTypeLabel = (orderType: string) => {
     switch (orderType) {
-      case 'kiosk_dine_in': return '매장에서';
-      case 'kiosk_takeout': return '가져가기';
+      case 'kiosk_dine_in': return '매장 식사';
+      case 'kiosk_takeout': return '포장';
       case 'kiosk_delivery': return '배달';
       default: return orderType;
     }
@@ -500,31 +464,6 @@ export default function KioskSalesHistory({ storeId }: KioskSalesHistoryProps) {
                                 )}
                                 {order.delivery_note && (
                                   <p><span className="font-medium">요청사항:</span> {order.delivery_note}</p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Session information */}
-                          {order.kiosk_sessions && order.kiosk_sessions.length > 0 && (
-                            <div className="mb-4">
-                              <h4 className="font-semibold mb-2">세션 정보</h4>
-                              <div className="bg-gray-50 p-3 rounded">
-                                <p className="mb-1">
-                                  <span className="font-medium">상태:</span>{' '}
-                                  {order.kiosk_sessions[0].status === 'completed' ? '완료됨' : 
-                                   order.kiosk_sessions[0].status === 'active' ? '활성' : 
-                                   order.kiosk_sessions[0].status === 'disconnected' ? '연결 끊김' : 
-                                   order.kiosk_sessions[0].status}
-                                </p>
-                                {order.kiosk_sessions[0].completion_reason && (
-                                  <p className="mb-1">
-                                    <span className="font-medium">종료 이유:</span>{' '}
-                                    {order.kiosk_sessions[0].completion_reason === 'admin_ended' ? '관리자 종료' :
-                                     order.kiosk_sessions[0].completion_reason === 'order_completed' ? '주문 완료' :
-                                     order.kiosk_sessions[0].completion_reason === 'user_exited' ? '사용자 종료' :
-                                     order.kiosk_sessions[0].completion_reason}
-                                  </p>
                                 )}
                               </div>
                             </div>
