@@ -319,38 +319,24 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
       
       // Add additional logging to debug
       console.log('Order data being updated:', {
-        orderId,
-        status: 'ready_for_pickup',
+        kiosk_order_id: orderId,
+        status: 'ready',  // Try using 'ready' instead of 'ready_for_pickup'
         updated_at: new Date().toISOString()
       });
       
-      // Try updating with kiosk_order_id first
-      let result = await supabase
+      // Update using kiosk_order_id only (order_id doesn't exist in the table)
+      const result = await supabase
         .from('kiosk_orders')
         .update({ 
-          status: 'ready_for_pickup',
+          status: 'ready',  // Use 'ready' to match the constraint
           updated_at: new Date().toISOString()
         })
         .eq('kiosk_order_id', orderId);
       
-      // If no rows affected or error, try with order_id
-      if (result.error || result.count === 0) {
-        console.log('First update attempt result:', result);
-        console.log('Retrying with order_id instead of kiosk_order_id');
-        
-        result = await supabase
-          .from('kiosk_orders')
-          .update({ 
-            status: 'ready_for_pickup',
-            updated_at: new Date().toISOString()
-          })
-          .eq('order_id', orderId);
-      }
-      
       // Check final result
       if (result.error) {
         console.error('Error marking order as ready:', result.error);
-        alert('주문 상태 업데이트 중 오류가 발생했습니다.');
+        alert(`주문 상태 업데이트 중 오류가 발생했습니다: ${result.error.message}`);
         return;
       }
       
@@ -548,15 +534,14 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
                         e.stopPropagation(); // Prevent toggle
                         // Add logging for debugging
                         console.log('Order button clicked, order data:', {
-                          order_id: order.order_id,
                           kiosk_order_id: order.kiosk_order_id,
                         });
                         
-                        // Use kiosk_order_id if available, fallback to order_id
-                        const idToUse = order.kiosk_order_id || order.order_id || '';
+                        // Only use kiosk_order_id - order_id doesn't exist in the table
+                        const idToUse = order.kiosk_order_id;
                         
                         if (!idToUse) {
-                          console.error('No valid order ID found for this order');
+                          console.error('No valid kiosk_order_id found for this order');
                           alert('주문 ID를 찾을 수 없습니다.');
                           return;
                         }
@@ -564,7 +549,7 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
                         handleMarkAsReady(idToUse, order.device_number);
                       }}
                       className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-sm"
-                      disabled={!order.kiosk_order_id && !order.order_id}
+                      disabled={!order.kiosk_order_id}
                     >
                       주문 준비 완료
                     </button>
