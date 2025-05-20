@@ -1153,7 +1153,10 @@ export default function KioskPage() {
             <div className="p-5 border-t">
               <button
                 className="w-full py-3 bg-red-600 text-white font-bold rounded-md hover:bg-red-700"
-                onClick={() => addToCartWithOptions(selectedProduct, selectedOptions)}
+                onClick={() => {
+                  addToCartWithOptions(selectedProduct, selectedOptions);
+                  setShowOptionsModal(false); // Close the modal after adding to cart
+                }}
               >
                 장바구니에 담기
               </button>
