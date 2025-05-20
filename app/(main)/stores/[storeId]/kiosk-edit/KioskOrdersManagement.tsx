@@ -317,20 +317,51 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
     try {
       console.log(`Marking order ${orderId} as ready for pickup (Device: ${deviceNumber})`);
       
-      const { error } = await supabase
+      // Add additional logging to debug
+      console.log('Order data being updated:', {
+        orderId,
+        status: 'ready_for_pickup',
+        updated_at: new Date().toISOString()
+      });
+      
+      // Try updating with kiosk_order_id first
+      let result = await supabase
         .from('kiosk_orders')
         .update({ 
           status: 'ready_for_pickup',
           updated_at: new Date().toISOString()
         })
-        .eq('order_id', orderId);
-
-      if (error) {
-        console.error('Error marking order as ready:', error);
+        .eq('kiosk_order_id', orderId);
+      
+      // If no rows affected or error, try with order_id
+      if (result.error || result.count === 0) {
+        console.log('First update attempt result:', result);
+        console.log('Retrying with order_id instead of kiosk_order_id');
+        
+        result = await supabase
+          .from('kiosk_orders')
+          .update({ 
+            status: 'ready_for_pickup',
+            updated_at: new Date().toISOString()
+          })
+          .eq('order_id', orderId);
+      }
+      
+      // Check final result
+      if (result.error) {
+        console.error('Error marking order as ready:', result.error);
         alert('주문 상태 업데이트 중 오류가 발생했습니다.');
         return;
       }
-
+      
+      // If no rows were updated, show error
+      if (result.count === 0) {
+        console.error('No rows were updated. Order ID might be invalid or not found.');
+        alert('주문을 찾을 수 없거나 업데이트할 수 없습니다.');
+        return;
+      }
+      
+      console.log('Order successfully marked as ready:', result);
       alert('주문이 준비 완료로 표시되었습니다. 고객의 키오스크 화면에 알림이 전송됩니다.');
     } catch (error) {
       console.error('Failed to mark order as ready:', error);
@@ -515,10 +546,25 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
                     <button
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent toggle
-                        handleMarkAsReady(order.order_id || '', order.device_number);
+                        // Add logging for debugging
+                        console.log('Order button clicked, order data:', {
+                          order_id: order.order_id,
+                          kiosk_order_id: order.kiosk_order_id,
+                        });
+                        
+                        // Use kiosk_order_id if available, fallback to order_id
+                        const idToUse = order.kiosk_order_id || order.order_id || '';
+                        
+                        if (!idToUse) {
+                          console.error('No valid order ID found for this order');
+                          alert('주문 ID를 찾을 수 없습니다.');
+                          return;
+                        }
+                        
+                        handleMarkAsReady(idToUse, order.device_number);
                       }}
                       className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-sm"
-                      disabled={!order.order_id}
+                      disabled={!order.kiosk_order_id && !order.order_id}
                     >
                       주문 준비 완료
                     </button>
