@@ -71,50 +71,88 @@ export default function SuccessPage() {
     }
   };
   
-  // Set up real-time subscription for the LATEST order status changes
+  // Set up real-time subscription for ALL relevant orders in the current session
   useEffect(() => {
-    if (!latestOrderId) return;
+    if (!sessionId) return; // Need sessionId to subscribe
     
-    console.log('[KioskSuccess] Setting up real-time subscription for latest order:', latestOrderId);
+    console.log('[KioskSuccess] Setting up real-time subscription for session:', sessionId);
     
     const channel = supabase
-      .channel(`order-status-${latestOrderId}`)
+      .channel(`session-order-updates-${sessionId}`) // Channel name based on session
       .on('postgres_changes', 
         { 
           event: 'UPDATE', 
           schema: 'public', 
           table: 'kiosk_orders',
-          filter: `kiosk_order_id=eq.${latestOrderId}`
+          filter: `kiosk_session_id=eq.${sessionId}` // Filter by session ID
         }, 
         (payload) => {
-          console.log('[KioskSuccess] Latest order status update received:', payload);
-          const newStatus = payload.new.status;
+          console.log('[KioskSuccess] Session order update received:', payload);
+          const updatedOrder = payload.new as KioskOrder;
           
           // Update the specific order in displayedOrders array
           setDisplayedOrders(prevOrders => 
             prevOrders.map(order => 
-              order.kiosk_order_id === latestOrderId ? { ...order, status: newStatus } : order
+              order.kiosk_order_id === updatedOrder.kiosk_order_id ? { ...order, status: updatedOrder.status } : order
             )
           );
           
-          if (newStatus === 'ready') {
-            playNotificationSound();
-            setShowReadyNotification(true);
+          // If the updated order is now 'ready', trigger notification
+          if (updatedOrder.status === 'ready') {
+            // Check if this order was ALREADY 'ready' in the displayedOrders to prevent re-notifying if something else in the payload changed
+            // This check is a bit tricky because displayedOrders might not have updated yet due to async nature of setState
+            // A simpler approach: only notify if the PREVIOUS state of this order wasn't ready.
+            // However, the current global notification will show for any 'ready' update.
+            
+            // For now, let's assume any 'ready' update for an order in the session is a valid trigger.
+            // We might need to refine this if multiple 'ready' updates for the SAME order cause issues.
+            const orderJustBecameReady = displayedOrders.find(o => o.kiosk_order_id === updatedOrder.kiosk_order_id)?.status !== 'ready';
+
+            // Only play sound and show pop-up if it's a new "ready" status for an order we are displaying
+            // and it's not already showing.
+            // This logic might need to be smarter if multiple orders become ready close together.
+            if (updatedOrder.status === 'ready') {
+                 // Check if this specific order is one we are displaying and if its *previous* state wasn't 'ready'
+                 // This helps avoid re-notifying if the page re-renders or if other fields on a 'ready' order change.
+                 setDisplayedOrders(prevOrders => {
+                    const existingOrder = prevOrders.find(o => o.kiosk_order_id === updatedOrder.kiosk_order_id);
+                    if (existingOrder && existingOrder.status !== 'ready') {
+                        playNotificationSound();
+                        setShowReadyNotification(true);
+                    }
+                    // Return the mapped orders regardless of notification
+                    return prevOrders.map(order => 
+                        order.kiosk_order_id === updatedOrder.kiosk_order_id 
+                            ? { ...order, status: updatedOrder.status, ...payload.new } // Ensure all new fields are copied
+                            : order
+                    );
+                });
+            } else {
+                 // Just update the status for non-ready changes without notification
+                 setDisplayedOrders(prevOrders => 
+                    prevOrders.map(order => 
+                        order.kiosk_order_id === updatedOrder.kiosk_order_id 
+                            ? { ...order, status: updatedOrder.status, ...payload.new } 
+                            : order
+                    )
+                );
+            }
           }
         })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`[KioskSuccess] Subscribed to updates for latest order ${latestOrderId}`);
+          console.log(`[KioskSuccess] Subscribed to order updates for session ${sessionId}`);
         }
         if (status === 'CHANNEL_ERROR') {
-          console.error(`[KioskSuccess] Channel error for latest order ${latestOrderId}:`, err);
+          console.error(`[KioskSuccess] Channel error for session ${sessionId}:`, err);
         }
       });
       
     return () => {
       supabase.removeChannel(channel);
+      console.log(`[KioskSuccess] Unsubscribed from order updates for session ${sessionId}`);
     };
-  }, [latestOrderId, supabase]);
+  }, [sessionId, supabase]); // Depend on sessionId
   
   // Fetch initial orders for the session and store name
   useEffect(() => {
