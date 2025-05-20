@@ -377,7 +377,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       const { error: deleteError } = await supabase
         .from('product_global_option_links')
         .delete()
-        .eq('store_option_group_id', selectedOption.id);
+        .eq('store_option_group_id', selectedOption.id)
+        .eq('store_id', storeId);
       
       if (deleteError) {
         console.error('Error deleting existing links:', deleteError);
@@ -388,7 +389,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       if (selectedProducts.length > 0) {
         const linksToInsert = selectedProducts.map(productId => ({
           product_id: productId,
-          store_id: storeId
+          store_id: storeId,
+          store_option_group_id: selectedOption.id // Add this field
         }));
         
         const { error: insertError } = await supabase
