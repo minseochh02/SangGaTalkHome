@@ -115,55 +115,37 @@ export default function SuccessPage() {
         (payload) => {
           console.log('[KioskSuccess] Session order update received:', payload);
           const updatedOrder = payload.new as KioskOrder;
-          
-          // Update the specific order in displayedOrders array
-          setDisplayedOrders(prevOrders => 
-            prevOrders.map(order => 
-              order.kiosk_order_id === updatedOrder.kiosk_order_id ? { ...order, status: updatedOrder.status } : order
-            )
-          );
-          
-          // If the updated order is now 'ready', trigger notification
-          if (updatedOrder.status === 'ready') {
-            // Check if this order was ALREADY 'ready' in the displayedOrders to prevent re-notifying if something else in the payload changed
-            // This check is a bit tricky because displayedOrders might not have updated yet due to async nature of setState
-            // A simpler approach: only notify if the PREVIOUS state of this order wasn't ready.
-            // However, the current global notification will show for any 'ready' update.
-            
-            // For now, let's assume any 'ready' update for an order in the session is a valid trigger.
-            // We might need to refine this if multiple 'ready' updates for the SAME order cause issues.
-            const orderJustBecameReady = displayedOrders.find(o => o.kiosk_order_id === updatedOrder.kiosk_order_id)?.status !== 'ready';
 
-            // Only play sound and show pop-up if it's a new "ready" status for an order we are displaying
-            // and it's not already showing.
-            // This logic might need to be smarter if multiple orders become ready close together.
-            if (updatedOrder.status === 'ready') {
-                 // Check if this specific order is one we are displaying and if its *previous* state wasn't 'ready'
-                 // This helps avoid re-notifying if the page re-renders or if other fields on a 'ready' order change.
-                 setDisplayedOrders(prevOrders => {
-                    const existingOrder = prevOrders.find(o => o.kiosk_order_id === updatedOrder.kiosk_order_id);
-                    if (existingOrder && existingOrder.status !== 'ready') {
-                        playNotificationSound();
-                        triggerWebVibration(); // Add vibration
-                        setShowReadyNotification(true);
-                    }
-                    // Return the mapped orders regardless of notification
-                    return prevOrders.map(order => 
-                        order.kiosk_order_id === updatedOrder.kiosk_order_id 
-                            ? { ...order, status: updatedOrder.status, ...payload.new } // Ensure all new fields are copied
-                            : order
-                    );
-                });
-            } else {
-                 // Just update the status for non-ready changes without notification
-                 setDisplayedOrders(prevOrders => 
-                    prevOrders.map(order => 
-                        order.kiosk_order_id === updatedOrder.kiosk_order_id 
-                            ? { ...order, status: updatedOrder.status, ...payload.new } 
-                            : order
-                    )
-                );
+          // Store the previous status of the order before updating the state
+          let previousStatus: string | undefined;
+          setDisplayedOrders(prevOrders => {
+            const existingOrder = prevOrders.find(o => o.kiosk_order_id === updatedOrder.kiosk_order_id);
+            previousStatus = existingOrder?.status;
+            
+            // Always update the order in the list
+            return prevOrders.map(order =>
+              order.kiosk_order_id === updatedOrder.kiosk_order_id
+                ? { ...order, ...updatedOrder } // Ensure all new fields are copied
+                : order
+            );
+          });
+
+          // Now check if we need to notify based on the fresh update and the *actual* previous status
+          console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} update. New status: ${updatedOrder.status}. Previous actual status: ${previousStatus}`);
+
+          if (updatedOrder.status === 'ready' && previousStatus !== 'ready') {
+            console.log(`[KioskSuccess] Conditions met for order ${updatedOrder.kiosk_order_id}: Playing sound and vibrating.`);
+            playNotificationSound();
+            triggerWebVibration();
+            setShowReadyNotification(true); // This shows the general modal
+          } else if (updatedOrder.status === 'ready' && previousStatus === 'ready') {
+            console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} is still 'ready'. No new sound/vibration. Notification might already be up or will be handled by latestOrderId logic.`);
+            // If it's the specific latest order and the notification isn't visible, show it
+            if (updatedOrder.kiosk_order_id === latestOrderId && !showReadyNotification) {
+              setShowReadyNotification(true);
             }
+          } else {
+            console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} new status is ${updatedOrder.status} (was ${previousStatus}). Not playing sound/vibrating for this update type.`);
           }
         })
       .subscribe((status, err) => {
