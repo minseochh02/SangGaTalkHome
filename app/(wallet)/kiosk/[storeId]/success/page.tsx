@@ -88,6 +88,15 @@ export default function SuccessPage() {
     }
   };
   
+  // Function to trigger web vibration
+  const triggerWebVibration = () => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(500); // Vibrate for 500ms. Can also be a pattern e.g., [500, 200, 500]
+    } else {
+      console.log('[KioskSuccess] Vibration API not supported in this browser.');
+    }
+  };
+  
   // Set up real-time subscription for ALL relevant orders in the current session
   useEffect(() => {
     if (!sessionId) return; // Need sessionId to subscribe
@@ -135,6 +144,7 @@ export default function SuccessPage() {
                     const existingOrder = prevOrders.find(o => o.kiosk_order_id === updatedOrder.kiosk_order_id);
                     if (existingOrder && existingOrder.status !== 'ready') {
                         playNotificationSound();
+                        triggerWebVibration(); // Add vibration
                         setShowReadyNotification(true);
                     }
                     // Return the mapped orders regardless of notification
