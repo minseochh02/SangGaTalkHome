@@ -1,12 +1,24 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
+// import { AddressSuggestions } from '@/components/kiosk/AddressSuggestions'; // Assuming this path - corrected path or remove if not used
+// If AddressSuggestions is a local component, adjust the path e.g. './AddressSuggestions'
+// For now, if it's not immediately used by the notification logic, let's comment it out to resolve linting unless it's essential for this page's core functionality beyond notifications.
 
 // Set a placeholder delivery fee
 const PLACEHOLDER_DELIVERY_FEE = 1; // 1000 SGT
+
+// Define KioskOrder interface (if not already globally available)
+interface KioskOrder {
+  kiosk_order_id: string;
+  kiosk_session_id?: string; // Make sure this is part of your KioskOrder interface for filtering
+  store_id: string;
+  status: string;
+  // other relevant order fields
+}
 
 export default function DeliveryAddressPage() {
   const params = useParams();
@@ -33,6 +45,149 @@ export default function DeliveryAddressPage() {
   const formatPrice = (price: number): string => {
     return price.toLocaleString();
   };
+
+  const [map, setMap] = useState<any>(null); // Keep your map state
+
+  // State for session-wide "order ready" notifications
+  const [actionableNotification, setActionableNotification] = useState<{ title: string; message: string; orderId: string } | null>(null);
+  const [showActionableModal, setShowActionableModal] = useState<boolean>(false);
+  const [notifiedOrderIdsThisSession, setNotifiedOrderIdsThisSession] = useState<string[]>([]);
+  const orderNotificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const orderVibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Removed the empty useEffect for storeId as it's not directly used by notification logic
+  // and its original purpose in the template was unclear.
+  // useEffect(() => {
+  // // ... existing code ...
+  //   return () => {
+  // // ... existing code ...
+  //   };
+  // }, [storeId]);
+
+  // Effect for initializing notification sound
+  useEffect(() => {
+    orderNotificationAudioRef.current = new Audio('/notification-sound.mp3'); // Ensure this path is correct
+    return () => {
+      if (orderNotificationAudioRef.current) {
+        orderNotificationAudioRef.current.pause();
+        orderNotificationAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const playKioskNotificationSound = useCallback(() => {
+    if (orderNotificationAudioRef.current) {
+      orderNotificationAudioRef.current.currentTime = 0;
+      orderNotificationAudioRef.current.play().catch(err => {
+        console.error('[DeliveryAddressPage] Error playing notification sound:', err);
+      });
+    }
+  }, []);
+
+  const startRepeatingVibration = useCallback(() => {
+    if (orderVibrationIntervalRef.current) {
+      clearInterval(orderVibrationIntervalRef.current);
+    }
+    if ('vibrate' in navigator) {
+      orderVibrationIntervalRef.current = setInterval(() => {
+        navigator.vibrate(400); // Buzz for 400ms
+      }, 1000); // Every 1 second
+    } else {
+      console.log('[DeliveryAddressPage] Vibration API not supported.');
+    }
+  }, []);
+
+  const stopRepeatingVibration = useCallback(() => {
+    if (orderVibrationIntervalRef.current) {
+      clearInterval(orderVibrationIntervalRef.current);
+      orderVibrationIntervalRef.current = null;
+    }
+    if ('vibrate' in navigator) {
+      navigator.vibrate(0); // Stop any ongoing vibration
+    }
+  }, []);
+
+  const handleDismissActionableToast = useCallback(() => {
+    setShowActionableModal(false);
+    stopRepeatingVibration();
+    // Do not reset actionableNotification here if you want auto-dismiss to handle it,
+    // or setActionableNotification(null) to prevent re-showing for the same notification instance immediately.
+  }, [stopRepeatingVibration]);
+
+  const handleCloseActionableModal = useCallback(() => {
+    setShowActionableModal(false);
+    stopRepeatingVibration();
+    // Optionally clear actionableNotification if it shouldn't reappear on next trigger for the same order
+    // setActionableNotification(null); 
+  }, [stopRepeatingVibration]);
+
+  // Session-wide Kiosk Order Status Subscription for previous orders
+  useEffect(() => {
+    if (!sessionId || !storeId) return; // Ensure sessionId and storeId are available
+
+    const orderStatusChannel = supabase
+      .channel(`delivery-address-page-session-order-updates-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'kiosk_orders',
+          filter: `kiosk_session_id=eq.${sessionId}`, // Filter by session ID
+        },
+        (payload) => {
+          const updatedOrder = payload.new as KioskOrder;
+          const oldOrder = payload.old as Partial<KioskOrder>;
+
+          console.log(`[DeliveryAddressPage] Session order update for session ${sessionId}: Order ID ${updatedOrder.kiosk_order_id}, New Status: ${updatedOrder.status}, Old Status: ${oldOrder?.status}`);
+          
+          if (updatedOrder.status === 'ready' && oldOrder?.status !== 'ready') {
+            if (!notifiedOrderIdsThisSession.includes(updatedOrder.kiosk_order_id)) {
+              console.log(`[DeliveryAddressPage] Order ${updatedOrder.kiosk_order_id} is newly ready. Triggering notification.`);
+              const notificationDetails = {
+                orderId: updatedOrder.kiosk_order_id,
+                title: '주문 준비 완료!',
+                message: `주문 #${updatedOrder.kiosk_order_id.substring(0, 8).toUpperCase()} 준비가 완료되었습니다. 확인 후 수령해주세요.`,
+              };
+              setActionableNotification(notificationDetails);
+              setShowActionableModal(true);
+              playKioskNotificationSound();
+              startRepeatingVibration();
+              setNotifiedOrderIdsThisSession(prev => [...prev, updatedOrder.kiosk_order_id]);
+
+              // Auto-dismiss toast after some time -- REMOVED FOR MODAL
+              // const dismissTimeout = setTimeout(() => {
+              //    // Only dismiss if this specific notification is still showing
+              //   if (actionableNotification && actionableNotification.orderId === updatedOrder.kiosk_order_id && showActionableToast) {
+              //       handleDismissActionableToast();
+              //   }
+              // }, 10000); // 10 seconds
+              
+              // It's good practice to clear timeout if the component unmounts or dependencies change before it fires
+              // This might be handled by the main return cleanup of the useEffect if structured carefully
+            } else {
+              console.log(`[DeliveryAddressPage] Order ${updatedOrder.kiosk_order_id} is ready, but already notified this session on this page.`);
+            }
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[DeliveryAddressPage] Subscribed to session order updates for session ${sessionId}`);
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[DeliveryAddressPage] Channel error/timeout for order updates ${sessionId}:`, err);
+        }
+      });
+    
+    return () => {
+      if (orderStatusChannel) {
+        supabase.removeChannel(orderStatusChannel);
+        console.log(`[DeliveryAddressPage] Unsubscribed from session order updates for session ${sessionId}`);
+      }
+      stopRepeatingVibration(); // Ensure vibration stops on unmount or if sessionId/storeId changes
+    };
+  }, [sessionId, storeId, supabase, notifiedOrderIdsThisSession, playKioskNotificationSound, startRepeatingVibration, stopRepeatingVibration, handleCloseActionableModal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,6 +454,48 @@ export default function DeliveryAddressPage() {
           </div>
         </div>
       </div>
+
+      {/* Order Ready Modal Notification */}
+      {showActionableModal && actionableNotification && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[990] p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-auto text-center animate-pop-in">
+            {/* Icon */}
+            <div className="mx-auto flex items-center justify-center h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-green-100 mb-4 sm:mb-5">
+              <svg className="h-10 w-10 sm:h-12 sm:w-12 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            
+            {/* Title */}
+            <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">
+              {actionableNotification.title}
+            </h3>
+            
+            {/* Message */}
+            <p className="text-sm sm:text-base text-gray-600 mb-5 sm:mb-6">
+              {actionableNotification.message}
+            </p>
+            
+            {/* Confirm Button */}
+            <button
+              onClick={handleCloseActionableModal}
+              className="w-full px-4 py-3 bg-green-500 text-white rounded-lg font-semibold text-base sm:text-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors duration-150"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Keyframes for modal animation (optional, add to a global CSS or style tag if needed) */}
+      {/* <style jsx global>{`
+        @keyframes pop-in {
+          0% { opacity: 0; transform: scale(0.9); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-pop-in { animation: pop-in 0.3s ease-out forwards; }
+      `}</style> */}
+
     </div>
   );
 } 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -48,7 +48,9 @@ export default function SuccessPage() {
   const [loading, setLoading] = useState(true);
   const [storeName, setStoreName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [showReadyNotification, setShowReadyNotification] = useState(false);
+  const [actionableNotification, setActionableNotification] = useState<{ title: string; message: string; orderId: string } | null>(null);
+  const [showActionableModal, setShowActionableModal] = useState<boolean>(false);
+  const [notifiedOrderIdsThisSession, setNotifiedOrderIdsThisSession] = useState<string[]>([]); // To track notifications on this page
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const vibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -126,37 +128,42 @@ export default function SuccessPage() {
           });
 
           // Now check if we need to notify based on the fresh update and the *actual* previous status
-          console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} update. New status: ${updatedOrder.status}. Previous actual status: ${previousStatus}`);
+          console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} update. New status: ${updatedOrder.status}. Actual previous status: ${previousStatus}`);
 
           if (updatedOrder.status === 'ready' && previousStatus !== 'ready') {
-            console.log(`[KioskSuccess] Conditions met for order ${updatedOrder.kiosk_order_id}: Playing sound and starting repeating vibration.`);
-            playNotificationSound();
-            // triggerWebVibrationPattern(); // No longer using single pattern here
+            if (!notifiedOrderIdsThisSession.includes(updatedOrder.kiosk_order_id)) {
+              console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} is newly ready. Triggering notification modal.`);
+              const notificationDetails = {
+                orderId: updatedOrder.kiosk_order_id,
+                title: '주문 준비 완료!', // Generic title
+                message: `주문 #${updatedOrder.kiosk_order_id.substring(0, 8).toUpperCase()} 준비가 완료되었습니다. 카운터에서 수령해주세요.`, // Generic message
+              };
+              setActionableNotification(notificationDetails);
+              setShowActionableModal(true);
+              playNotificationSound();
 
-            // Clear previous interval if any and start new repeating vibration
-            if (vibrationIntervalRef.current) {
-              clearInterval(vibrationIntervalRef.current);
-            }
-            if ('vibrate' in navigator) {
-              console.log('[KioskSuccess] Vibration API supported. Setting up interval for repeating vibration.');
-              vibrationIntervalRef.current = setInterval(() => {
-                console.log('[KioskSuccess] Interval: Attempting navigator.vibrate(400)');
-                navigator.vibrate(400); // Buzz for 400ms
-              }, 1000); // Every 1 second
-              console.log('[KioskSuccess] Vibration interval set with ID:', vibrationIntervalRef.current);
+              if (vibrationIntervalRef.current) {
+                clearInterval(vibrationIntervalRef.current);
+              }
+              if ('vibrate' in navigator) {
+                vibrationIntervalRef.current = setInterval(() => {
+                  navigator.vibrate(400);
+                }, 1000);
+              }
+              setNotifiedOrderIdsThisSession(prev => [...prev, updatedOrder.kiosk_order_id]);
             } else {
-              console.log('[KioskSuccess] Vibration API not supported for repeating vibration.');
+              console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} is ready, but already notified on this page this session.`);
             }
-
-            setShowReadyNotification(true); // This shows the general modal
           } else if (updatedOrder.status === 'ready' && previousStatus === 'ready') {
-            console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} is still 'ready'. No new sound/vibration. Notification might already be up or will be handled by latestOrderId logic.`);
-            // If it's the specific latest order and the notification isn't visible, show it
-            if (updatedOrder.kiosk_order_id === latestOrderId && !showReadyNotification) {
-              setShowReadyNotification(true);
+            console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} is still 'ready'. No new sound/vibration. Modal might already be up or was dismissed for this order.`);
+            // If the modal for this specific ready order isn't visible and it hasn't been notified yet, consider showing it.
+            // This case might be redundant if notifiedOrderIdsThisSession handles it well.
+            if (!showActionableModal && !notifiedOrderIdsThisSession.includes(updatedOrder.kiosk_order_id)){
+              // This logic might be too aggressive if a user dismissed it and another update comes.
+              // For now, primary notification is on the first transition to 'ready'.
             }
           } else {
-            console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} new status is ${updatedOrder.status} (was ${previousStatus}). Not playing sound/vibrating for this update type.`);
+            console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} new status is ${updatedOrder.status} (was ${previousStatus}). Not triggering modal for this update type.`);
           }
         })
       .subscribe((status, err) => {
@@ -276,7 +283,20 @@ export default function SuccessPage() {
           // Check if the latest order (from URL) is already ready
           const currentLatestOrder = ordersWithItems.find(o => o.kiosk_order_id === latestOrderId);
           if (currentLatestOrder?.status === 'ready') {
-            setShowReadyNotification(true); // Potentially show notification without sound if already ready on load
+            // If it's ready on load and not yet notified, show the modal
+            if (!notifiedOrderIdsThisSession.includes(currentLatestOrder.kiosk_order_id)) {
+              const notificationDetails = {
+                orderId: currentLatestOrder.kiosk_order_id,
+                title: '주문 준비 완료!',
+                message: `주문 #${currentLatestOrder.kiosk_order_id.substring(0,8).toUpperCase()} 준비가 완료되었습니다. 카운터에서 수령해주세요.`,
+              };
+              setActionableNotification(notificationDetails);
+              setShowActionableModal(true);
+              // Optionally play sound/vibrate here too if desired for on-load ready state
+              // playNotificationSound();
+              // ... start vibration ...
+              setNotifiedOrderIdsThisSession(prev => [...prev, currentLatestOrder.kiosk_order_id]);
+            }
           }
         }
       } catch (err) {
@@ -343,20 +363,16 @@ export default function SuccessPage() {
     router.push(`/kiosk/${storeId}?sessionId=${sessionId}`);
   };
   
-  const closeNotification = () => {
-    console.log('[KioskSuccess] closeNotification called.');
-    setShowReadyNotification(false);
-    // Stop repeating vibration when notification is closed
+  const handleCloseActionableModal = useCallback(() => {
+    setShowActionableModal(false);
     if (vibrationIntervalRef.current) {
       clearInterval(vibrationIntervalRef.current);
       vibrationIntervalRef.current = null;
-      console.log('[KioskSuccess] Vibration interval cleared in closeNotification.');
     }
     if ('vibrate' in navigator) {
-      console.log('[KioskSuccess] Attempting to stop vibration with navigator.vibrate(0) in closeNotification.');
-      navigator.vibrate(0); // Stop any ongoing vibration
+      navigator.vibrate(0); 
     }
-  };
+  }, []);
 
   // Cleanup effect for component unmount
   useEffect(() => {
@@ -372,8 +388,7 @@ export default function SuccessPage() {
         navigator.vibrate(0);
       }
     };
-  // }, [showReadyNotification]); // Dependency not strictly needed for this simplified cleanup
-}, []); // Empty dependency array for one-time unmount cleanup
+  }, []); // Empty dependency array for one-time unmount cleanup
 
   const latestOrderForHeader = displayedOrders.find(o => o.kiosk_order_id === latestOrderId) || displayedOrders[0];
 
@@ -420,19 +435,26 @@ export default function SuccessPage() {
         </button>
       </div> */}
 
-      {/* Order Ready Notification for the LATEST order */}
-      {showReadyNotification && latestOrderId && (
-        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 max-w-md w-[95%] mx-2 animate-bounce-in">
-            <div className="text-center">
-              <svg className="w-12 h-12 sm:w-16 sm:h-16 text-green-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      {/* Order Ready Notification for ANY order in the session */}
+      {showActionableModal && actionableNotification && ( 
+        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-[990] bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-auto text-center animate-pop-in">
+            {/* Icon */}
+            <div className="mx-auto flex items-center justify-center h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-green-100 mb-4 sm:mb-5">
+              <svg className="h-10 w-10 sm:h-12 sm:w-12 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h2 className="text-xl sm:text-2xl font-bold mb-2">주문 #{latestOrderId?.substring(0,8)} 준비 완료!</h2>
-              <p className="text-gray-600 mb-4">카운터에서 수령해주세요.</p>
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">
+                {actionableNotification.title} 
+              </h2>
+              <p className="text-sm sm:text-base text-gray-600 mb-5 sm:mb-6">
+                {actionableNotification.message}
+              </p>
               <button 
-                onClick={closeNotification}
-                className="w-full px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 focus:outline-none"
+                onClick={handleCloseActionableModal}
+                className="w-full px-4 py-3 bg-green-500 text-white rounded-lg font-semibold text-base sm:text-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors duration-150"
               >
                 확인
               </button>

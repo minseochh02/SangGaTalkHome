@@ -114,7 +114,7 @@ export default function KioskPage() {
   
   // State for session-wide "order ready" notifications
   const [actionableNotification, setActionableNotification] = useState<{ title: string; message: string; orderId: string } | null>(null);
-  const [showActionableToast, setShowActionableToast] = useState<boolean>(false);
+  const [showActionableModal, setShowActionableModal] = useState<boolean>(false);
   const [notifiedOrderIdsThisSession, setNotifiedOrderIdsThisSession] = useState<string[]>([]);
   const orderNotificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const orderVibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -251,12 +251,9 @@ export default function KioskPage() {
     }
   }, []);
 
-  const handleDismissActionableToast = useCallback(() => {
-    setShowActionableToast(false);
+  const handleCloseActionableModal = useCallback(() => {
+    setShowActionableModal(false);
     stopRepeatingVibration();
-    // Do not reset actionableNotification here, let the auto-dismiss or timeout handle it if needed
-    // Or, if you want to prevent re-showing for the *same* actionableNotification instance immediately:
-    // setActionableNotification(null); 
   }, [stopRepeatingVibration]);
 
   // Session-wide Kiosk Order Status Subscription (for previous orders)
@@ -288,18 +285,10 @@ export default function KioskPage() {
                 message: `주문 #${updatedOrder.kiosk_order_id.substring(0, 8).toUpperCase()} 준비가 완료되었습니다. 확인 후 수령해주세요.`,
               };
               setActionableNotification(notificationDetails);
-              setShowActionableToast(true);
+              setShowActionableModal(true);
               playKioskNotificationSound();
               startRepeatingVibration();
               setNotifiedOrderIdsThisSession(prev => [...prev, updatedOrder.kiosk_order_id]);
-
-              // Auto-dismiss toast after some time
-              setTimeout(() => {
-                // Only dismiss if this specific notification is still showing
-                if (actionableNotification && actionableNotification.orderId === updatedOrder.kiosk_order_id && showActionableToast) {
-                    handleDismissActionableToast();
-                }
-              }, 10000); // 10 seconds
 
             } else {
               console.log(`[KioskPage] Order ${updatedOrder.kiosk_order_id} is ready, but already notified this session on this page.`);
@@ -323,7 +312,7 @@ export default function KioskPage() {
       }
       stopRepeatingVibration(); // Ensure vibration stops on unmount or if sessionId changes
     };
-  }, [sessionId, notifiedOrderIdsThisSession, playKioskNotificationSound, startRepeatingVibration, stopRepeatingVibration, handleDismissActionableToast, actionableNotification, showActionableToast]);
+  }, [sessionId, notifiedOrderIdsThisSession, playKioskNotificationSound, startRepeatingVibration, stopRepeatingVibration, handleCloseActionableModal, actionableNotification, showActionableModal]);
 
   // Fetch store data and products
   const fetchStoreData = useCallback(async () => {
@@ -1056,7 +1045,7 @@ export default function KioskPage() {
       
       {/* Category tabs */}
       {(categories.length > 0 || selectedCategory === 'all') && ( // Show if categories exist or 'all' is an option
-        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-5"> {/* Added sticky top-0 z-5 for visibility */}
+        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-50"> {/* Added sticky top-0 z-50 for visibility */}
           <div className="container mx-auto">
             <div className="flex space-x-2 p-2">
               <button
@@ -1442,22 +1431,35 @@ export default function KioskPage() {
         </div>
       </div>
 
-      {/* Actionable Toast for Order Ready Notification */} 
-      {showActionableToast && actionableNotification && (
-        <div className="fixed bottom-16 sm:bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 sm:w-auto max-w-md bg-green-600 text-white p-4 rounded-lg shadow-lg z-[100] flex items-center justify-between">
-          <div>
-            <h4 className="font-bold">{actionableNotification.title}</h4>
-            <p className="text-sm">{actionableNotification.message}</p>
+      {/* Order Ready Modal Notification */}
+      {showActionableModal && actionableNotification && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[990] p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-auto text-center animate-pop-in">
+            {/* Icon */}
+            <div className="mx-auto flex items-center justify-center h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-green-100 mb-4 sm:mb-5">
+              <svg className="h-10 w-10 sm:h-12 sm:w-12 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            
+            {/* Title */}
+            <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">
+              {actionableNotification.title}
+            </h3>
+            
+            {/* Message */}
+            <p className="text-sm sm:text-base text-gray-600 mb-5 sm:mb-6">
+              {actionableNotification.message}
+            </p>
+            
+            {/* Confirm Button */}
+            <button
+              onClick={handleCloseActionableModal}
+              className="w-full px-4 py-3 bg-green-500 text-white rounded-lg font-semibold text-base sm:text-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors duration-150"
+            >
+              확인
+            </button>
           </div>
-          <button 
-            onClick={handleDismissActionableToast}
-            className="ml-4 p-1.5 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-white"
-            aria-label="Dismiss notification"
-          >
-            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
       )}
     </div>
