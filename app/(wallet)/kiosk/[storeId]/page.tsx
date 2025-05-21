@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -43,7 +43,7 @@ interface CartItem {
 
 // Define this interface, ideally in a shared types file or at the top of the component
 interface KioskOrder {
-  order_id: string;
+  kiosk_order_id: string;
   kiosk_session_id?: string;
   store_id: string;
   status: string;
@@ -111,6 +111,13 @@ export default function KioskPage() {
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
   const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
   const [cartItemsWithOptions, setCartItemsWithOptions] = useState<CartItemWithOptions[]>([]);
+  
+  // State for session-wide "order ready" notifications
+  const [actionableNotification, setActionableNotification] = useState<{ title: string; message: string; orderId: string } | null>(null);
+  const [showActionableToast, setShowActionableToast] = useState<boolean>(false);
+  const [notifiedOrderIdsThisSession, setNotifiedOrderIdsThisSession] = useState<string[]>([]);
+  const orderNotificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const orderVibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Initialize kiosk session
   const initKioskSession = useCallback(async (urlSessionId: string | null) => {
@@ -201,6 +208,123 @@ export default function KioskPage() {
     }
   }, [initKioskSession, searchParams, sessionId]);
   
+  // Effect for initializing notification sound
+  useEffect(() => {
+    orderNotificationAudioRef.current = new Audio('/notification-sound.mp3'); // Ensure this path is correct in /public
+    return () => {
+      if (orderNotificationAudioRef.current) {
+        orderNotificationAudioRef.current.pause();
+        orderNotificationAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const playKioskNotificationSound = useCallback(() => {
+    if (orderNotificationAudioRef.current) {
+      orderNotificationAudioRef.current.currentTime = 0;
+      orderNotificationAudioRef.current.play().catch(err => {
+        console.error('[KioskPage] Error playing notification sound:', err);
+      });
+    }
+  }, []);
+
+  const startRepeatingVibration = useCallback(() => {
+    if (orderVibrationIntervalRef.current) {
+      clearInterval(orderVibrationIntervalRef.current);
+    }
+    if ('vibrate' in navigator) {
+      orderVibrationIntervalRef.current = setInterval(() => {
+        navigator.vibrate(400); // Buzz for 400ms
+      }, 1000); // Every 1 second
+    } else {
+      console.log('[KioskPage] Vibration API not supported for repeating vibration.');
+    }
+  }, []);
+
+  const stopRepeatingVibration = useCallback(() => {
+    if (orderVibrationIntervalRef.current) {
+      clearInterval(orderVibrationIntervalRef.current);
+      orderVibrationIntervalRef.current = null;
+    }
+    if ('vibrate' in navigator) {
+      navigator.vibrate(0); // Stop any ongoing vibration
+    }
+  }, []);
+
+  const handleDismissActionableToast = useCallback(() => {
+    setShowActionableToast(false);
+    stopRepeatingVibration();
+    // Do not reset actionableNotification here, let the auto-dismiss or timeout handle it if needed
+    // Or, if you want to prevent re-showing for the *same* actionableNotification instance immediately:
+    // setActionableNotification(null); 
+  }, [stopRepeatingVibration]);
+
+  // Session-wide Kiosk Order Status Subscription (for previous orders)
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const orderStatusChannel = supabase
+      .channel(`kiosk-page-session-order-updates-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'kiosk_orders',
+          filter: `kiosk_session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const updatedOrder = payload.new as KioskOrder;
+          const oldOrder = payload.old as Partial<KioskOrder>; 
+
+          console.log(`[KioskPage] Session order update for session ${sessionId}: Order ID ${updatedOrder.kiosk_order_id}, New Status: ${updatedOrder.status}, Old Status: ${oldOrder?.status}`);
+          
+          if (updatedOrder.status === 'ready' && oldOrder?.status !== 'ready') {
+            if (!notifiedOrderIdsThisSession.includes(updatedOrder.kiosk_order_id)) {
+              console.log(`[KioskPage] Order ${updatedOrder.kiosk_order_id} is newly ready. Triggering notification.`);
+              const notificationDetails = {
+                orderId: updatedOrder.kiosk_order_id,
+                title: '주문 준비 완료!',
+                message: `주문 #${updatedOrder.kiosk_order_id.substring(0, 8).toUpperCase()} 준비가 완료되었습니다. 확인 후 수령해주세요.`,
+              };
+              setActionableNotification(notificationDetails);
+              setShowActionableToast(true);
+              playKioskNotificationSound();
+              startRepeatingVibration();
+              setNotifiedOrderIdsThisSession(prev => [...prev, updatedOrder.kiosk_order_id]);
+
+              // Auto-dismiss toast after some time
+              setTimeout(() => {
+                // Only dismiss if this specific notification is still showing
+                if (actionableNotification && actionableNotification.orderId === updatedOrder.kiosk_order_id && showActionableToast) {
+                    handleDismissActionableToast();
+                }
+              }, 10000); // 10 seconds
+
+            } else {
+              console.log(`[KioskPage] Order ${updatedOrder.kiosk_order_id} is ready, but already notified this session on this page.`);
+            }
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[KioskPage] Subscribed to session order updates on KioskPage for session ${sessionId}`);
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[KioskPage] Channel error/timeout for order updates on KioskPage ${sessionId}:`, err);
+        }
+      });
+    
+    return () => {
+      if (orderStatusChannel) {
+        supabase.removeChannel(orderStatusChannel);
+        console.log(`[KioskPage] Unsubscribed from session order updates on KioskPage for session ${sessionId}`);
+      }
+      stopRepeatingVibration(); // Ensure vibration stops on unmount or if sessionId changes
+    };
+  }, [sessionId, notifiedOrderIdsThisSession, playKioskNotificationSound, startRepeatingVibration, stopRepeatingVibration, handleDismissActionableToast, actionableNotification, showActionableToast]);
+
   // Fetch store data and products
   const fetchStoreData = useCallback(async () => {
     try {
@@ -1317,6 +1441,25 @@ export default function KioskPage() {
           </div>
         </div>
       </div>
+
+      {/* Actionable Toast for Order Ready Notification */} 
+      {showActionableToast && actionableNotification && (
+        <div className="fixed bottom-16 sm:bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 sm:w-auto max-w-md bg-green-600 text-white p-4 rounded-lg shadow-lg z-[100] flex items-center justify-between">
+          <div>
+            <h4 className="font-bold">{actionableNotification.title}</h4>
+            <p className="text-sm">{actionableNotification.message}</p>
+          </div>
+          <button 
+            onClick={handleDismissActionableToast}
+            className="ml-4 p-1.5 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-white"
+            aria-label="Dismiss notification"
+          >
+            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 } 
