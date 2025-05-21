@@ -50,6 +50,7 @@ export default function SuccessPage() {
   const [error, setError] = useState<string | null>(null);
   const [showReadyNotification, setShowReadyNotification] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const vibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Make sure to clear cart when the success page loads
   useEffect(() => {
@@ -88,15 +89,8 @@ export default function SuccessPage() {
     }
   };
   
-  // Function to trigger web vibration (single pattern)
-  const triggerWebVibrationPattern = () => {
-    if ('vibrate' in navigator) {
-      console.log('[KioskSuccess] Attempting navigator.vibrate([400, 200, 400])');
-      navigator.vibrate([400, 200, 400]); // Example pattern: buzz, pause, buzz
-    } else {
-      console.log('[KioskSuccess] Vibration API not supported in this browser.');
-    }
-  };
+  // Function to trigger web vibration (will use interval logic below)
+  // const triggerWebVibrationPattern = () => { ... }; // Keep or remove, not directly used if interval takes over
   
   // Set up real-time subscription for ALL relevant orders in the current session
   useEffect(() => {
@@ -135,9 +129,24 @@ export default function SuccessPage() {
           console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} update. New status: ${updatedOrder.status}. Previous actual status: ${previousStatus}`);
 
           if (updatedOrder.status === 'ready' && previousStatus !== 'ready') {
-            console.log(`[KioskSuccess] Conditions met for order ${updatedOrder.kiosk_order_id}: Playing sound and vibrating (single pattern).`);
+            console.log(`[KioskSuccess] Conditions met for order ${updatedOrder.kiosk_order_id}: Playing sound and starting repeating vibration.`);
             playNotificationSound();
-            triggerWebVibrationPattern(); // Use the single pattern vibration
+            // triggerWebVibrationPattern(); // No longer using single pattern here
+
+            // Clear previous interval if any and start new repeating vibration
+            if (vibrationIntervalRef.current) {
+              clearInterval(vibrationIntervalRef.current);
+            }
+            if ('vibrate' in navigator) {
+              console.log('[KioskSuccess] Vibration API supported. Setting up interval for repeating vibration.');
+              vibrationIntervalRef.current = setInterval(() => {
+                console.log('[KioskSuccess] Interval: Attempting navigator.vibrate(400)');
+                navigator.vibrate(400); // Buzz for 400ms
+              }, 1000); // Every 1 second
+              console.log('[KioskSuccess] Vibration interval set with ID:', vibrationIntervalRef.current);
+            } else {
+              console.log('[KioskSuccess] Vibration API not supported for repeating vibration.');
+            }
 
             setShowReadyNotification(true); // This shows the general modal
           } else if (updatedOrder.status === 'ready' && previousStatus === 'ready') {
@@ -335,19 +344,36 @@ export default function SuccessPage() {
   };
   
   const closeNotification = () => {
+    console.log('[KioskSuccess] closeNotification called.');
     setShowReadyNotification(false);
-    // Stop repeating vibration when notification is closed -- No longer needed as it's not repeating
+    // Stop repeating vibration when notification is closed
+    if (vibrationIntervalRef.current) {
+      clearInterval(vibrationIntervalRef.current);
+      vibrationIntervalRef.current = null;
+      console.log('[KioskSuccess] Vibration interval cleared in closeNotification.');
+    }
     if ('vibrate' in navigator) {
-        navigator.vibrate(0); // Attempt to cancel any ongoing vibration from the pattern.
+      console.log('[KioskSuccess] Attempting to stop vibration with navigator.vibrate(0) in closeNotification.');
+      navigator.vibrate(0); // Stop any ongoing vibration
     }
   };
 
-  // Cleanup effect for component unmount -- Simplified as no interval
+  // Cleanup effect for component unmount
   useEffect(() => {
     return () => {
-      // If a pattern was played, it usually stops on its own. Explicit cancel on unmount is mostly for long/infinite patterns.
+      console.log('[KioskSuccess] Component unmounting. Cleaning up vibration interval.');
+      if (vibrationIntervalRef.current) {
+        clearInterval(vibrationIntervalRef.current);
+        vibrationIntervalRef.current = null;
+      }
+      // Attempt to stop vibration if it might have been running, e.g. if modal was open
+      if ('vibrate' in navigator) { 
+        console.log('[KioskSuccess] Attempting to stop vibration with navigator.vibrate(0) on unmount.');
+        navigator.vibrate(0);
+      }
     };
-  }, []); // Empty dependency array for one-time unmount cleanup if any specific logic was needed (not much now for vibration)
+  // }, [showReadyNotification]); // Dependency not strictly needed for this simplified cleanup
+}, []); // Empty dependency array for one-time unmount cleanup
 
   const latestOrderForHeader = displayedOrders.find(o => o.kiosk_order_id === latestOrderId) || displayedOrders[0];
 
