@@ -50,7 +50,6 @@ export default function SuccessPage() {
   const [error, setError] = useState<string | null>(null);
   const [showReadyNotification, setShowReadyNotification] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const vibrationIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref for vibration interval
   
   // Make sure to clear cart when the success page loads
   useEffect(() => {
@@ -89,14 +88,15 @@ export default function SuccessPage() {
     }
   };
   
-  // Function to trigger web vibration (this will be replaced by interval logic)
-  // const triggerWebVibration = () => { 
-  //   if ('vibrate' in navigator) {
-  //     navigator.vibrate(500); 
-  //   } else {
-  //     console.log('[KioskSuccess] Vibration API not supported in this browser.');
-  //   }
-  // };
+  // Function to trigger web vibration (single pattern)
+  const triggerWebVibrationPattern = () => {
+    if ('vibrate' in navigator) {
+      console.log('[KioskSuccess] Attempting navigator.vibrate([400, 200, 400])');
+      navigator.vibrate([400, 200, 400]); // Example pattern: buzz, pause, buzz
+    } else {
+      console.log('[KioskSuccess] Vibration API not supported in this browser.');
+    }
+  };
   
   // Set up real-time subscription for ALL relevant orders in the current session
   useEffect(() => {
@@ -135,21 +135,9 @@ export default function SuccessPage() {
           console.log(`[KioskSuccess] Order ${updatedOrder.kiosk_order_id} update. New status: ${updatedOrder.status}. Previous actual status: ${previousStatus}`);
 
           if (updatedOrder.status === 'ready' && previousStatus !== 'ready') {
-            console.log(`[KioskSuccess] Conditions met for order ${updatedOrder.kiosk_order_id}: Playing sound and starting vibration.`);
+            console.log(`[KioskSuccess] Conditions met for order ${updatedOrder.kiosk_order_id}: Playing sound and vibrating (single pattern).`);
             playNotificationSound();
-            // triggerWebVibration(); // Old single vibration
-
-            // Clear previous interval if any and start new repeating vibration
-            if (vibrationIntervalRef.current) {
-              clearInterval(vibrationIntervalRef.current);
-            }
-            if ('vibrate' in navigator) {
-              vibrationIntervalRef.current = setInterval(() => {
-                navigator.vibrate(400); // Buzz for 400ms
-              }, 1000); // Every 1 second
-            } else {
-              console.log('[KioskSuccess] Vibration API not supported for repeating vibration.');
-            }
+            triggerWebVibrationPattern(); // Use the single pattern vibration
 
             setShowReadyNotification(true); // This shows the general modal
           } else if (updatedOrder.status === 'ready' && previousStatus === 'ready') {
@@ -348,27 +336,20 @@ export default function SuccessPage() {
   
   const closeNotification = () => {
     setShowReadyNotification(false);
-    // Stop repeating vibration when notification is closed
-    if (vibrationIntervalRef.current) {
-      clearInterval(vibrationIntervalRef.current);
-      vibrationIntervalRef.current = null;
-    }
+    // Stop repeating vibration when notification is closed -- No longer needed as it's not repeating
     if ('vibrate' in navigator) {
-      navigator.vibrate(0); // Stop any ongoing vibration
+        navigator.vibrate(0); // Attempt to cancel any ongoing vibration from the pattern.
     }
   };
 
-  // Cleanup effect for component unmount
+  // Cleanup effect for component unmount -- Simplified as no interval
   useEffect(() => {
     return () => {
-      if (vibrationIntervalRef.current) {
-        clearInterval(vibrationIntervalRef.current);
-      }
-      if ('vibrate' in navigator && showReadyNotification) { // Only try to stop if it might have been running
-        navigator.vibrate(0);
-      }
+      // If a pattern was played, it usually stops on its own. Explicit cancel on unmount is mostly for long/infinite patterns.
     };
-  }, [showReadyNotification]); // Re-evaluate if showReadyNotification changes, though primary stop is in closeNotification
+  }, []); // Empty dependency array for one-time unmount cleanup if any specific logic was needed (not much now for vibration)
+
+  const latestOrderForHeader = displayedOrders.find(o => o.kiosk_order_id === latestOrderId) || displayedOrders[0];
 
   if (loading && displayedOrders.length === 0) {
     return (
@@ -400,11 +381,19 @@ export default function SuccessPage() {
       </div>
     );
   }
-  
-  const latestOrderForHeader = displayedOrders.find(o => o.kiosk_order_id === latestOrderId) || displayedOrders[0];
 
   return (
     <div className="min-h-screen bg-gray-100 py-6 px-2 sm:py-8 sm:px-4">
+      {/* Temporary Test Vibration Button -- REMOVED */}
+      {/* <div style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 9999 }}>
+        <button 
+          onClick={handleTestVibration} 
+          style={{ padding: '10px', backgroundColor: '#f00', color: 'white', border: 'none', borderRadius: '5px' }}
+        >
+          Test Vibration
+        </button>
+      </div> */}
+
       {/* Order Ready Notification for the LATEST order */}
       {showReadyNotification && latestOrderId && (
         <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50 bg-black bg-opacity-50">
