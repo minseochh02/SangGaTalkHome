@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -21,6 +21,15 @@ interface StoreOptions {
   kiosk_dine_in_enabled: boolean;
   kiosk_takeout_enabled: boolean;
   kiosk_delivery_enabled: boolean;
+}
+
+// Interface for KioskOrder (ensure this matches your actual structure or shared type)
+interface KioskOrder {
+  kiosk_order_id: string;
+  store_id: string;
+  status: string;
+  kiosk_session_id?: string;
+  // Add other fields as needed from your kiosk_orders table
 }
 
 export default function CheckoutPage() {
@@ -44,6 +53,13 @@ export default function CheckoutPage() {
     kiosk_takeout_enabled: false,
     kiosk_delivery_enabled: false
   });
+
+  // State for session-wide "order ready" notifications
+  const [actionableNotification, setActionableNotification] = useState<{ title: string; message: string; orderId: string } | null>(null);
+  const [showActionableToast, setShowActionableToast] = useState<boolean>(false);
+  const [notifiedOrderIdsThisSession, setNotifiedOrderIdsThisSession] = useState<string[]>([]);
+  const orderNotificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const orderVibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load cart from localStorage and fetch store details
   useEffect(() => {
@@ -112,6 +128,55 @@ export default function CheckoutPage() {
       isActive = false; // Mark component as unmounted
     };
   }, [storeId]); // Only depend on storeId
+
+  // Effect for initializing notification sound
+  useEffect(() => {
+    orderNotificationAudioRef.current = new Audio('/notification-sound.mp3');
+    return () => {
+      if (orderNotificationAudioRef.current) {
+        orderNotificationAudioRef.current.pause();
+        orderNotificationAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const playKioskNotificationSound = useCallback(() => {
+    if (orderNotificationAudioRef.current) {
+      orderNotificationAudioRef.current.currentTime = 0;
+      orderNotificationAudioRef.current.play().catch(err => {
+        console.error('[CheckoutPage] Error playing notification sound:', err);
+      });
+    }
+  }, []);
+
+  const startRepeatingVibration = useCallback(() => {
+    if (orderVibrationIntervalRef.current) {
+      clearInterval(orderVibrationIntervalRef.current);
+    }
+    if ('vibrate' in navigator) {
+      orderVibrationIntervalRef.current = setInterval(() => {
+        navigator.vibrate(400);
+      }, 1000);
+    } else {
+      console.log('[CheckoutPage] Vibration API not supported.');
+    }
+  }, []);
+
+  const stopRepeatingVibration = useCallback(() => {
+    if (orderVibrationIntervalRef.current) {
+      clearInterval(orderVibrationIntervalRef.current);
+      orderVibrationIntervalRef.current = null;
+    }
+    if ('vibrate' in navigator) {
+      navigator.vibrate(0);
+    }
+  }, []);
+
+  const handleDismissActionableToast = useCallback(() => {
+    setShowActionableToast(false);
+    stopRepeatingVibration();
+    // setActionableNotification(null); // Optional: clear the specific notification details
+  }, [stopRepeatingVibration]);
 
   // Check for sold out items
   useEffect(() => {
@@ -256,6 +321,74 @@ export default function CheckoutPage() {
       console.log(`[Checkout] Unsubscribed from product updates`);
     };
   }, [storeId, cartItems.length, router, supabase]); // Only depend on cartItems.length
+
+  // Effect for initializing session-wide Kiosk Order Status Subscription (for previous orders)
+  useEffect(() => {
+    if (!sessionId) {
+      console.log('[CheckoutPage] No sessionId, skipping order status subscription.');
+      return;
+    }
+
+    const orderStatusChannel = supabase
+      .channel(`checkout-page-session-order-updates-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'kiosk_orders',
+          filter: `kiosk_session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const updatedOrder = payload.new as KioskOrder;
+          const oldOrder = payload.old as Partial<KioskOrder>; 
+
+          console.log(`[CheckoutPage] Session order update for session ${sessionId}: Order ID ${updatedOrder.kiosk_order_id}, New Status: ${updatedOrder.status}, Old Status: ${oldOrder?.status}`);
+          
+          if (updatedOrder.status === 'ready' && oldOrder?.status !== 'ready') {
+            if (!notifiedOrderIdsThisSession.includes(updatedOrder.kiosk_order_id)) {
+              console.log(`[CheckoutPage] Order ${updatedOrder.kiosk_order_id} is newly ready. Triggering notification.`);
+              const notificationDetails = {
+                orderId: updatedOrder.kiosk_order_id,
+                title: '주문 준비 완료!',
+                message: `주문 #${updatedOrder.kiosk_order_id.substring(0, 8).toUpperCase()} 준비가 완료되었습니다. 확인 후 수령해주세요.`,
+              };
+              setActionableNotification(notificationDetails);
+              setShowActionableToast(true);
+              playKioskNotificationSound();
+              startRepeatingVibration();
+              setNotifiedOrderIdsThisSession(prev => [...prev, updatedOrder.kiosk_order_id]);
+
+              // Auto-dismiss toast after some time
+              setTimeout(() => {
+                if (actionableNotification && actionableNotification.orderId === updatedOrder.kiosk_order_id && showActionableToast) {
+                    handleDismissActionableToast();
+                }
+              }, 10000); // 10 seconds
+
+            } else {
+              console.log(`[CheckoutPage] Order ${updatedOrder.kiosk_order_id} is ready, but already notified this session on this page.`);
+            }
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[CheckoutPage] Subscribed to session order updates on CheckoutPage for session ${sessionId}`);
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[CheckoutPage] Channel error/timeout for order updates on CheckoutPage ${sessionId}:`, err);
+        }
+      });
+    
+    return () => {
+      if (orderStatusChannel) {
+        supabase.removeChannel(orderStatusChannel);
+        console.log(`[CheckoutPage] Unsubscribed from session order updates on CheckoutPage for session ${sessionId}`);
+      }
+      stopRepeatingVibration(); 
+    };
+  }, [sessionId, notifiedOrderIdsThisSession, playKioskNotificationSound, startRepeatingVibration, stopRepeatingVibration, handleDismissActionableToast, supabase, actionableNotification, showActionableToast]);
 
   // Submit order with selected option
   const handleOrderSubmit = async (orderType: 'kiosk_dine_in' | 'kiosk_takeout' | 'kiosk_delivery') => {
@@ -584,6 +717,28 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Actionable Toast for Order Ready Notification */} 
+      {showActionableToast && actionableNotification && (
+        <div 
+            className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 sm:w-auto max-w-md bg-green-600 text-white p-4 rounded-lg shadow-lg z-[200] flex items-center justify-between"
+            // Using z-index that should be higher than most other elements on this page
+        >
+          <div>
+            <h4 className="font-bold">{actionableNotification.title}</h4>
+            <p className="text-sm">{actionableNotification.message}</p>
+          </div>
+          <button 
+            onClick={handleDismissActionableToast}
+            className="ml-4 p-1.5 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-white"
+            aria-label="Dismiss notification"
+          >
+            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 } 

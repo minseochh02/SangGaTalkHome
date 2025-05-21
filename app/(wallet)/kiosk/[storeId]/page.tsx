@@ -231,26 +231,20 @@ export default function KioskPage() {
   const startRepeatingVibration = useCallback(() => {
     if (orderVibrationIntervalRef.current) {
       clearInterval(orderVibrationIntervalRef.current);
-      console.log('[KioskPage] Cleared previous vibration interval.');
     }
     if ('vibrate' in navigator) {
-      console.log('[KioskPage] Vibration API supported. Setting up interval.');
       orderVibrationIntervalRef.current = setInterval(() => {
-        console.log('[KioskPage] Interval: Attempting navigator.vibrate(400)');
         navigator.vibrate(400); // Buzz for 400ms
       }, 1000); // Every 1 second
-      console.log('[KioskPage] Vibration interval set with ID:', orderVibrationIntervalRef.current);
     } else {
       console.log('[KioskPage] Vibration API not supported for repeating vibration.');
     }
   }, []);
 
   const stopRepeatingVibration = useCallback(() => {
-    console.log('[KioskPage] stopRepeatingVibration called.'); // Log when called
     if (orderVibrationIntervalRef.current) {
       clearInterval(orderVibrationIntervalRef.current);
       orderVibrationIntervalRef.current = null;
-      console.log('[KioskPage] Vibration interval cleared.');
     }
     if ('vibrate' in navigator) {
       navigator.vibrate(0); // Stop any ongoing vibration
@@ -258,7 +252,6 @@ export default function KioskPage() {
   }, []);
 
   const handleDismissActionableToast = useCallback(() => {
-    console.log('[KioskPage] handleDismissActionableToast called.'); // Log when called
     setShowActionableToast(false);
     stopRepeatingVibration();
     // Do not reset actionableNotification here, let the auto-dismiss or timeout handle it if needed
@@ -328,7 +321,6 @@ export default function KioskPage() {
         supabase.removeChannel(orderStatusChannel);
         console.log(`[KioskPage] Unsubscribed from session order updates on KioskPage for session ${sessionId}`);
       }
-      console.log('[KioskPage] Cleanup: Calling stopRepeatingVibration from orderStatusChannel effect cleanup.');
       stopRepeatingVibration(); // Ensure vibration stops on unmount or if sessionId changes
     };
   }, [sessionId, notifiedOrderIdsThisSession, playKioskNotificationSound, startRepeatingVibration, stopRepeatingVibration, handleDismissActionableToast, actionableNotification, showActionableToast]);
