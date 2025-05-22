@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SafeImage } from '@/components/ui/image';
+import PortonePaymentHandler from '../../ui/PortonePaymentHandler'; // Adjusted path
 
 // Types for cart items
 interface CartItem {
@@ -33,6 +34,35 @@ interface KioskOrder {
   // Add other fields as needed from your kiosk_orders table
 }
 
+// Types from your KioskPage - ideally, share these from a types file
+interface SelectedOption {
+  groupId: string;
+  choiceId: string;
+  name: string;
+  price_impact: number; // This is SGT impact, won_price impact needs to be handled if applicable
+}
+
+interface CartItemWithOptions {
+  product_id: string;
+  product_name: string;
+  sgt_price: number;    // SGT base price
+  won_price: number;    // WON base price
+  quantity: number;
+  image_url?: string | null;
+  options?: SelectedOption[];
+  total_price: number; // This is total SGT price (base SGT + SGT option impacts)
+  // We'll need to calculate total WON price separately
+}
+
+// Type for the paymentParams prop of PortonePaymentHandler
+// Note: `pg` and `m_redirect_url` are handled internally by PortonePaymentHandler
+type PortonePaymentHandlerParams = Omit<Parameters<typeof PortonePaymentHandler>[0]['paymentParams'], 'pg' | 'm_redirect_url'>;
+
+// Helper to generate a unique merchant_uid
+function generateMerchantUid() {
+  return `cko_${new Date().getTime()}_${Math.random().toString(36).substring(7)}`;
+}
+
 export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
@@ -43,7 +73,7 @@ export default function CheckoutPage() {
   const supabase = createClient();
 
   // State
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItemWithOptions[]>([]);
   const [storeName, setStoreName] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -55,6 +85,8 @@ export default function CheckoutPage() {
     kiosk_delivery_enabled: false
   });
   const [exchangeRate, setExchangeRate] = useState<number>(1000); // Default KRW/SGT exchange rate
+  const [totalWonAmount, setTotalWonAmount] = useState<number>(0);
+  const [paymentParams, setPaymentParams] = useState<PortonePaymentHandlerParams | null>(null);
 
   // State for session-wide "order ready" notifications for OTHER orders
   const [actionableNotification, setActionableNotification] = useState<{ title: string; message: string; orderId: string } | null>(null);
@@ -64,82 +96,72 @@ export default function CheckoutPage() {
   const orderVibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load cart from localStorage and fetch store details
-  useEffect(() => {
-    let isActive = true; // Track component mount state
-    
-    const initialize = async () => {
-      if (!isActive) return;
-      
+  const loadCartAndCalculateTotal = useCallback(() => {
+    if (typeof window !== 'undefined') {
       try {
-        setIsLoading(true);
-        
-        // Load cart data
-        try {
-          const storedCart = localStorage.getItem(`kiosk-cart-${storeId}`);
-          if (storedCart) {
-            const parsedCart = JSON.parse(storedCart);
-            if (isActive) {
-              setCartItems(parsedCart);
-              // Calculate total
-              const total = parsedCart.reduce(
-                (sum: number, item: CartItem) => sum + (item.sgt_price * item.quantity), 0
-              );
-              setTotalAmount(total);
-            }
+        const storedCart = localStorage.getItem(`kiosk-cart-${storeId}`);
+        if (storedCart) {
+          const parsedCart: CartItemWithOptions[] = JSON.parse(storedCart);
+          if (parsedCart.length === 0) {
+            setError('장바구니가 비어있습니다. (Cart is empty.)');
+            setCartItems([]);
+            setTotalWonAmount(0);
+          } else {
+            setCartItems(parsedCart);
+            const totalWon = parsedCart.reduce((sum, item) => {
+              // Assuming options price_impact is for SGT.
+              // If options have a separate WON price impact, it needs to be fetched and calculated.
+              // For now, item.won_price is the base WON price per unit.
+              return sum + (item.won_price * item.quantity);
+            }, 0);
+            setTotalWonAmount(totalWon);
           }
-        } catch (err) {
-          console.error('Error loading cart from localStorage:', err);
-          if (isActive) {
-            setError('장바구니를 불러오는데 실패했습니다.');
-          }
+        } else {
+          setError('장바구니를 찾을 수 없습니다. (Cart not found.)');
         }
-        
-        // Fetch exchange rate from localStorage or use default
-        try {
-          const storedRate = localStorage.getItem('sgt-exchange-rate');
-          if (storedRate) {
-            setExchangeRate(parseFloat(storedRate));
-          }
-        } catch (err) {
-          console.error('Error loading exchange rate:', err);
-        }
-        
-        // Fetch store data if component is still mounted
-        if (isActive && storeId) {
-          try {
-            const { data, error } = await supabase
-              .from('stores')
-              .select('store_name, kiosk_dine_in_enabled, kiosk_takeout_enabled, kiosk_delivery_enabled')
-              .eq('store_id', storeId)
-              .single();
-              
-            if (error) {
-              console.error('Error fetching store details:', error);
-              if (isActive) setError('스토어 정보를 불러오는데 실패했습니다.');
-            } else if (data && isActive) {
-              setStoreName(data.store_name);
-              setStoreOptions({
-                kiosk_dine_in_enabled: data.kiosk_dine_in_enabled,
-                kiosk_takeout_enabled: data.kiosk_takeout_enabled,
-                kiosk_delivery_enabled: data.kiosk_delivery_enabled
-              });
-            }
-          } catch (err) {
-            console.error('Error in fetchStoreDetails:', err);
-            if (isActive) setError('스토어 정보를 불러오는데 실패했습니다.');
-          }
-        }
-      } finally {
-        if (isActive) setIsLoading(false);
+      } catch (e) {
+        console.error("Error loading cart from localStorage:", e);
+        setError('장바구니를 불러오는 중 오류가 발생했습니다. (Error loading cart.)');
       }
-    };
-    
-    initialize();
-    
-    return () => {
-      isActive = false; // Mark component as unmounted
-    };
-  }, [storeId]); // Only depend on storeId
+    }
+    setIsLoading(false);
+  }, [storeId]);
+
+  useEffect(() => {
+    loadCartAndCalculateTotal();
+  }, [loadCartAndCalculateTotal]);
+
+  useEffect(() => {
+    if (!isLoading && totalWonAmount > 0 && cartItems.length > 0 && storeId) {
+      const orderName = cartItems.length > 1 
+        ? `${cartItems[0].product_name} 외 ${cartItems.length - 1}건` 
+        : cartItems[0].product_name;
+
+      setPaymentParams({
+        pay_method: 'card',
+        name: orderName,
+        amount: totalWonAmount,
+        merchant_uid: generateMerchantUid(),
+        buyer_name: `키오스크 ${deviceNumber || '고객'}`,
+        buyer_tel: 'N/A',
+        buyer_email: 'kiosk@example.com',
+        custom_data: { // custom_data should be an object or string as per Portone docs
+          sessionId: sessionId,
+          deviceNumber: deviceNumber,
+          storeId: storeId,
+          cart_items_summary: cartItems.map(item => ({ 
+            pid: item.product_id,
+            name: item.product_name,
+            qty: item.quantity,
+            won_each: item.won_price,
+            options: item.options?.map(opt => opt.name).join(', ') || 'N/A'
+          }))
+        }
+      });
+    } else if (!isLoading && cartItems.length === 0 && !error) { // Set error only if not already set
+        setError('결제할 상품이 없습니다. (No items to pay for.)');
+    }
+  }, [totalWonAmount, cartItems, storeId, deviceNumber, sessionId, isLoading, error]);
 
   // Effect for initializing notification sound
   useEffect(() => {
@@ -655,6 +677,29 @@ export default function CheckoutPage() {
     );
   };
 
+  const handlePaymentResponse = (rsp: any) => {
+    if (!storeId) {
+      console.error("Store ID is not available for redirect.");
+      alert("오류: 상점 ID를 찾을 수 없습니다. (Error: Store ID not found.)");
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`kiosk-cart-${storeId}`);
+    }
+
+    const baseUrl = `/kiosk/${storeId}/payment/callback`;
+    let currentMerchantUid = paymentParams?.merchant_uid;
+
+    if (rsp.success) {
+      window.location.href = `${baseUrl}?imp_uid=${rsp.imp_uid}&merchant_uid=${rsp.merchant_uid}&imp_success=true`;
+    } else {
+      const errorMessage = rsp.error_msg || '알 수 없는 결제 오류 (Unknown payment error)';
+      if (rsp.merchant_uid) currentMerchantUid = rsp.merchant_uid;
+      window.location.href = `${baseUrl}?merchant_uid=${currentMerchantUid || 'N/A'}&error_msg=${encodeURIComponent(errorMessage)}&imp_success=false`;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
@@ -776,6 +821,39 @@ export default function CheckoutPage() {
           </div>
         </div>
       )}
+
+      {/* Payment Section */}
+      <section className="bg-white p-4 sm:p-6 rounded-lg shadow-lg">
+        <h2 className="text-xl font-semibold mb-4">결제 진행</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          아래 버튼을 눌러 결제를 진행해주세요. 결제는 KRW(원)으로 진행됩니다.
+        </p>
+        {paymentParams && totalWonAmount > 0 && !error ? (
+          <PortonePaymentHandler
+            storeId={storeId}
+            paymentParams={paymentParams}
+            onPaymentComplete={handlePaymentResponse}
+            onPaymentError={handlePaymentResponse} 
+          />
+        ) : error ? (
+          <div className="bg-white p-5 sm:p-6 rounded-xl shadow-lg text-center">
+            <p className="text-red-500 text-lg">{error}</p>
+          </div>
+        ) : null }
+      </section>
+
+      <div className="mt-8 text-center">
+        <button 
+            onClick={() => router.push(`/kiosk/${storeId}${sessionId ? '?sessionId='+sessionId : ''}`)}
+            className="text-sm text-gray-600 hover:text-gray-800"
+        >
+            &larr; 상품 선택으로 돌아가기
+        </button>
+      </div>
+
+      <footer className="mt-10 sm:mt-12 text-center text-xs sm:text-sm text-gray-500">
+        <p>&copy; {new Date().getFullYear()} SGT Wallet Kiosk. All rights reserved.</p>
+      </footer>
     </div>
   );
 } 

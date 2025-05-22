@@ -19,7 +19,8 @@ interface PortonePaymentParams {
   buyer_name?: string;
   buyer_tel?: string;
   m_redirect_url?: string; // For mobile redirects: e.g., /kiosk/[storeId]/payment/callback
-  // Add other necessary params like custom_data, app_scheme etc.
+  custom_data?: Record<string, any> | string; // Added custom_data
+  // Add other necessary params like app_scheme etc.
 }
 
 interface PortonePaymentHandlerProps {
