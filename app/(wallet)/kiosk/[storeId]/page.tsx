@@ -1048,7 +1048,7 @@ export default function KioskPage() {
       
       {/* Category tabs */}
       {(categories.length > 0 || selectedCategory === 'all') && ( // Show if categories exist or 'all' is an option
-        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-50"> {/* Added sticky top-0 z-50 for visibility */}
+        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-30"> {/* Changed z-50 to z-30 */}
           <div className="container mx-auto">
             <div className="flex space-x-2 p-2">
               <button
@@ -1292,14 +1292,14 @@ export default function KioskPage() {
       
       {/* Modify cart sidebar */}
       <div 
-        className={`fixed inset-0 bg-black bg-opacity-50 z-10 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
           showCart ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setShowCart(false)}
       ></div>
       
       <div 
-        className={`fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-white shadow-xl z-20 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
           showCart ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
