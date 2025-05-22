@@ -186,7 +186,7 @@ function StoreProductsListContent({ storeId }: StoreProductsListProps) {
 									</p>
 									{product.sgt_price && (
 										<p className="text-xs text-primary">
-											SGT: {formatSGTPrice(product.sgt_price)} 토큰
+											SGT: {formatSGTPrice(product.sgt_price)} 포인트
 										</p>
 									)}
 								</div>

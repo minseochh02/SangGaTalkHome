@@ -24,7 +24,7 @@ const SAMPLE_NOTICES: Notice[] = [
 	},
 	{
 		id: 2,
-		title: "[이벤트] SGT 토큰 보상 이벤트 안내",
+		title: "[이벤트] SGT 포인트 보상 이벤트 안내",
 		date: "2024-02-28",
 		views: 980,
 		category: "이벤트",

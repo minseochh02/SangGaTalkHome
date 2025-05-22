@@ -244,7 +244,7 @@ function StoreProductsContent({ storeId }: StoreProductsPageProps) {
 										{formatSGTPrice(
 											product.sgt_price_text || product.sgt_price
 										)}{" "}
-										토큰
+										포인트
 									</p>
 								)}
 								<p className="line-clamp-2 text-sm text-muted-foreground mt-2">

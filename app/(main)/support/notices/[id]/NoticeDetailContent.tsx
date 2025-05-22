@@ -27,7 +27,7 @@ const SAMPLE_NOTICES: Notice[] = [
 
 2. 업데이트 내용
    - 스토어 검색 기능 개선
-   - SGT 토큰 리워드 시스템 업데이트
+   - SGT 포인트 리워드 시스템 업데이트
    - UI/UX 개선
 
 3. 유의사항
@@ -45,7 +45,7 @@ const SAMPLE_NOTICES: Notice[] = [
 	},
 	{
 		id: 2,
-		title: "[이벤트] SGT 토큰 보상 이벤트 안내",
+		title: "[이벤트] SGT 포인트 보상 이벤트 안내",
 		content: "이벤트 내용...",
 		date: "2024-02-28",
 		views: 980,

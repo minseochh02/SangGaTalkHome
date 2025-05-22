@@ -10,10 +10,10 @@ export default function Hero() {
 						<div className="text-center lg:text-left">
 							<h1 className="text-3xl tracking-tight font-extrabold text-gray-900 sm:text-4xl md:text-5xl lg:text-6xl">
 								<span className="block">내 주변 스토어 찾기</span>
-								<span className="block text-[#FFA725]">SGT 토큰 적립하기</span>
+								<span className="block text-[#FFA725]">SGT 포인트 적립하기</span>
 							</h1>
 							<p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-								지역 스토어과 연결하고, 리워드를 받으며, SGT 토큰과 함께하는
+								지역 스토어과 연결하고, 리워드를 받으며, SGT 포인트과 함께하는
 								차세대 쇼핑 경험을 만나보세요.
 							</p>
 							<div className="mt-5 sm:mt-8 flex flex-col sm:flex-row sm:justify-center lg:justify-start gap-3 sm:gap-3">

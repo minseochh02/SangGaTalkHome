@@ -57,7 +57,7 @@ export default function SGTProducts() {
 							SGT 상품 특별 프로모션
 						</h1>
 						<p className="text-sm md:text-lg mb-4 md:mb-6">
-							SGT 토큰으로 더 저렴하게 구매하세요! 지금 구매하시면 추가 10% SGT
+							SGT 포인트으로 더 저렴하게 구매하세요! 지금 구매하시면 추가 10% SGT
 							적립
 						</p>
 						<button className="px-4 py-2 md:px-6 md:py-3 bg-[#FFA725] text-white text-sm md:text-base rounded-lg hover:bg-[#FF9500] transition-colors">

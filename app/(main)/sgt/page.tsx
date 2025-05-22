@@ -8,9 +8,9 @@ export default function SGTPage() {
 		<div className="w-full max-w-7xl mx-auto px-4 py-8">
 			{/* Hero Section */}
 			<div className="text-center mb-16">
-				<h1 className="text-5xl font-bold mb-6">SGT 토큰 이코노미</h1>
+				<h1 className="text-5xl font-bold mb-6">SGT 포인트 이코노미</h1>
 				<p className="text-xl text-gray-600 max-w-2xl mx-auto">
-					QUUS의 자체 토큰 SGT로 더 스마트한 지역 상권 생태계를 만나보세요
+					QUUS의 자체 포인트 SGT로 더 스마트한 지역 상권 생태계를 만나보세요
 				</p>
 			</div>
 
@@ -35,7 +35,7 @@ export default function SGTPage() {
 					</div>
 					<h3 className="text-xl font-semibold mb-3">가치 저장</h3>
 					<p className="text-gray-600">
-						SGT 토큰으로 자산을 안전하게 보관하고 가치를 저장하세요
+						SGT 포인트으로 자산을 안전하게 보관하고 가치를 저장하세요
 					</p>
 				</div>
 
@@ -81,7 +81,7 @@ export default function SGTPage() {
 					</div>
 					<h3 className="text-xl font-semibold mb-3">리워드</h3>
 					<p className="text-gray-600">
-						SGT 활동과 거래를 통해 SGT 토큰을 보상으로 받으세요
+						SGT 활동과 거래를 통해 SGT 포인트을 보상으로 받으세요
 					</p>
 				</div>
 			</div>
@@ -89,7 +89,7 @@ export default function SGTPage() {
 			{/* How It Works */}
 			<div className="mb-16">
 				<h2 className="text-3xl font-bold mb-8 text-center">
-					SGT 토큰 사용 방법
+					SGT 포인트 사용 방법
 				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-12">
 					<div className="space-y-6">
@@ -98,10 +98,10 @@ export default function SGTPage() {
 								<span className="text-white font-semibold">1</span>
 							</div>
 							<div>
-								<h3 className="text-xl font-semibold mb-2">토큰 획득</h3>
+								<h3 className="text-xl font-semibold mb-2">포인트 획득</h3>
 								<p className="text-gray-600">
 									SGT 앱에서 리뷰 작성, 스토어 방문 인증, 친구 초대 등 다양한
-									활동을 통해 SGT 토큰을 획득하세요.
+									활동을 통해 SGT 포인트을 획득하세요.
 								</p>
 							</div>
 						</div>
@@ -110,9 +110,9 @@ export default function SGTPage() {
 								<span className="text-white font-semibold">2</span>
 							</div>
 							<div>
-								<h3 className="text-xl font-semibold mb-2">토큰 사용</h3>
+								<h3 className="text-xl font-semibold mb-2">포인트 사용</h3>
 								<p className="text-gray-600">
-									획득한 SGT 토큰으로 제휴 스토어에서 상품과 서비스를 구매하거나
+									획득한 SGT 포인트으로 제휴 스토어에서 상품과 서비스를 구매하거나
 									특별 할인을 받을 수 있습니다.
 								</p>
 							</div>
@@ -122,16 +122,16 @@ export default function SGTPage() {
 								<span className="text-white font-semibold">3</span>
 							</div>
 							<div>
-								<h3 className="text-xl font-semibold mb-2">토큰 적립</h3>
+								<h3 className="text-xl font-semibold mb-2">포인트 적립</h3>
 								<p className="text-gray-600">
-									SGT 토큰으로 결제 시 추가 토큰을 적립 받아 더 많은 혜택을 누릴
+									SGT 포인트으로 결제 시 추가 포인트을 적립 받아 더 많은 혜택을 누릴
 									수 있습니다.
 								</p>
 							</div>
 						</div>
 					</div>
 					<div className="bg-[#FFF5E4] rounded-2xl p-8">
-						<h3 className="text-2xl font-bold mb-6">SGT 토큰 혜택</h3>
+						<h3 className="text-2xl font-bold mb-6">SGT 포인트 혜택</h3>
 						<ul className="space-y-4">
 							<li className="flex items-center gap-3">
 								<svg
@@ -165,7 +165,7 @@ export default function SGTPage() {
 										d="M5 13l4 4L19 7"
 									/>
 								</svg>
-								<span>결제 금액의 5~10% SGT 토큰 적립</span>
+								<span>결제 금액의 5~10% SGT 포인트 적립</span>
 							</li>
 							<li className="flex items-center gap-3">
 								<svg
@@ -209,10 +209,10 @@ export default function SGTPage() {
 			{/* CTA Section */}
 			<div className="bg-gradient-to-r from-[#6A9C89] to-[#C1D8C3] rounded-2xl p-12 text-center text-white">
 				<h2 className="text-3xl font-bold mb-6">
-					지금 바로 SGT 토큰을 경험해보세요
+					지금 바로 SGT 포인트을 경험해보세요
 				</h2>
 				<p className="text-lg mb-8 max-w-2xl mx-auto">
-					SGT 앱을 다운로드하고 SGT 토큰으로 더 스마트한 소비 생활을 시작하세요.
+					SGT 앱을 다운로드하고 SGT 포인트으로 더 스마트한 소비 생활을 시작하세요.
 					새로운 회원에게 웰컴 보너스 10 SGT 증정!
 				</p>
 				<div className="flex gap-4 justify-center">

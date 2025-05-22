@@ -538,7 +538,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 
 					{/* SGT Price */}
 					<div className="space-y-2">
-						<Label htmlFor="sgt_price">SGT 가격 (토큰)</Label>
+						<Label htmlFor="sgt_price">SGT 가격 (포인트)</Label>
 						<Input
 							id="sgt_price"
 							name="sgt_price"
@@ -549,7 +549,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 							placeholder="0"
 						/>
 						<p className="text-sm text-muted-foreground">
-							SGT 토큰으로 결제 가능한 경우 입력하세요. 최대
+							SGT 포인트으로 결제 가능한 경우 입력하세요. 최대
 							9,999,999,999.9999999999까지 입력 가능합니다.
 						</p>
 					</div>
@@ -664,7 +664,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 
 							<div className="space-y-2">
 								<Label htmlFor="sgt_delivery_fee">
-									SGT 배송비 (토큰)
+									SGT 배송비 (포인트)
 								</Label>
 								<Input
 									id="sgt_delivery_fee"
@@ -699,7 +699,7 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="sgt_special_delivery_fee">
-									SGT 도서산간 추가 배송비 (토큰)
+									SGT 도서산간 추가 배송비 (포인트)
 								</Label>
 								<Input
 									id="sgt_special_delivery_fee"

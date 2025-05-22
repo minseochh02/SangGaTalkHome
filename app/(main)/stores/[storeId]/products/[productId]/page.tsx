@@ -486,7 +486,7 @@ function ProductDetailsContent({
 										{formatSGTPrice(
 											product.sgt_price_text || product.sgt_price || 0
 										)}{" "}
-										토큰
+										포인트
 									</p>
 								</div>
 							)}

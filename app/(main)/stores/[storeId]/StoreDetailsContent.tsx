@@ -490,7 +490,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 															{formatSGTPrice(
 																product.sgt_price_text || product.sgt_price
 															)}{" "}
-															토큰
+															포인트
 														</p>
 													)}
 												</div>

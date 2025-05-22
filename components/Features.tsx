@@ -13,8 +13,8 @@ const features = [
 		icon: MapIcon,
 	},
 	{
-		name: "SGT 토큰 리워드",
-		description: "쇼핑하고 지역 스토어과 소통하면서 SGT 토큰을 적립하세요.",
+		name: "SGT 포인트 리워드",
+		description: "쇼핑하고 지역 스토어과 소통하면서 SGT 포인트을 적립하세요.",
 		icon: CurrencyDollarIcon,
 	},
 	{
