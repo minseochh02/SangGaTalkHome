@@ -19,6 +19,7 @@ interface Product {
   product_name: string;
   description?: string;
   sgt_price: number;
+  won_price: number; // Added won_price field
   image_url?: string;
   status: number;
   is_kiosk_enabled: boolean;
@@ -356,7 +357,7 @@ export default function KioskPage() {
       // Fetch products - match the mobile app query format
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('product_id, product_name, description, sgt_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out')
+        .select('product_id, product_name, description, sgt_price, won_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out')
         .eq('store_id', storeId)
         .eq('status', 1)
         .eq('is_kiosk_enabled', true)
@@ -1143,7 +1144,10 @@ export default function KioskPage() {
                       <p className="text-gray-600 text-sm mt-1 line-clamp-2">{product.description}</p>
                     )}
                     <div className="mt-2 flex justify-between items-center">
-                      <span className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
+                      <div className="flex flex-col">
+                        <span className="text-gray-600 text-sm">{formatPrice(product.won_price)}원</span>
+                        <span className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
+                      </div>
                       <button
                         className={`px-3 py-1 rounded-md ${
                           product.is_sold_out
@@ -1239,7 +1243,10 @@ export default function KioskPage() {
               <div className="mt-6 border-t pt-4">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-gray-700">기본 가격</span>
-                  <span className="font-medium">{formatPrice(selectedProduct.sgt_price)}</span>
+                  <div className="text-right">
+                    <div className="text-gray-600 text-sm">{formatPrice(selectedProduct.won_price)}원</div>
+                    <span className="font-medium">{formatPrice(selectedProduct.sgt_price)} SGT</span>
+                  </div>
                 </div>
                 
                 {selectedOptions.length > 0 && selectedOptions.map((option, index) => (
@@ -1256,9 +1263,12 @@ export default function KioskPage() {
                 
                 <div className="flex justify-between items-center mt-4 pt-4 border-t font-bold">
                   <span>총 가격</span>
-                  <span className="text-lg text-red-600">{formatPrice(
-                    selectedProduct.sgt_price + selectedOptions.reduce((sum, opt) => sum + opt.price_impact, 0)
-                  )}</span>
+                  <div className="text-right">
+                    <div className="text-gray-600 text-sm">{formatPrice(selectedProduct.won_price)}원</div>
+                    <span className="text-lg text-red-600">{formatPrice(
+                      selectedProduct.sgt_price + selectedOptions.reduce((sum, opt) => sum + opt.price_impact, 0)
+                    )} SGT</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1339,7 +1349,10 @@ export default function KioskPage() {
                       </div>
                       <div className="flex-1">
                         <h4 className="font-medium">{item.product_name}</h4>
-                        <p className="text-red-600 font-bold">{formatPrice(item.total_price)}<span className="text-xs text-gray-500 ml-1">SGT</span></p>
+                        <div className="flex flex-col">
+                          <span className="text-gray-600 text-sm">{formatPrice(item.product.won_price)}원</span>
+                          <span className="text-red-600 font-bold">{formatPrice(item.total_price)}<span className="text-xs text-gray-500 ml-1">SGT</span></span>
+                        </div>
                       </div>
                       <div className="flex flex-col items-end">
                         <button 
@@ -1400,7 +1413,10 @@ export default function KioskPage() {
           <div className="p-4 border-t">
             <div className="flex justify-between items-center mb-4">
               <span className="text-gray-700 font-medium">총 금액</span>
-              <span className="text-xl font-bold text-red-600">{formatPrice(totalAmount)}<span className="text-xs text-gray-500 ml-1">SGT</span></span>
+              <div className="text-right">
+                <div className="text-gray-600 text-sm">{formatPrice(totalAmountWon)}원</div>
+                <span className="text-xl font-bold text-red-600">{formatPrice(totalAmount)}<span className="text-xs text-gray-500 ml-1">SGT</span></span>
+              </div>
             </div>
             
             <div className="space-y-2">
