@@ -38,6 +38,7 @@ interface CartItem {
   product_id: string;
   product_name: string;
   sgt_price: number;
+  won_price: number; // Added won_price field
   quantity: number;
   image_url?: string | null;
 }
@@ -611,6 +612,7 @@ export default function KioskPage() {
           product_id: product.product_id, 
           product_name: product.product_name, 
           sgt_price: itemBasePrice, // Store base price
+          won_price: product.won_price, // Added won_price field
           quantity: 1, 
           image_url: product.image_url,
           options: options,
@@ -1145,8 +1147,8 @@ export default function KioskPage() {
                     )}
                     <div className="mt-2 flex justify-between items-center">
                       <div className="flex flex-col">
-                        <span className="text-gray-600 text-sm">{formatPrice(product.won_price)}원</span>
-                        <span className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
+                        <span className="text-red-600 font-bold">{formatPrice(product.won_price)}원</span>
+                        <span className="text-gray-600 text-sm flex items-center gap-1 flex-row">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
                       </div>
                       <button
                         className={`px-3 py-1 rounded-md ${
@@ -1244,8 +1246,8 @@ export default function KioskPage() {
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-gray-700">기본 가격</span>
                   <div className="text-right">
-                    <div className="text-gray-600 text-sm">{formatPrice(selectedProduct.won_price)}원</div>
-                    <span className="font-medium">{formatPrice(selectedProduct.sgt_price)} SGT</span>
+                    <div className="font-medium">{formatPrice(selectedProduct.won_price)}원</div>
+                    <span className="text-sm text-gray-600">{formatPrice(selectedProduct.sgt_price)} SGT</span>
                   </div>
                 </div>
                 
@@ -1264,8 +1266,8 @@ export default function KioskPage() {
                 <div className="flex justify-between items-center mt-4 pt-4 border-t font-bold">
                   <span>총 가격</span>
                   <div className="text-right">
-                    <div className="text-gray-600 text-sm">{formatPrice(selectedProduct.won_price)}원</div>
-                    <span className="text-lg text-red-600">{formatPrice(
+                    <div className="text-lg font-bold">{formatPrice(selectedProduct.won_price)}원</div>
+                    <span className="text-sm text-gray-600">{formatPrice(
                       selectedProduct.sgt_price + selectedOptions.reduce((sum, opt) => sum + opt.price_impact, 0)
                     )} SGT</span>
                   </div>
@@ -1350,8 +1352,8 @@ export default function KioskPage() {
                       <div className="flex-1">
                         <h4 className="font-medium">{item.product_name}</h4>
                         <div className="flex flex-col">
-                          <span className="text-gray-600 text-sm">{formatPrice(item.product.won_price)}원</span>
-                          <span className="text-red-600 font-bold">{formatPrice(item.total_price)}<span className="text-xs text-gray-500 ml-1">SGT</span></span>
+                          <span className="font-semibold">{formatPrice(item.won_price)}원</span>
+                          <span className="text-gray-600 text-sm">{formatPrice(item.total_price)} SGT</span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end">
@@ -1413,9 +1415,9 @@ export default function KioskPage() {
           <div className="p-4 border-t">
             <div className="flex justify-between items-center mb-4">
               <span className="text-gray-700 font-medium">총 금액</span>
-              <div className="text-right">
-                <div className="text-gray-600 text-sm">{formatPrice(totalAmountWon)}원</div>
-                <span className="text-xl font-bold text-red-600">{formatPrice(totalAmount)}<span className="text-xs text-gray-500 ml-1">SGT</span></span>
+              <div>
+                <span className="text-xl font-bold">{formatPrice(totalAmount * 1000)}원</span>
+                <div className="text-sm text-gray-600">{formatPrice(totalAmount)} SGT</div>
               </div>
             </div>
             
