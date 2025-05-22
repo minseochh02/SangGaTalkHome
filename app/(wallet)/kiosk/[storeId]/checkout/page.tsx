@@ -705,10 +705,10 @@ export default function CheckoutPage() {
                     </div>
                     <div className="text-right">
                       <div className="font-medium flex items-center gap-1 flex-row justify-end">
-                        {formatPrice(item.sgt_price * item.quantity)}<p className="text-xs text-gray-500">SGT</p>
-                      </div>
-                      <div className="text-sm text-gray-500">
                         {formatPrice(convertToKRW(item.sgt_price * item.quantity))}원
+                      </div>
+                      <div className="text-sm text-gray-500 flex items-center gap-1 flex-row justify-end">
+                        {formatPrice(item.sgt_price * item.quantity)} SGT
                       </div>
                     </div>
                   </div>
@@ -720,10 +720,10 @@ export default function CheckoutPage() {
               <span>총 결제 금액</span>
               <div className="text-right">
                 <div className="text-red-600 flex items-center gap-1 flex-row justify-end">
-                  {formatPrice(totalAmount)}<p className="text-xs text-gray-500">SGT</p>
-                </div>
-                <div className="text-sm text-gray-500 font-normal">
                   {formatPrice(convertToKRW(totalAmount))}원
+                </div>
+                <div className="text-sm text-gray-500 font-normal flex items-center gap-1 flex-row justify-end">
+                  {formatPrice(totalAmount)} SGT
                 </div>
               </div>
             </div>
