@@ -1048,7 +1048,7 @@ export default function KioskPage() {
       
       {/* Category tabs */}
       {(categories.length > 0 || selectedCategory === 'all') && ( // Show if categories exist or 'all' is an option
-        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-50"> {/* Added sticky top-0 z-50 for visibility */}
+        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-30"> {/* Changed z-50 to z-30 */}
           <div className="container mx-auto">
             <div className="flex space-x-2 p-2">
               <button
@@ -1292,14 +1292,14 @@ export default function KioskPage() {
       
       {/* Modify cart sidebar */}
       <div 
-        className={`fixed inset-0 bg-black bg-opacity-50 z-10 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
           showCart ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setShowCart(false)}
       ></div>
       
       <div 
-        className={`fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-white shadow-xl z-20 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
           showCart ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -1379,22 +1379,22 @@ export default function KioskPage() {
                             <span className="text-gray-600 text-sm">{formatPrice(item.total_price)} SGT</span>
                           </div>
                           
-                          <div className="flex items-center border rounded-md">
+                          <div className="flex flex-col items-center border rounded-md">
                             <button 
-                              className="px-2 py-1 text-gray-500 hover:text-gray-700"
-                              onClick={() => decrementItem(index)}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                              </svg>
-                            </button>
-                            <span className="px-2 py-1 font-medium">{item.quantity}</span>
-                            <button 
-                              className="px-2 py-1 text-gray-500 hover:text-gray-700"
+                              className="px-2 py-1 text-gray-500 hover:text-gray-700 border-b border-gray-200 w-full"
                               onClick={() => incrementItem(index)}
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                              <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </button>
+                            <span className="px-3 py-1 font-medium text-center">{item.quantity}</span>
+                            <button 
+                              className="px-2 py-1 text-gray-500 hover:text-gray-700 border-t border-gray-200 w-full"
+                              onClick={() => decrementItem(index)}
+                            >
+                              <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                               </svg>
                             </button>
                           </div>
