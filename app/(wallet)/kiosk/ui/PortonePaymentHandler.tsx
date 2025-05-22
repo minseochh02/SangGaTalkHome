@@ -55,6 +55,8 @@ export default function PortonePaymentHandler({
       m_redirect_url: `${window.location.origin}/kiosk/${storeId}/payment/callback`, // Ensure this matches your callback page route
     };
 
+    console.log('fullParams', fullParams);
+
     window.IMP.request_pay(fullParams, (rsp: any) => {
       if (rsp.success) {
         // Client-side success, but needs server verification
