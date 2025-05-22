@@ -48,6 +48,7 @@ export default function SuccessPage() {
   const [loading, setLoading] = useState(true);
   const [storeName, setStoreName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [exchangeRate, setExchangeRate] = useState<number>(1000); // Default KRW/SGT exchange rate
   const [actionableNotification, setActionableNotification] = useState<{ title: string; message: string; orderId: string } | null>(null);
   const [showActionableModal, setShowActionableModal] = useState<boolean>(false);
   const [notifiedOrderIdsThisSession, setNotifiedOrderIdsThisSession] = useState<string[]>([]); // To track notifications on this page
@@ -61,6 +62,16 @@ export default function SuccessPage() {
     try {
       // Clear cart in localStorage
       localStorage.removeItem(`kiosk-cart-${storeId}`);
+      
+      // Fetch exchange rate from localStorage or use default
+      try {
+        const storedRate = localStorage.getItem('sgt-exchange-rate');
+        if (storedRate) {
+          setExchangeRate(parseFloat(storedRate));
+        }
+      } catch (err) {
+        console.error('Error loading exchange rate:', err);
+      }
     } catch (err) {
       console.error('Error clearing cart:', err);
     }
@@ -392,6 +403,16 @@ export default function SuccessPage() {
 
   const latestOrderForHeader = displayedOrders.find(o => o.kiosk_order_id === latestOrderId) || displayedOrders[0];
 
+  // Convert SGT to KRW
+  const convertToKRW = (sgtAmount: number): number => {
+    return Math.round(sgtAmount * exchangeRate);
+  };
+  
+  // Format price with commas
+  const formatPrice = (price: number): string => {
+    return price.toLocaleString();
+  };
+
   if (loading && displayedOrders.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -505,7 +526,14 @@ export default function SuccessPage() {
                 {order.total_amount && (
                   <div className="flex justify-between">
                     <span>결제 금액:</span>
-                    <span className="font-bold text-gray-800 flex items-center gap-1 flex-row">{Number(order.total_amount).toLocaleString()}<p className="text-xs text-gray-500">SGT</p></span>
+                    <div className="text-right">
+                      <div className="font-bold text-gray-800">
+                        {formatPrice(convertToKRW(Number(order.total_amount)))}원
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatPrice(Number(order.total_amount))} SGT
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -522,7 +550,14 @@ export default function SuccessPage() {
                             <span className="text-gray-800">{item.product_name}</span>
                             <span className="text-gray-500 mx-1">x{item.quantity}</span>
                           </div>
-                          <span className="text-gray-800">{Number(item.price_at_purchase * item.quantity).toLocaleString()} SGT</span>
+                          <div className="text-right">
+                            <div className="text-gray-800">
+                              {formatPrice(convertToKRW(item.price_at_purchase * item.quantity))}원
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {formatPrice(item.price_at_purchase * item.quantity)} SGT
+                            </div>
+                          </div>
                         </div>
                         {item.options && item.options.length > 0 && (
                           <div className="ml-2 mt-1 text-xs text-gray-600">
@@ -530,9 +565,14 @@ export default function SuccessPage() {
                               <div key={option.option_id} className="flex justify-between flex-wrap">
                                 <span className="mr-1">{option.option_group_name}: {option.option_choice_name}</span>
                                 {option.price_impact !== 0 && (
-                                  <span className={option.price_impact > 0 ? 'text-green-600' : 'text-red-600'}>
-                                    {option.price_impact > 0 ? '+' : ''}{option.price_impact.toLocaleString()} SGT
-                                  </span>
+                                  <div className="text-right">
+                                    <span className={option.price_impact > 0 ? 'text-green-600' : 'text-red-600'}>
+                                      {option.price_impact > 0 ? '+' : ''}{formatPrice(convertToKRW(option.price_impact))}원
+                                    </span>
+                                    <div className="text-xs text-gray-500">
+                                      {option.price_impact > 0 ? '+' : ''}{formatPrice(option.price_impact)} SGT
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             ))}
