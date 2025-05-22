@@ -14,6 +14,7 @@ interface CartItem {
   quantity: number;
   image_url?: string | null;
   options?: { groupId: string; name: string; choiceId: string; price_impact: number }[];
+  krw_price?: number;
 }
 
 // Type for store options
@@ -53,6 +54,7 @@ export default function CheckoutPage() {
     kiosk_takeout_enabled: false,
     kiosk_delivery_enabled: false
   });
+  const [exchangeRate, setExchangeRate] = useState<number>(1000); // Default KRW/SGT exchange rate
 
   // State for session-wide "order ready" notifications for OTHER orders
   const [actionableNotification, setActionableNotification] = useState<{ title: string; message: string; orderId: string } | null>(null);
@@ -90,6 +92,16 @@ export default function CheckoutPage() {
           if (isActive) {
             setError('장바구니를 불러오는데 실패했습니다.');
           }
+        }
+        
+        // Fetch exchange rate from localStorage or use default
+        try {
+          const storedRate = localStorage.getItem('sgt-exchange-rate');
+          if (storedRate) {
+            setExchangeRate(parseFloat(storedRate));
+          }
+        } catch (err) {
+          console.error('Error loading exchange rate:', err);
         }
         
         // Fetch store data if component is still mounted
@@ -535,6 +547,11 @@ export default function CheckoutPage() {
   const formatPrice = (price: number): string => {
     return price.toLocaleString();
   };
+  
+  // Convert SGT to KRW
+  const convertToKRW = (sgtAmount: number): number => {
+    return Math.round(sgtAmount * exchangeRate);
+  };
 
   // Render order options
   const renderOrderOptions = () => {
@@ -686,7 +703,14 @@ export default function CheckoutPage() {
                       <span className="font-medium">{item.product_name}</span>
                       <span className="text-gray-500 ml-2">x{item.quantity}</span>
                     </div>
-                    <span className="font-medium flex items-center gap-1 flex-row">{formatPrice(item.sgt_price * item.quantity)}<p className="text-xs text-gray-500">SGT</p></span>
+                    <div className="text-right">
+                      <div className="font-medium flex items-center gap-1 flex-row justify-end">
+                        {formatPrice(item.sgt_price * item.quantity)}<p className="text-xs text-gray-500">SGT</p>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {formatPrice(convertToKRW(item.sgt_price * item.quantity))}원
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -694,7 +718,14 @@ export default function CheckoutPage() {
             
             <div className="flex justify-between items-center text-lg font-bold">
               <span>총 결제 금액</span>
-              <span className="text-red-600 flex items-center gap-1 flex-row">{formatPrice(totalAmount)}<p className="text-xs text-gray-500">SGT</p></span>
+              <div className="text-right">
+                <div className="text-red-600 flex items-center gap-1 flex-row justify-end">
+                  {formatPrice(totalAmount)}<p className="text-xs text-gray-500">SGT</p>
+                </div>
+                <div className="text-sm text-gray-500 font-normal">
+                  {formatPrice(convertToKRW(totalAmount))}원
+                </div>
+              </div>
             </div>
           </div>
           
