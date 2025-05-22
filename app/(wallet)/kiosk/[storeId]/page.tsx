@@ -19,7 +19,6 @@ interface Product {
   product_name: string;
   description?: string;
   sgt_price: number;
-  won_price: number;
   image_url?: string;
   status: number;
   is_kiosk_enabled: boolean;
@@ -38,7 +37,6 @@ interface CartItem {
   product_id: string;
   product_name: string;
   sgt_price: number;
-  won_price: number;
   quantity: number;
   image_url?: string | null;
 }
@@ -358,7 +356,7 @@ export default function KioskPage() {
       // Fetch products - match the mobile app query format
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('product_id, product_name, description, sgt_price, won_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out')
+        .select('product_id, product_name, description, sgt_price, image_url, status, is_kiosk_enabled, kiosk_order, is_sold_out')
         .eq('store_id', storeId)
         .eq('status', 1)
         .eq('is_kiosk_enabled', true)
@@ -612,7 +610,6 @@ export default function KioskPage() {
           product_id: product.product_id, 
           product_name: product.product_name, 
           sgt_price: itemBasePrice, // Store base price
-          won_price: product.won_price,
           quantity: 1, 
           image_url: product.image_url,
           options: options,
@@ -1048,7 +1045,7 @@ export default function KioskPage() {
       
       {/* Category tabs */}
       {(categories.length > 0 || selectedCategory === 'all') && ( // Show if categories exist or 'all' is an option
-        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-30"> {/* Changed z-50 to z-30 */}
+        <div className="bg-white shadow-sm overflow-x-auto sticky top-0 z-50"> {/* Added sticky top-0 z-50 for visibility */}
           <div className="container mx-auto">
             <div className="flex space-x-2 p-2">
               <button
@@ -1146,10 +1143,7 @@ export default function KioskPage() {
                       <p className="text-gray-600 text-sm mt-1 line-clamp-2">{product.description}</p>
                     )}
                     <div className="mt-2 flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <span className="text-red-600 font-bold">{formatPrice(product.won_price)}원</span>
-                        <span className="text-gray-600 text-sm flex items-center gap-1">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
-                      </div>
+                      <span className="text-red-600 font-bold flex items-center gap-1 flex-row">{formatPrice(product.sgt_price)}<p className="text-xs text-gray-500">SGT</p></span>
                       <button
                         className={`px-3 py-1 rounded-md ${
                           product.is_sold_out
@@ -1245,10 +1239,7 @@ export default function KioskPage() {
               <div className="mt-6 border-t pt-4">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-gray-700">기본 가격</span>
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium">{formatPrice(selectedProduct.won_price)}원</div>
-                    <span className="text-sm text-gray-600">{formatPrice(selectedProduct.sgt_price)} SGT</span>
-                  </div>
+                  <span className="font-medium">{formatPrice(selectedProduct.sgt_price)}</span>
                 </div>
                 
                 {selectedOptions.length > 0 && selectedOptions.map((option, index) => (
@@ -1265,12 +1256,9 @@ export default function KioskPage() {
                 
                 <div className="flex justify-between items-center mt-4 pt-4 border-t font-bold">
                   <span>총 가격</span>
-                  <div className="flex items-center gap-2">
-                    <div className="text-lg font-bold">{formatPrice(selectedProduct.won_price)}원</div>
-                    <span className="text-sm text-gray-600">{formatPrice(
-                      selectedProduct.sgt_price + selectedOptions.reduce((sum, opt) => sum + opt.price_impact, 0)
-                    )} SGT</span>
-                  </div>
+                  <span className="text-lg text-red-600">{formatPrice(
+                    selectedProduct.sgt_price + selectedOptions.reduce((sum, opt) => sum + opt.price_impact, 0)
+                  )}</span>
                 </div>
               </div>
             </div>
@@ -1292,14 +1280,14 @@ export default function KioskPage() {
       
       {/* Modify cart sidebar */}
       <div 
-        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black bg-opacity-50 z-10 transition-opacity duration-300 ${
           showCart ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setShowCart(false)}
       ></div>
       
       <div 
-        className={`fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-white shadow-xl z-20 transform transition-transform duration-300 ease-in-out ${
           showCart ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -1349,58 +1337,59 @@ export default function KioskPage() {
                           </div>
                         )}
                       </div>
-                      <div className="flex-1 ml-3">
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-medium">{item.product_name}</h4>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.product_name}</h4>
+                        <p className="text-red-600 font-bold">{formatPrice(item.total_price)}<span className="text-xs text-gray-500 ml-1">SGT</span></p>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <button 
+                          className="text-gray-500 hover:text-red-600 mb-2"
+                          onClick={() => removeItem(index)}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                        <div className="flex items-center border rounded-md">
                           <button 
-                            onClick={() => removeItem(index)}
-                            className="text-gray-400 hover:text-red-500 p-1"
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100" 
+                            onClick={() => decrementItem(index)}
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                            </svg>
+                          </button>
+                          <span className="px-2 min-w-[2rem] text-center">{item.quantity}</span>
+                          <button 
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+                            onClick={() => incrementItem(index)}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                             </svg>
                           </button>
                         </div>
-                        
-                        {/* Display options if any */}
-                        {item.options && item.options.length > 0 && (
-                          <div className="text-xs text-gray-500 mb-2">
-                            {item.options.map((opt, i) => (
-                              <span key={i} className="mr-1">
-                                {opt.name}{i < item.options!.length - 1 ? ', ' : ''}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{formatPrice(item.won_price)}원</span>
-                            <span className="text-gray-600 text-sm">{formatPrice(item.total_price)} SGT</span>
-                          </div>
-                          
-                          <div className="flex flex-col items-center border rounded-md">
-                            <button 
-                              className="px-2 py-1 text-gray-500 hover:text-gray-700 border-b border-gray-200 w-full"
-                              onClick={() => incrementItem(index)}
-                            >
-                              <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              </svg>
-                            </button>
-                            <span className="px-3 py-1 font-medium text-center">{item.quantity}</span>
-                            <button 
-                              className="px-2 py-1 text-gray-500 hover:text-gray-700 border-t border-gray-200 w-full"
-                              onClick={() => decrementItem(index)}
-                            >
-                              <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
                       </div>
                     </div>
+                    
+                    {/* Show selected options */}
+                    {item.options && item.options.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <ul className="text-xs text-gray-600 pl-2">
+                          {item.options.map((option, optionIndex) => (
+                            <li key={optionIndex} className="flex justify-between py-1">
+                              <span>{option.name}</span>
+                              {option.price_impact !== 0 && (
+                                <span className={option.price_impact > 0 ? 'text-green-600' : 'text-red-600'}>
+                                  {option.price_impact > 0 ? '+' : ''}
+                                  {formatPrice(option.price_impact)}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1411,10 +1400,7 @@ export default function KioskPage() {
           <div className="p-4 border-t">
             <div className="flex justify-between items-center mb-4">
               <span className="text-gray-700 font-medium">총 금액</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold">{formatPrice(totalAmount * 1000)}원</span>
-                <div className="text-sm text-gray-600">{formatPrice(totalAmount)} SGT</div>
-              </div>
+              <span className="text-xl font-bold text-red-600">{formatPrice(totalAmount)}<span className="text-xs text-gray-500 ml-1">SGT</span></span>
             </div>
             
             <div className="space-y-2">
