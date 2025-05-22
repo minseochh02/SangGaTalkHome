@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { library, IconPrefix, IconName, findIconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
+import PortonePaymentHandler from '../ui/PortonePaymentHandler'; // Adjusted path
 
 // Add all FontAwesome icons to the library
 library.add(fas, far);
@@ -80,6 +81,11 @@ interface SelectedOption {
 interface CartItemWithOptions extends CartItem {
   options?: SelectedOption[];
   total_price: number; // Base price + all option price impacts
+}
+
+// Helper to generate a unique merchant_uid for demonstration
+function generateMerchantUid() {
+  return `mid_${new Date().getTime()}_${Math.random().toString(36).substring(7)}`;
 }
 
 export default function KioskPage() {
@@ -1482,4 +1488,4 @@ export default function KioskPage() {
       )}
     </div>
   );
-} 
+}
