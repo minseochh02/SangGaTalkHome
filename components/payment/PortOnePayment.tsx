@@ -144,7 +144,7 @@ export default function PortOnePayment({
       };
 
       // Add customer data, potentially required by some PGs like Inicis
-      if (pgProvider === 'html5_inicis') {
+      if (pgProvider === 'html5_inicis' || pgProvider === 'inicis_v2') {
         requestPayload.customer = {
           fullName: customData?.customerName || orderName.split(' - ')[0] || "키오스크 고객", // Try to get a name or default
           email: customData?.customerEmail || "kiosk-customer@example.com", // Placeholder
