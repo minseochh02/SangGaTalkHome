@@ -1,7 +1,5 @@
 import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
-import type { Metadata } from "next";
-import Script from "next/script";
 
 const geistSans = Geist({
   display: "swap",
@@ -26,9 +24,6 @@ export default function KioskRootLayout({
 }) {
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
-      <head>
-        <Script src="https://cdn.iamport.kr/v1/iamport.js" strategy="beforeInteractive" />
-      </head>
       <body>
         <main className="min-h-screen bg-gray-100">
           <div className="flex flex-col w-full">{children}</div>
