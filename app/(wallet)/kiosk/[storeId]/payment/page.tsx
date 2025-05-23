@@ -128,7 +128,7 @@ function PaymentPageContent() {
             orderName={orderName}
             totalAmount={totalAmountKRW}
             currency="KRW"
-            payMethod="CARD" // Or other methods like EASY_PAY depending on channelKey
+            payMethod="EASY_PAY" // Changed from "CARD" to "EASY_PAY" to match error rule
             redirectUrl={currentPaymentPageUrl} // User returns to this page
             customData={{
               kioskOrderId: kioskOrderId,
