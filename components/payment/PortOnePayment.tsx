@@ -240,7 +240,7 @@ export default function PortOnePayment({
 
       <button
         type="button"
-        onClick={() => handleSubmit('inicis_std', 'channel-key-2e232933-4f20-4565-8e43-b929da601081', 'CARD')}
+        onClick={() => handleSubmit('html5_inicis', 'channel-key-2e232933-4f20-4565-8e43-b929da601081', 'CARD')}
         aria-busy={paymentStatus.status === 'PENDING'}
         disabled={paymentStatus.status === 'PENDING'}
         className={buttonClassName || "w-full py-3 bg-purple-500 text-white font-bold rounded-md hover:bg-purple-600 text-lg"}
