@@ -9,12 +9,10 @@ let PortOne: any = null;
 // Define component props interface
 interface PortOnePaymentProps {
   storeId: string;
-  channelKey: string;
   merchantUidFromCaller?: string;
   orderName: string;
   totalAmount: number;
   currency?: string;
-  payMethod?: string;
   customData?: Record<string, any>;
   redirectUrl?: string;
   onPaymentComplete?: (response: any) => void;
@@ -27,12 +25,10 @@ interface PortOnePaymentProps {
 
 export default function PortOnePayment({
   storeId,
-  channelKey,
   merchantUidFromCaller,
   orderName,
   totalAmount,
   currency = 'KRW',
-  payMethod = 'EASY_PAY',
   customData = {},
   redirectUrl,
   onPaymentComplete,
@@ -126,8 +122,7 @@ export default function PortOnePayment({
       .join('');
   }
 
-  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (pgProvider: string, channelKey: string, specificPayMethod?: string) => {
     setPaymentStatus({ status: 'PENDING' });
     
     const isLoaded = await ensurePortOneLoaded();
@@ -143,7 +138,8 @@ export default function PortOnePayment({
         orderName,
         totalAmount,
         currency,
-        payMethod,
+        payMethod: specificPayMethod || 'EASY_PAY',
+        pg: pgProvider,
         customData,
       };
 
@@ -213,15 +209,43 @@ export default function PortOnePayment({
   };
 
   return (
-    <>
+    <div className="space-y-3">
       <button
         type="button"
-        onClick={handleSubmit}
-        aria-busy={isWaitingPayment}
-        disabled={isWaitingPayment}
-        className={buttonClassName}
+        onClick={() => handleSubmit('kakao', process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || "channel-key-01764171-b249-4c16-9d18-e9174fa8e611", 'EASY_PAY')}
+        aria-busy={paymentStatus.status === 'PENDING'}
+        disabled={paymentStatus.status === 'PENDING'}
+        className={buttonClassName || "w-full py-3 bg-yellow-400 text-black font-bold rounded-md hover:bg-yellow-500 text-lg"}
       >
-        {isWaitingPayment ? '처리 중...' : paymentStatus.status === 'PENDING' && paymentStatus.message ? paymentStatus.message : buttonText}
+        {paymentStatus.status === 'PENDING' ? '처리 중...' : '카카오페이 결제'}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => alert('네이버페이 결제는 현재 지원되지 않습니다.')}
+        className={buttonClassName || "w-full py-3 bg-green-500 text-white font-bold rounded-md hover:bg-green-600 text-lg opacity-50 cursor-not-allowed"}
+      >
+        네이버페이 결제
+      </button>
+
+      <button
+        type="button"
+        onClick={() => handleSubmit('nice_v2', 'channel-key-34a5a8d9-39f7-480c-b338-36a5f7f5b10b', 'CARD')}
+        aria-busy={paymentStatus.status === 'PENDING'}
+        disabled={paymentStatus.status === 'PENDING'}
+        className={buttonClassName || "w-full py-3 bg-blue-500 text-white font-bold rounded-md hover:bg-blue-600 text-lg"}
+      >
+        나이스페이 결제
+      </button>
+
+      <button
+        type="button"
+        onClick={() => handleSubmit('inicis_std', 'channel-key-2e232933-4f20-4565-8e43-b929da601081', 'CARD')}
+        aria-busy={paymentStatus.status === 'PENDING'}
+        disabled={paymentStatus.status === 'PENDING'}
+        className={buttonClassName || "w-full py-3 bg-purple-500 text-white font-bold rounded-md hover:bg-purple-600 text-lg"}
+      >
+        KG이니시스 결제
       </button>
 
       {showModals && (
@@ -251,6 +275,6 @@ export default function PortOnePayment({
           )}
         </>
       )}
-    </>
+    </div>
   );
 } 

@@ -123,13 +123,11 @@ function PaymentPageContent() {
 
           <PortOnePayment
             storeId={process.env.NEXT_PUBLIC_PORTONE_STORE_ID || "store-e4038486-8d83-41a5-acf1-844a009e0d94"} // Use your actual PortOne store ID
-            channelKey={process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || "channel-key-01764171-b249-4c16-9d18-e9174fa8e611"} // Use your channel key for card payments
-            merchantUidFromCaller={kioskOrderId} // Pass kioskOrderId as merchantUidFromCaller
+            merchantUidFromCaller={kioskOrderId}
             orderName={orderName}
             totalAmount={totalAmountKRW}
             currency="KRW"
-            payMethod="EASY_PAY" // Changed from "CARD" to "EASY_PAY" to match error rule
-            redirectUrl={currentPaymentPageUrl} // User returns to this page
+            redirectUrl={currentPaymentPageUrl}
             customData={{
               kioskOrderId: kioskOrderId,
               totalAmountSGT: totalAmountSGT,
@@ -140,10 +138,8 @@ function PaymentPageContent() {
             }}
             onPaymentComplete={handlePaymentSuccess}
             onPaymentFailed={handlePaymentFailure}
-            onClose={handlePaymentModalClose} // Handle if user closes PortOne modal before completion
-            buttonText={`총 ${formatPrice(totalAmountKRW)}원 결제하기`}
-            buttonClassName="w-full py-3 bg-blue-600 text-white font-bold rounded-md hover:bg-blue-700 text-lg"
-            showModals={true} // Show PortOnePayment's own success/failure modals
+            onClose={handlePaymentModalClose}
+            showModals={true}
           />
           
           <button
