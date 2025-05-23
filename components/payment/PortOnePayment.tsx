@@ -143,6 +143,15 @@ export default function PortOnePayment({
         customData,
       };
 
+      // Add customer data, potentially required by some PGs like Inicis
+      if (pgProvider === 'html5_inicis') {
+        requestPayload.customer = {
+          fullName: customData?.customerName || orderName.split(' - ')[0] || "키오스크 고객", // Try to get a name or default
+          email: customData?.customerEmail || "kiosk-customer@example.com", // Placeholder
+          phoneNumber: customData?.customerPhone || "01000000000" // Placeholder
+        };
+      }
+
       if (redirectUrl) {
         requestPayload.redirectUrl = redirectUrl;
       }
