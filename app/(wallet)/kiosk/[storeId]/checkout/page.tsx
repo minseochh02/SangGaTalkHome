@@ -5,13 +5,6 @@ import { createClient } from '@/utils/supabase/client';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SafeImage } from '@/components/ui/image';
-import dynamic from 'next/dynamic';
-
-// Dynamically import the PortOnePayment component with no SSR
-const PortOnePayment = dynamic(() => import('@/components/payment/PortOnePayment'), { 
-  ssr: false,
-  loading: () => <div className="w-full py-3 bg-gray-400 text-white font-bold rounded-md text-center">결제 모듈 로딩중...</div>
-});
 
 // Types for cart items
 interface CartItem {
@@ -40,8 +33,8 @@ interface KioskOrder {
   // Add other fields as needed from your kiosk_orders table
 }
 
-// Add new type for payment methods
-type PaymentMethod = 'kiosk_dine_in' | 'kiosk_takeout' | 'kiosk_delivery' | 'card_payment';
+// Original PaymentMethod type, card_payment will be removed
+type OrderTypeOption = 'kiosk_dine_in' | 'kiosk_takeout' | 'kiosk_delivery';
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -55,7 +48,7 @@ export default function CheckoutPage() {
   // State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [storeName, setStoreName] = useState<string>('');
-  const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [totalAmount, setTotalAmount] = useState<number>(0); // This is SGT amount
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,11 +65,6 @@ export default function CheckoutPage() {
   const [notifiedOrderIdsThisSession, setNotifiedOrderIdsThisSession] = useState<string[]>([]);
   const orderNotificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const orderVibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Add new state for payment method
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [showPortOnePayment, setShowPortOnePayment] = useState<boolean>(false);
-  const [currentUrl, setCurrentUrl] = useState('');
 
   // Load cart from localStorage and fetch store details
   useEffect(() => {
@@ -95,12 +83,18 @@ export default function CheckoutPage() {
             const parsedCart = JSON.parse(storedCart);
             if (isActive) {
               setCartItems(parsedCart);
-              // Calculate total
-              const total = parsedCart.reduce(
-                (sum: number, item: CartItem) => sum + (item.sgt_price * item.quantity), 0
+              // Calculate total SGT amount
+              const totalSgt = parsedCart.reduce(
+                (sum: number, item: CartItem) => sum + (item.sgt_price * item.quantity) + 
+                                                (item.options?.reduce((optSum, opt) => optSum + opt.price_impact, 0) || 0) * item.quantity,
+                0
               );
-              setTotalAmount(total);
+              setTotalAmount(totalSgt);
             }
+          } else {
+            // If no cart, redirect back to kiosk main page
+            if (isActive) router.push(`/kiosk/${storeId}${sessionId ? `?sessionId=${sessionId}` : ''}`);
+            return;
           }
         } catch (err) {
           console.error('Error loading cart from localStorage:', err);
@@ -154,7 +148,7 @@ export default function CheckoutPage() {
     return () => {
       isActive = false; // Mark component as unmounted
     };
-  }, [storeId]); // Only depend on storeId
+  }, [storeId, supabase, router, sessionId]);
 
   // Effect for initializing notification sound
   useEffect(() => {
@@ -198,12 +192,7 @@ export default function CheckoutPage() {
       navigator.vibrate(0);
     }
   }, []);
-
-  const handleDismissActionableToast = useCallback(() => {
-    setShowActionableModal(false);
-    stopRepeatingVibration();
-  }, [stopRepeatingVibration]);
-
+  
   const handleCloseActionableModal = useCallback(() => {
     setShowActionableModal(false);
     stopRepeatingVibration();
@@ -211,20 +200,22 @@ export default function CheckoutPage() {
 
   // Check for sold out items
   useEffect(() => {
-    if (cartItems.length === 0) return;
+    if (cartItems.length === 0 && !isLoading) { // check isLoading to prevent redirect on initial load
+        // router.push(`/kiosk/${storeId}`); // Decided to keep user on page if cart becomes empty by sold out
+        return;
+    };
     
     let isActive = true;
     let alreadyChecking = false;
     
     const checkForSoldOutItems = async () => {
-      if (alreadyChecking || !isActive) return;
+      if (alreadyChecking || !isActive || cartItems.length === 0) return; // Add cartItems.length check
       
       alreadyChecking = true;
       try {
-        // Get product IDs from cart
         const productIds = cartItems.map(item => item.product_id);
+        if (productIds.length === 0) return; // No items to check
         
-        // Check if any products are sold out
         const { data } = await supabase
           .from('products')
           .select('product_id, product_name, is_sold_out')
@@ -234,7 +225,6 @@ export default function CheckoutPage() {
         if (!isActive) return;
         
         if (data && data.length > 0) {
-          // Some items are now sold out
           const soldOutNames = data.map(item => {
             const cartItem = cartItems.find(ci => ci.product_id === item.product_id);
             return cartItem?.product_name || '알 수 없는 상품';
@@ -242,7 +232,6 @@ export default function CheckoutPage() {
           
           alert(`주문 중 다음 상품이 품절되었습니다:\n${soldOutNames.join('\n')}\n\n장바구니로 돌아가 주문을 수정해 주세요.`);
           
-          // Remove sold out items from cart and update localStorage
           const updatedCart = cartItems.filter(
             item => !data.some(soldOut => soldOut.product_id === item.product_id)
           );
@@ -251,15 +240,16 @@ export default function CheckoutPage() {
             setCartItems(updatedCart);
             localStorage.setItem(`kiosk-cart-${storeId}`, JSON.stringify(updatedCart));
             
-            // Recalculate total
-            const total = updatedCart.reduce(
-              (sum, item) => sum + (item.sgt_price * item.quantity), 0
-            );
-            setTotalAmount(total);
+            const totalSgt = updatedCart.reduce(
+                 (sum: number, item: CartItem) => sum + (item.sgt_price * item.quantity) + 
+                                                (item.options?.reduce((optSum, opt) => optSum + opt.price_impact, 0) || 0) * item.quantity,
+                0
+              );
+            setTotalAmount(totalSgt);
             
-            // If cart is now empty, go back to kiosk page
             if (updatedCart.length === 0) {
-              router.push(`/kiosk/${storeId}`);
+              alert('장바구니의 모든 상품이 품절되어 키오스크 메인으로 돌아갑니다.');
+              router.push(`/kiosk/${storeId}${sessionId ? `?sessionId=${sessionId}` : ''}`);
             }
           }
         }
@@ -270,22 +260,19 @@ export default function CheckoutPage() {
       }
     };
     
-    // Call once, don't set up a polling interval that could cause loops
     checkForSoldOutItems();
     
     return () => {
       isActive = false;
     };
-  }, [cartItems.length, storeId, router]); // Only depend on cartItems.length, not the entire cartItems array
+  }, [cartItems, storeId, router, supabase, sessionId, isLoading]);
 
   // Add real-time subscription for product updates during checkout
   useEffect(() => {
-    // Skip if no storeId or cartItems not yet loaded
     if (!storeId || cartItems.length === 0) return;
     
     let isActive = true;
     
-    // Set up real-time subscription for product updates
     const productChannel = supabase
       .channel(`checkout-product-updates-${storeId}`)
       .on(
@@ -302,35 +289,31 @@ export default function CheckoutPage() {
           const updatedProduct = payload.new as any;
           console.log(`[Checkout] Product update received: ${updatedProduct.product_id}, sold_out: ${updatedProduct.is_sold_out}`);
           
-          // Check if this is a cart item that just became sold out
           if (updatedProduct.is_sold_out) {
             const affectedItem = cartItems.find(item => item.product_id === updatedProduct.product_id);
             
             if (affectedItem) {
-              // Alert the user
               alert(`'${affectedItem.product_name}' 상품이 품절되어 장바구니에서 제거됩니다.`);
               
-              // Remove the item from cart
               const updatedCart = cartItems.filter(item => item.product_id !== updatedProduct.product_id);
               setCartItems(updatedCart);
               
-              // Update localStorage
               try {
                 localStorage.setItem(`kiosk-cart-${storeId}`, JSON.stringify(updatedCart));
               } catch (err) {
                 console.error('Error updating cart in localStorage:', err);
               }
               
-              // Recalculate total
-              const total = updatedCart.reduce(
-                (sum, item) => sum + (item.sgt_price * item.quantity), 0
+              const totalSgt = updatedCart.reduce(
+                (sum: number, item: CartItem) => sum + (item.sgt_price * item.quantity) + 
+                                               (item.options?.reduce((optSum, opt) => optSum + opt.price_impact, 0) || 0) * item.quantity,
+               0
               );
-              setTotalAmount(total);
+              setTotalAmount(totalSgt);
               
-              // If cart is now empty, go back to kiosk page
               if (updatedCart.length === 0 && isActive) {
                 alert('모든 상품이 품절되어 키오스크 메인 화면으로 돌아갑니다.');
-                router.push(`/kiosk/${storeId}`);
+                router.push(`/kiosk/${storeId}${sessionId ? `?sessionId=${sessionId}` : ''}`);
               }
             }
           }
@@ -345,13 +328,12 @@ export default function CheckoutPage() {
         }
       });
     
-    // Cleanup function
     return () => {
       isActive = false;
       supabase.removeChannel(productChannel);
       console.log(`[Checkout] Unsubscribed from product updates`);
     };
-  }, [storeId, cartItems.length, router, supabase]); // Only depend on cartItems.length
+  }, [storeId, cartItems, router, supabase, sessionId]);
 
   // Effect for initializing session-wide Kiosk Order Status Subscription (for OTHER orders in the session)
   useEffect(() => {
@@ -411,247 +393,134 @@ export default function CheckoutPage() {
       }
       stopRepeatingVibration(); 
     };
-  }, [sessionId, notifiedOrderIdsThisSession, playKioskNotificationSound, startRepeatingVibration, stopRepeatingVibration, handleCloseActionableModal, actionableNotification, showActionableModal]);
+  }, [sessionId, notifiedOrderIdsThisSession, playKioskNotificationSound, startRepeatingVibration, stopRepeatingVibration, handleCloseActionableModal]);
 
-  // Modify handleOrderSubmit to accept card_payment
-  const handleOrderSubmit = async (orderType: PaymentMethod) => {
-    if (isSubmitting) return;
-    
-    if (orderType === 'card_payment') {
-      setSelectedPaymentMethod('card_payment');
-      setShowPortOnePayment(true);
-      return;
-    }
+  // UPDATED: handleOrderSubmit will now create a preliminary order and redirect to /payment page
+  const handleOrderSubmit = async (orderType: OrderTypeOption) => {
+    if (isSubmitting || cartItems.length === 0) return;
     
     setIsSubmitting(true);
+    setError(null); // Clear previous errors
     
     try {
-      // For delivery, redirect to the delivery address page
+      // For delivery, first redirect to the delivery address page to gather address
       if (orderType === 'kiosk_delivery') {
-        // Redirect to delivery address page with necessary params
-        router.push(`/kiosk/${storeId}/delivery-address?totalAmount=${totalAmount}&sessionId=${sessionId || ''}&deviceNumber=${deviceNumber || ''}`);
+        // Pass current cart total (SGT) and session info to delivery address page
+        router.push(`/kiosk/${storeId}/delivery-address?totalAmountSGT=${totalAmount}&sessionId=${sessionId || ''}&deviceNumber=${deviceNumber || ''}&orderType=${orderType}`);
+        // The delivery address page will then handle order creation and redirect to /payment
+        setIsSubmitting(false); // Allow submission again if user navigates back
         return;
       }
       
-      // Create new kiosk order - use the same fields as the mobile app
+      // 1. Create new kiosk order with 'pending_payment' status
       const { data: orderData, error: orderError } = await supabase
         .from('kiosk_orders')
         .insert({
           store_id: storeId,
           order_type: orderType,
-          total_amount: totalAmount,
-          status: 'pending',
+          total_amount: totalAmount, // Store SGT amount
+          status: 'pending_payment', // New status
           device_number: deviceNumber ? parseInt(deviceNumber) : null,
-          // Include any additional fields that might be required
           created_at: new Date().toISOString(),
           kiosk_session_id: sessionId,
+          // payment_method will be set after payment
         })
         .select('kiosk_order_id')
         .single();
         
       if (orderError || !orderData) {
-        console.error('Error creating kiosk order:', orderError);
-        setError('주문을 처리하는 중에 오류가 발생했습니다. 다시 시도해 주세요.');
+        console.error('Error creating preliminary kiosk order:', orderError);
+        setError('주문 준비 중 오류가 발생했습니다. 다시 시도해 주세요.');
         setIsSubmitting(false);
         return;
       }
       
       const kioskOrderId = orderData.kiosk_order_id;
       
-      // Create order items with all required fields
-      const orderItems = cartItems.map(item => ({
+      // 2. Create order items linked to this new order
+      const orderItemsToInsert = cartItems.map(item => ({
         kiosk_order_id: kioskOrderId,
         product_id: item.product_id,
         quantity: item.quantity,
-        price_at_purchase: item.sgt_price,
+        price_at_purchase: item.sgt_price, // Base SGT price per unit
+        // total_price_at_purchase: (item.sgt_price + (item.options?.reduce((sum, opt) => sum + opt.price_impact, 0) || 0)) * item.quantity, // Total SGT for this line item
         created_at: new Date().toISOString()
       }));
       
-      const { data: orderItemsData, error: itemsError } = await supabase
+      const { data: insertedItemsData, error: itemsError } = await supabase
         .from('kiosk_order_items')
-        .insert(orderItems)
-        .select('kiosk_order_item_id, product_id');
+        .insert(orderItemsToInsert)
+        .select('kiosk_order_item_id, product_id'); // Select to get IDs for options
         
       if (itemsError) {
         console.error('Error creating kiosk order items:', itemsError);
-        // Continue to success page even if items have an error
+        // Attempt to clean up the preliminary order if items fail? Or mark as failed?
+        // For now, proceed to payment, but log this error.
+        // Consider a rollback or error state for the order.
+        setError('주문 항목 저장 중 오류가 발생했습니다.');
+        // To be safe, might not want to proceed to payment if items fail to save.
+        // For now, we'll let it proceed but this is a point of attention.
       }
-      
-      // Save order item options if items were successfully created
-      if (orderItemsData && orderItemsData.length > 0) {
-        try {
-          // Prepare option records for all items with options
-          const allOptionRecords = [];
+
+      // 3. Save order item options if items were successfully created
+      if (insertedItemsData && insertedItemsData.length > 0) {
+        const allOptionRecords = [];
+        for (const cartItem of cartItems) {
+          if (!cartItem.options || cartItem.options.length === 0) continue;
           
-          for (const item of cartItems) {
-            if (!item.options || item.options.length === 0) continue;
-            
-            // Find the corresponding order item ID
-            const orderItem = orderItemsData.find(oi => oi.product_id === item.product_id);
-            if (!orderItem) continue;
-            
-            // Create option records for this item
-            const itemOptionRecords = item.options.map(option => ({
-              kiosk_order_item_id: orderItem.kiosk_order_item_id,
-              option_group_id: option.groupId,
-              option_group_name: option.name.split(':')[0].trim(), // Extract group name from the formatted name
-              option_choice_id: option.choiceId,
-              option_choice_name: option.name.split(':')[1]?.trim() || option.name, // Extract choice name or use full name
-              price_impact: option.price_impact,
+          const correspondingOrderItem = insertedItemsData.find(
+            (insItem) => insItem.product_id === cartItem.product_id
+          );
+
+          if (correspondingOrderItem) {
+            const itemOptionRecords = cartItem.options.map(option => ({
+              kiosk_order_item_id: correspondingOrderItem.kiosk_order_item_id,
+              option_group_id: option.groupId, // Assuming this ID exists in your DB or is just for reference
+              option_group_name: option.name.split(':')[0].trim(),
+              option_choice_id: option.choiceId, // Assuming this ID exists
+              option_choice_name: option.name.split(':')[1]?.trim() || option.name,
+              price_impact: option.price_impact, // SGT price impact
               created_at: new Date().toISOString()
             }));
-            
             allOptionRecords.push(...itemOptionRecords);
           }
-          
-          // Save all option records if there are any
-          if (allOptionRecords.length > 0) {
-            const { error: optionsError } = await supabase
-              .from('kiosk_order_item_options')
-              .insert(allOptionRecords);
-              
-            if (optionsError) {
-              console.error('Error saving order item options:', optionsError);
-              // Continue to success page even if options have an error
-            }
+        }
+        if (allOptionRecords.length > 0) {
+          const { error: optionsError } = await supabase
+            .from('kiosk_order_item_options')
+            .insert(allOptionRecords);
+          if (optionsError) {
+            console.error('Error saving order item options:', optionsError);
+            setError('주문 옵션 저장 중 오류가 발생했습니다.');
+            // Similar to item error, consider implications for proceeding.
           }
-        } catch (optErr) {
-          console.error('Error processing order options:', optErr);
-          // Continue to success page even if option processing fails
         }
       }
       
-      // Clear cart in localStorage
-      localStorage.removeItem(`kiosk-cart-${storeId}`);
+      // 4. Redirect to the new payment page
+      const orderName = `${storeName} - ${orderType === 'kiosk_dine_in' ? '매장식사' : '포장'}`; // Example order name
       
-      // Navigate to success page
-      router.push(`/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${sessionId}`);
+      // Clear cart from localStorage *before* redirecting to payment page.
+      // If payment fails on the payment page, the user would need to start a new order.
+      localStorage.removeItem(`kiosk-cart-${storeId}`);
+
+      router.push(
+        `/kiosk/${storeId}/payment?kioskOrderId=${kioskOrderId}&orderName=${encodeURIComponent(orderName)}&totalAmountSGT=${totalAmount}&orderType=${orderType}&originalSessionId=${sessionId || ''}&originalDeviceNumber=${deviceNumber || ''}`
+      );
+
     } catch (err) {
-      console.error('Error in order submission:', err);
-      setError('결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
-    } finally {
+      console.error('Error in order submission process:', err);
+      setError('주문 처리 중 예기치 않은 오류가 발생했습니다. 다시 시도해 주세요.');
       setIsSubmitting(false);
-    }
+    } 
+    // No finally { setIsSubmitting(false) } here because we are redirecting
   };
 
-  // Add handler for PortOne payment completion
-  const handlePortOnePaymentComplete = async (paymentResult: any) => {
-    try {
-      setIsSubmitting(true);
-      
-      // Create new kiosk order with card payment information
-      const { data: orderData, error: orderError } = await supabase
-        .from('kiosk_orders')
-        .insert({
-          store_id: storeId,
-          order_type: 'kiosk_dine_in', // Default to dine in for card payments 
-          total_amount: totalAmount,
-          status: 'pending',
-          device_number: deviceNumber ? parseInt(deviceNumber) : null,
-          payment_method: 'card',
-          payment_id: paymentResult.paymentId || null,
-          created_at: new Date().toISOString(),
-          kiosk_session_id: sessionId,
-        })
-        .select('kiosk_order_id')
-        .single();
-        
-      if (orderError || !orderData) {
-        console.error('Error creating kiosk order:', orderError);
-        setError('주문을 처리하는 중에 오류가 발생했습니다. 다시 시도해 주세요.');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const kioskOrderId = orderData.kiosk_order_id;
-      
-      // Create order items with all required fields
-      const orderItems = cartItems.map(item => ({
-        kiosk_order_id: kioskOrderId,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price_at_purchase: item.sgt_price,
-        created_at: new Date().toISOString()
-      }));
-      
-      const { data: orderItemsData, error: itemsError } = await supabase
-        .from('kiosk_order_items')
-        .insert(orderItems)
-        .select('kiosk_order_item_id, product_id');
-        
-      if (itemsError) {
-        console.error('Error creating kiosk order items:', itemsError);
-        // Continue to success page even if items have an error
-      }
-      
-      // Save order item options if items were successfully created
-      if (orderItemsData && orderItemsData.length > 0) {
-        try {
-          // Prepare option records for all items with options
-          const allOptionRecords = [];
-          
-          for (const item of cartItems) {
-            if (!item.options || item.options.length === 0) continue;
-            
-            // Find the corresponding order item ID
-            const orderItem = orderItemsData.find(oi => oi.product_id === item.product_id);
-            if (!orderItem) continue;
-            
-            // Create option records for this item
-            const itemOptionRecords = item.options.map(option => ({
-              kiosk_order_item_id: orderItem.kiosk_order_item_id,
-              option_group_id: option.groupId,
-              option_group_name: option.name.split(':')[0].trim(), // Extract group name from the formatted name
-              option_choice_id: option.choiceId,
-              option_choice_name: option.name.split(':')[1]?.trim() || option.name, // Extract choice name or use full name
-              price_impact: option.price_impact,
-              created_at: new Date().toISOString()
-            }));
-            
-            allOptionRecords.push(...itemOptionRecords);
-          }
-          
-          // Save all option records if there are any
-          if (allOptionRecords.length > 0) {
-            const { error: optionsError } = await supabase
-              .from('kiosk_order_item_options')
-              .insert(allOptionRecords);
-              
-            if (optionsError) {
-              console.error('Error saving order item options:', optionsError);
-              // Continue to success page even if options have an error
-            }
-          }
-        } catch (optErr) {
-          console.error('Error processing order options:', optErr);
-          // Continue to success page even if option processing fails
-        }
-      }
-      
-      // Clear cart in localStorage
-      localStorage.removeItem(`kiosk-cart-${storeId}`);
-      
-      // Navigate to success page
-      router.push(`/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=card_payment&sessionId=${sessionId}`);
-    } catch (err) {
-      console.error('Error in card payment order submission:', err);
-      setError('카드 결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
-    } finally {
-      setIsSubmitting(false);
-      setShowPortOnePayment(false);
-    }
-  };
-  
-  const handlePortOnePaymentFailed = (error: any) => {
-    setError(`카드 결제 실패: ${error.message || '알 수 없는 오류가 발생했습니다.'}`);
-    setShowPortOnePayment(false);
-  };
-
-  // Modify handleOptionSelect to use the new PaymentMethod type
-  const handleOptionSelect = (option: 'dine-in' | 'takeout' | 'delivery' | 'card') => {
+  // UPDATED: handleOptionSelect to only handle dine-in, takeout, delivery
+  const handleOptionSelect = (option: 'dine-in' | 'takeout' | 'delivery') => {
     if (isSubmitting) return;
     
-    let orderType: PaymentMethod;
+    let orderType: OrderTypeOption;
     let optionName: string;
     
     switch (option) {
@@ -667,16 +536,10 @@ export default function CheckoutPage() {
         orderType = 'kiosk_delivery';
         optionName = '배달';
         break;
-      case 'card':
-        orderType = 'card_payment';
-        optionName = '카드 결제';
-        break;
-      default:
-        orderType = 'kiosk_dine_in';
-        optionName = '매장 에서';
+      // No default needed as type is constrained
     }
     
-    if (confirm(`${optionName}로 주문을 진행하시겠습니까?`)) {
+    if (confirm(`${optionName}로 주문을 진행하시겠습니까? (결제 페이지로 이동합니다)`)) {
       handleOrderSubmit(orderType);
     }
   };
@@ -691,17 +554,15 @@ export default function CheckoutPage() {
     return Math.round(sgtAmount * exchangeRate);
   };
 
-  // Update renderOrderOptions to include card payment option
+  // UPDATED: renderOrderOptions to remove card payment
   const renderOrderOptions = () => {
-    // Count available options including card payment
     const availableOptionsCount = [
       storeOptions.kiosk_dine_in_enabled,
       storeOptions.kiosk_takeout_enabled,
       storeOptions.kiosk_delivery_enabled,
-      true, // Card payment is always available
     ].filter(Boolean).length;
 
-    if (availableOptionsCount === 0) {
+    if (availableOptionsCount === 0 && !isLoading) { // check isLoading
       return (
         <div className="py-8 text-center">
           <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -711,7 +572,7 @@ export default function CheckoutPage() {
             현재 이용 가능한 주문 옵션이 없습니다.
           </p>
           <Link 
-            href={`/kiosk/${storeId}`}
+            href={`/kiosk/${storeId}${sessionId ? `?sessionId=${sessionId}` : ''}`}
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             돌아가기
@@ -726,7 +587,7 @@ export default function CheckoutPage() {
           <button 
             className="w-full p-4 border rounded-lg flex items-center hover:bg-gray-50 transition-colors"
             onClick={() => handleOptionSelect('dine-in')}
-            disabled={isSubmitting}
+            disabled={isSubmitting || cartItems.length === 0}
           >
             <div className="w-12 h-12 flex items-center justify-center bg-red-100 text-red-700 rounded-full mr-4">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -749,7 +610,7 @@ export default function CheckoutPage() {
           <button 
             className="w-full p-4 border rounded-lg flex items-center hover:bg-gray-50 transition-colors"
             onClick={() => handleOptionSelect('takeout')}
-            disabled={isSubmitting}
+            disabled={isSubmitting || cartItems.length === 0}
           >
             <div className="w-12 h-12 flex items-center justify-center bg-orange-100 text-orange-700 rounded-full mr-4">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -772,7 +633,7 @@ export default function CheckoutPage() {
           <button 
             className="w-full p-4 border rounded-lg flex items-center hover:bg-gray-50 transition-colors"
             onClick={() => handleOptionSelect('delivery')}
-            disabled={isSubmitting}
+            disabled={isSubmitting || cartItems.length === 0}
           >
             <div className="w-12 h-12 flex items-center justify-center bg-green-100 text-green-700 rounded-full mr-4">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -790,39 +651,11 @@ export default function CheckoutPage() {
             </div>
           </button>
         )}
-
-        {/* Add card payment option */}
-        <button 
-          className="w-full p-4 border rounded-lg flex items-center hover:bg-gray-50 transition-colors"
-          onClick={() => handleOptionSelect('card')}
-          disabled={isSubmitting}
-        >
-          <div className="w-12 h-12 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full mr-4">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-          </div>
-          <div className="text-left">
-            <h3 className="font-bold text-lg">카드 결제</h3>
-            <p className="text-gray-600">온라인 카드 결제로 진행하기</p>
-          </div>
-          <div className="ml-auto">
-            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </button>
       </div>
     );
   };
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setCurrentUrl(window.location.href);
-    }
-  }, []);
-
-  if (isLoading) {
+  if (isLoading && cartItems.length === 0) { // Added cartItems.length check for initial loading
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
         <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md text-center">
@@ -832,6 +665,24 @@ export default function CheckoutPage() {
       </div>
     );
   }
+  
+  if (cartItems.length === 0 && !isLoading) {
+    return (
+       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+        <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+          <h2 className="text-xl font-bold mb-3">장바구니가 비었습니다.</h2>
+          <p className="text-gray-600 mb-6">상품을 담고 다시 주문해주세요.</p>
+          <Link 
+            href={`/kiosk/${storeId}${sessionId ? `?sessionId=${sessionId}` : ''}`}
+            className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+          >
+            상품 보러가기
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -839,11 +690,11 @@ export default function CheckoutPage() {
       <header className="bg-red-600 text-white p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center">
-            <Link href={`/kiosk/${storeId}`} className="mr-2">
+            <button onClick={() => router.back()} className="mr-2 p-1 rounded-md hover:bg-red-700">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-            </Link>
+            </button>
             <h1 className="text-xl font-bold">주문 방법 선택</h1>
           </div>
         </div>
@@ -864,18 +715,27 @@ export default function CheckoutPage() {
             
             <div className="border-t border-b py-4 my-4">
               <div className="max-h-48 overflow-y-auto">
-                {cartItems.map((item) => (
-                  <div key={item.product_id} className="flex justify-between py-2">
+                {cartItems.map((item, index) => ( // Added index for key
+                  <div key={`${item.product_id}-${index}`} className="flex justify-between py-2">
                     <div>
                       <span className="font-medium">{item.product_name}</span>
                       <span className="text-gray-500 ml-2">x{item.quantity}</span>
+                       {item.options && item.options.length > 0 && (
+                        <div className="text-xs text-gray-500 pl-2">
+                          {item.options.map(opt => opt.name).join(', ')}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="font-medium flex items-center gap-1 flex-row justify-end">
-                        {formatPrice(convertToKRW(item.sgt_price * item.quantity))}원
+                        {formatPrice(convertToKRW(
+                           (item.sgt_price + (item.options?.reduce((sum, opt) => sum + opt.price_impact, 0) || 0)) * item.quantity
+                        ))}원
                       </div>
                       <div className="text-sm text-gray-500 flex items-center gap-1 flex-row justify-end">
-                        {formatPrice(item.sgt_price * item.quantity)} SGT
+                        {formatPrice(
+                           (item.sgt_price + (item.options?.reduce((sum, opt) => sum + opt.price_impact, 0) || 0)) * item.quantity
+                        )} SGT
                       </div>
                     </div>
                   </div>
@@ -896,59 +756,23 @@ export default function CheckoutPage() {
             </div>
           </div>
           
-          {/* Payment method selection or PortOne payment UI */}
-          {!showPortOnePayment ? (
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-bold mb-4">주문 방법을 선택해주세요</h2>
-              
-              {isSubmitting ? (
-                <div className="py-8 text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-                  <p className="text-gray-600">주문을 처리 중입니다...</p>
-                </div>
-              ) : (
-                renderOrderOptions()
-              )}
-            </div>
-          ) : (
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-bold mb-4">카드 결제</h2>
-              <p className="mb-6 text-gray-600">결제 버튼을 클릭하여 결제를 진행해주세요.</p>
-              
-              {/* PortOne Payment Component */}
-              <PortOnePayment 
-                storeId="store-e4038486-8d83-41a5-acf1-844a009e0d94"
-                channelKey="channel-key-01764171-b249-4c16-9d18-e9174fa8e611"
-                orderName="상가 키오스크 주문"
-                totalAmount={convertToKRW(totalAmount)}
-                currency="KRW"
-                redirectUrl={currentUrl}
-                customData={{ 
-                  storeId: storeId,
-                  sessionId: sessionId,
-                  deviceNumber: deviceNumber,
-                  sgtAmount: totalAmount,
-                  kioskOrderIdToUpdate: null
-                }}
-                onPaymentComplete={handlePortOnePaymentComplete}
-                onPaymentFailed={handlePortOnePaymentFailed}
-                onClose={() => setShowPortOnePayment(false)}
-                buttonText="결제하기"
-                buttonClassName="w-full py-3 bg-blue-600 text-white font-bold rounded-md hover:bg-blue-700"
-              />
-              
-              <button
-                className="w-full mt-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100"
-                onClick={() => setShowPortOnePayment(false)}
-              >
-                취소
-              </button>
-            </div>
-          )}
+          {/* Payment method selection (no PortOne UI here anymore) */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-bold mb-4">주문 방법을 선택해주세요</h2>
+            
+            {isSubmitting ? (
+              <div className="py-8 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                <p className="text-gray-600">주문 정보를 생성 중입니다...</p>
+              </div>
+            ) : (
+              renderOrderOptions()
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Order Ready Modal Notification for other orders in session */}
+      {/* Order Ready Modal Notification for other orders in session (remains the same) */}
       {showActionableModal && actionableNotification && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[990] p-4">
           <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-auto text-center animate-pop-in">

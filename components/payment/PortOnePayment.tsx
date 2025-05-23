@@ -10,6 +10,7 @@ let PortOne: any = null;
 interface PortOnePaymentProps {
   storeId: string;
   channelKey: string;
+  merchantUidFromCaller?: string;
   orderName: string;
   totalAmount: number;
   currency?: string;
@@ -27,6 +28,7 @@ interface PortOnePaymentProps {
 export default function PortOnePayment({
   storeId,
   channelKey,
+  merchantUidFromCaller,
   orderName,
   totalAmount,
   currency = 'KRW',
@@ -132,7 +134,7 @@ export default function PortOnePayment({
     if (!isLoaded) return;
     
     try {
-      const paymentId = randomId();
+      const paymentId = merchantUidFromCaller || randomId();
       
       const requestPayload: any = {
         storeId,
