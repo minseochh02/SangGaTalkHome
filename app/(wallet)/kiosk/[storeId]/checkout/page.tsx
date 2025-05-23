@@ -76,6 +76,7 @@ export default function CheckoutPage() {
   // Add new state for payment method
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [showPortOnePayment, setShowPortOnePayment] = useState<boolean>(false);
+  const [currentUrl, setCurrentUrl] = useState('');
 
   // Load cart from localStorage and fetch store details
   useEffect(() => {
@@ -815,6 +816,12 @@ export default function CheckoutPage() {
     );
   };
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentUrl(window.location.href);
+    }
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
@@ -909,18 +916,19 @@ export default function CheckoutPage() {
               <p className="mb-6 text-gray-600">결제 버튼을 클릭하여 결제를 진행해주세요.</p>
               
               {/* PortOne Payment Component */}
-              {/* we need to use the environment variable for the storeId and channelKey */}
               <PortOnePayment 
-                storeId="store-0035c865-604f-4994-b96d-0ca135076482"
-                channelKey="channel-key-7fe9bdc4-fab3-4d5d-8d4e-39e7f746ef70"
+                storeId="store-e4038486-8d83-41a5-acf1-844a009e0d94"
+                channelKey="channel-key-01764171-b249-4c16-9d18-e9174fa8e611"
                 orderName="상가 키오스크 주문"
                 totalAmount={convertToKRW(totalAmount)}
                 currency="KRW"
+                redirectUrl={currentUrl}
                 customData={{ 
                   storeId: storeId,
                   sessionId: sessionId,
                   deviceNumber: deviceNumber,
-                  sgtAmount: totalAmount
+                  sgtAmount: totalAmount,
+                  kioskOrderIdToUpdate: null
                 }}
                 onPaymentComplete={handlePortOnePaymentComplete}
                 onPaymentFailed={handlePortOnePaymentFailed}
