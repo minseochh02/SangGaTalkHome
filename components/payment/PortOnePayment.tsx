@@ -76,6 +76,9 @@ export default function PortOnePayment({
     const errorMsg = searchParams.get('error_msg');
 
     if (merchantUid && impSuccess !== null) {
+      console.log(`[PortOnePayment] Detected return from redirect. merchant_uid: ${merchantUid}, imp_success: ${impSuccess}, imp_uid: ${impUid}`);
+      
+      // Clean up URL without triggering another navigation
       const currentPath = window.location.pathname;
       const existingParams = new URLSearchParams(window.location.search);
       existingParams.delete('merchant_uid');
@@ -83,10 +86,17 @@ export default function PortOnePayment({
       existingParams.delete('imp_uid');
       existingParams.delete('error_msg');
       const newQueryString = existingParams.toString();
-      router.replace(`${currentPath}${newQueryString ? `?${newQueryString}` : ''}`);
+      
+      // Use history.replaceState to clean URL without causing navigation
+      if (typeof window !== 'undefined') {
+        const newUrl = `${currentPath}${newQueryString ? `?${newQueryString}` : ''}`;
+        window.history.replaceState({}, '', newUrl);
+      }
 
       if (impSuccess === 'true') {
         setPaymentStatus({ status: 'PENDING', message: '결제 확인 중...' });
+        console.log(`[PortOnePayment] Redirect successful, verifying payment with merchant_uid: ${merchantUid}, imp_uid: ${impUid}`);
+        
         fetch('/api/payment/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -95,19 +105,31 @@ export default function PortOnePayment({
         .then(async (res) => {
           if (res.ok) {
             const paymentComplete = await res.json();
+            console.log(`[PortOnePayment] Payment verification after redirect:`, paymentComplete);
             setPaymentStatus({ status: paymentComplete.status });
-            if (onPaymentComplete) onPaymentComplete({...paymentComplete, paymentId: merchantUid});
+            
+            if (onPaymentComplete) {
+              console.log(`[PortOnePayment] Calling onPaymentComplete after redirect with status: ${paymentComplete.status}`);
+              // Use setTimeout to ensure the status change has time to propagate
+              setTimeout(() => {
+                onPaymentComplete({...paymentComplete, paymentId: merchantUid});
+              }, 100);
+            }
           } else {
-            const errorMessage = await res.text();
+            const errorResponse = await res.json();
+            const errorMessage = errorResponse.message || 'Unknown error';
+            console.error(`[PortOnePayment] Error verifying payment after redirect:`, errorMessage);
             setPaymentStatus({ status: 'FAILED', message: errorMessage });
             if (onPaymentFailed) onPaymentFailed({ message: errorMessage, paymentId: merchantUid });
           }
         })
         .catch((err) => {
+          console.error(`[PortOnePayment] Exception verifying payment after redirect:`, err);
           setPaymentStatus({ status: 'FAILED', message: err.message || '리디렉션 후 결제 확인에 실패했습니다.' });
           if (onPaymentFailed) onPaymentFailed({ error: err, paymentId: merchantUid });
         });
       } else {
+        console.error(`[PortOnePayment] Redirect indicates payment failure:`, errorMsg);
         setPaymentStatus({ status: 'FAILED', message: errorMsg || '리디렉션 후 결제가 실패 처리되었습니다.' });
         if (onPaymentFailed) onPaymentFailed({ message: errorMsg || '결제 실패', paymentId: merchantUid });
       }

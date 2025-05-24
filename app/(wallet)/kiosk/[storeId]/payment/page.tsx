@@ -52,6 +52,41 @@ function PaymentPageContent() {
     setIsLoading(false);
   }, [totalAmountSGT]);
 
+  // Add effect to check if order is already completed
+  useEffect(() => {
+    // Skip if no order ID or still loading
+    if (!kioskOrderId || isLoading) return;
+
+    const checkOrderStatus = async () => {
+      try {
+        console.log(`[PaymentPage] Checking status of order: ${kioskOrderId}`);
+        const { data: orderData, error } = await supabase
+          .from('kiosk_orders')
+          .select('status')
+          .eq('kiosk_order_id', kioskOrderId)
+          .single();
+
+        if (error) {
+          console.error('[PaymentPage] Error checking order status:', error);
+          return;
+        }
+
+        console.log(`[PaymentPage] Order ${kioskOrderId} status: ${orderData?.status}`);
+        
+        // If order is already completed, redirect to success page
+        if (orderData?.status === 'completed') {
+          console.log('[PaymentPage] Order already completed, redirecting to success page');
+          const successUrl = `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`;
+          window.location.href = successUrl;
+        }
+      } catch (err) {
+        console.error('[PaymentPage] Error in checkOrderStatus:', err);
+      }
+    };
+
+    checkOrderStatus();
+  }, [kioskOrderId, storeId, orderType, originalSessionId, isLoading, supabase]);
+
   const handlePaymentSuccess = (paymentResult: any) => {
     console.log("[PaymentPage] Payment result received:", paymentResult);
     // Only redirect if payment was successful
@@ -59,14 +94,18 @@ function PaymentPageContent() {
       const successUrl = `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`;
       console.log(`[PaymentPage] Payment success, redirecting to: ${successUrl}`);
       
-      // Try using window.location for a hard redirect instead of router.push
+      // Always use window.location.href for a hard redirect
+      // This is more reliable after payment processing
       try {
-        router.push(successUrl);
-        console.log('[PaymentPage] router.push completed');
-      } catch (error) {
-        console.error('[PaymentPage] Error with router.push:', error);
-        // Fallback to window.location
+        console.log('[PaymentPage] Executing redirect via window.location.href');
         window.location.href = successUrl;
+      } catch (error) {
+        console.error('[PaymentPage] Error with redirect:', error);
+        // Try an alternative approach if the first one fails
+        setTimeout(() => {
+          console.log('[PaymentPage] Attempting redirect again via setTimeout');
+          window.location.href = successUrl;
+        }, 500);
       }
     } else {
       console.log(`[PaymentPage] Payment not successful, status: ${paymentResult.status}`);
