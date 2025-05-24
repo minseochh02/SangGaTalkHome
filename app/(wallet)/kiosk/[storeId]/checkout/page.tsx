@@ -402,6 +402,9 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     setError(null); // Clear previous errors
     
+    // Calculate total_amount_krw using the current exchangeRate
+    const calculatedTotalAmountKRW = Math.round(totalAmount * exchangeRate);
+
     try {
       // For delivery, first redirect to the delivery address page to gather address
       if (orderType === 'kiosk_delivery') {
@@ -419,6 +422,7 @@ export default function CheckoutPage() {
           store_id: storeId,
           order_type: orderType,
           total_amount: totalAmount, // Store SGT amount
+          total_amount_krw: calculatedTotalAmountKRW, // Store KRW amount
           status: 'pending_payment', // New status
           device_number: deviceNumber ? parseInt(deviceNumber) : null,
           created_at: new Date().toISOString(),
