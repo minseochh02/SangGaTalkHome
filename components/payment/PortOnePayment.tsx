@@ -76,7 +76,7 @@ export default function PortOnePayment({
     const errorMsg = searchParams.get('error_msg');
 
     if (merchantUid && impSuccess !== null) {
-      console.log(`[PortOnePayment] Detected return from redirect. merchant_uid: ${merchantUid}, imp_success: ${impSuccess}, imp_uid: ${impUid}`);
+      console.log(`[PortOnePayment] Detected return from redirect. merchant_uid: ${merchantUid}, imp_success: ${impSuccess}, imp_uid: ${impUid}, error_msg: ${errorMsg}`);
       
       // Clean up URL without triggering another navigation
       const currentPath = window.location.pathname;
@@ -95,37 +95,44 @@ export default function PortOnePayment({
 
       if (impSuccess === 'true') {
         setPaymentStatus({ status: 'PENDING', message: '결제 확인 중...' });
-        console.log(`[PortOnePayment] Redirect successful, verifying payment with merchant_uid: ${merchantUid}, imp_uid: ${impUid}`);
+        const requestBody = { paymentId: merchantUid, impUid: impUid };
+        console.log(`[PortOnePayment] Redirect successful. Verifying payment. Sending to /api/payment/complete:`, JSON.stringify(requestBody));
         
         fetch('/api/payment/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentId: merchantUid, impUid: impUid }),
+          body: JSON.stringify(requestBody),
         })
         .then(async (res) => {
+          const responseBodyText = await res.text(); // Read body once as text
+          console.log(`[PortOnePayment] Verification response status: ${res.status}, Body: ${responseBodyText}`);
+
           if (res.ok) {
-            const paymentComplete = await res.json();
-            console.log(`[PortOnePayment] Payment verification after redirect:`, paymentComplete);
-            setPaymentStatus({ status: paymentComplete.status });
-            
-            if (onPaymentComplete) {
-              console.log(`[PortOnePayment] Calling onPaymentComplete after redirect with status: ${paymentComplete.status}`);
-              // Use setTimeout to ensure the status change has time to propagate
-              setTimeout(() => {
-                onPaymentComplete({...paymentComplete, paymentId: merchantUid});
-              }, 100);
+            try {
+              const paymentComplete = JSON.parse(responseBodyText);
+              console.log(`[PortOnePayment] Payment verification JSON parsed:`, paymentComplete);
+              setPaymentStatus({ status: paymentComplete.status });
+              
+              if (onPaymentComplete) {
+                console.log(`[PortOnePayment] Calling onPaymentComplete after redirect with status: ${paymentComplete.status}`);
+                setTimeout(() => {
+                  onPaymentComplete({...paymentComplete, paymentId: merchantUid});
+                }, 100);
+              }
+            } catch (parseError) {
+              console.error('[PortOnePayment] Error parsing JSON response from /api/payment/complete:', parseError, 'Raw body:', responseBodyText);
+              setPaymentStatus({ status: 'FAILED', message: '결제 확인 응답 처리 오류.' });
+              if (onPaymentFailed) onPaymentFailed({ message: '결제 확인 응답 처리 오류.', paymentId: merchantUid, rawResponse: responseBodyText });
             }
           } else {
-            const errorResponse = await res.json();
-            const errorMessage = errorResponse.message || 'Unknown error';
-            console.error(`[PortOnePayment] Error verifying payment after redirect:`, errorMessage);
-            setPaymentStatus({ status: 'FAILED', message: errorMessage });
-            if (onPaymentFailed) onPaymentFailed({ message: errorMessage, paymentId: merchantUid });
+            console.error(`[PortOnePayment] Error verifying payment after redirect. Status: ${res.status}. Response: ${responseBodyText}`);
+            setPaymentStatus({ status: 'FAILED', message: `결제 확인 실패 (상태: ${res.status})` });
+            if (onPaymentFailed) onPaymentFailed({ message: `결제 확인 실패: ${responseBodyText}`, paymentId: merchantUid, status: res.status });
           }
         })
         .catch((err) => {
-          console.error(`[PortOnePayment] Exception verifying payment after redirect:`, err);
-          setPaymentStatus({ status: 'FAILED', message: err.message || '리디렉션 후 결제 확인에 실패했습니다.' });
+          console.error(`[PortOnePayment] Network or other exception verifying payment after redirect:`, err);
+          setPaymentStatus({ status: 'FAILED', message: err.message || '리디렉션 후 결제 확인 중 네트워크 오류가 발생했습니다.' });
           if (onPaymentFailed) onPaymentFailed({ error: err, paymentId: merchantUid });
         });
       } else {
@@ -151,13 +158,13 @@ export default function PortOnePayment({
     if (!isLoaded) return;
     
     try {
-      const paymentId = merchantUidFromCaller || randomId();
-      console.log(`[PortOnePayment] Initiating payment with ID: ${paymentId}`);
+      const paymentIdForPortOne = merchantUidFromCaller || randomId();
+      console.log(`[PortOnePayment] Initiating payment (non-redirect flow) with PortOne Payment ID (merchant_uid): ${paymentIdForPortOne}`);
       
       const requestPayload: any = {
         storeId,
         channelKey,
-        paymentId,
+        paymentId: paymentIdForPortOne,
         orderName,
         totalAmount,
         currency,
@@ -192,36 +199,43 @@ export default function PortOnePayment({
       
       if (!redirectUrl || (payment && payment.success === true && !payment.code)) {
          setPaymentStatus({ status: 'PENDING', message: '결제 확인 중...' });
-         console.log(`[PortOnePayment] Verifying payment with ID: ${payment.paymentId}`);
+         const requestBody = { paymentId: payment.paymentId, impUid: payment.imp_uid }; // Assuming payment.imp_uid is available
+         console.log(`[PortOnePayment] Non-redirect flow. Verifying payment. Sending to /api/payment/complete:`, JSON.stringify(requestBody));
+         
          const completeResponse = await fetch('/api/payment/complete', {
            method: 'POST',
            headers: {
              'Content-Type': 'application/json',
            },
-           body: JSON.stringify({
-             paymentId: payment.paymentId,
-           }),
+           body: JSON.stringify(requestBody),
          });
+
+         const responseBodyText = await completeResponse.text();
+         console.log(`[PortOnePayment] Non-redirect verification response status: ${completeResponse.status}, Body: ${responseBodyText}`);
          
          if (completeResponse.ok) {
-           const paymentComplete = await completeResponse.json();
-           console.log(`[PortOnePayment] Payment verification response:`, paymentComplete);
-           setPaymentStatus({
-             status: paymentComplete.status,
-           });
-           if (onPaymentComplete) {
-             console.log(`[PortOnePayment] Calling onPaymentComplete with status: ${paymentComplete.status}`);
-             onPaymentComplete({...paymentComplete, paymentId: payment.paymentId});
-           } else {
-             console.log(`[PortOnePayment] onPaymentComplete callback is not defined`);
+           try {
+             const paymentComplete = JSON.parse(responseBodyText);
+             console.log(`[PortOnePayment] Non-redirect payment verification JSON parsed:`, paymentComplete);
+             setPaymentStatus({
+               status: paymentComplete.status,
+             });
+             if (onPaymentComplete) {
+               console.log(`[PortOnePayment] Calling onPaymentComplete (non-redirect) with status: ${paymentComplete.status}`);
+               onPaymentComplete({...paymentComplete, paymentId: payment.paymentId});
+             }
+           } catch (parseError) {
+             console.error('[PortOnePayment] Error parsing JSON response from /api/payment/complete (non-redirect):', parseError, 'Raw body:', responseBodyText);
+             setPaymentStatus({ status: 'FAILED', message: '결제 확인 응답 처리 오류 (non-redirect).' });
+             if (onPaymentFailed) onPaymentFailed({ message: '결제 확인 응답 처리 오류 (non-redirect).', paymentId: payment.paymentId, rawResponse: responseBodyText });
            }
          } else {
-           const errorMessage = await completeResponse.text();
+           console.error(`[PortOnePayment] Error verifying payment (non-redirect). Status: ${completeResponse.status}. Response: ${responseBodyText}`);
            setPaymentStatus({
              status: 'FAILED',
-             message: errorMessage,
+             message: `결제 확인 실패 (상태: ${completeResponse.status})`,
            });
-           if (onPaymentFailed) onPaymentFailed({ message: errorMessage, paymentId: payment.paymentId });
+           if (onPaymentFailed) onPaymentFailed({ message: `결제 확인 실패: ${responseBodyText}`, paymentId: payment.paymentId, status: completeResponse.status });
          }
       } else if (payment && payment.success === false && payment.message) {
         setPaymentStatus({
