@@ -72,11 +72,11 @@ export default function PortOnePayment({
   useEffect(() => {
     const merchantUid = searchParams.get('merchant_uid');
     const impSuccess = searchParams.get('imp_success');
-    const impUid = searchParams.get('imp_uid');
+    const impUidFromParams = searchParams.get('imp_uid');
     const errorMsg = searchParams.get('error_msg');
 
     if (merchantUid && impSuccess !== null) {
-      console.log(`[PortOnePayment] Detected return from redirect. merchant_uid: ${merchantUid}, imp_success: ${impSuccess}, imp_uid: ${impUid}`);
+      console.log(`[PortOnePayment] Detected return from redirect. merchant_uid: ${merchantUid}, imp_success: ${impSuccess}, imp_uid: ${impUidFromParams}`);
       
       // Clean up URL without triggering another navigation
       const currentPath = window.location.pathname;
@@ -95,12 +95,16 @@ export default function PortOnePayment({
 
       if (impSuccess === 'true') {
         setPaymentStatus({ status: 'PENDING', message: '결제 확인 중...' });
-        console.log(`[PortOnePayment] Redirect successful, verifying payment with merchant_uid: ${merchantUid}, imp_uid: ${impUid}`);
+        const payloadForApiRedirect = { 
+          paymentId: merchantUid, 
+          impUid: impUidFromParams 
+        };
+        console.log(`[PortOnePayment] (Redirect) Verifying payment. Sending to /api/payment/complete:`, JSON.stringify(payloadForApiRedirect, null, 2));
         
         fetch('/api/payment/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentId: merchantUid, impUid: impUid }),
+          body: JSON.stringify(payloadForApiRedirect),
         })
         .then(async (res) => {
           if (res.ok) {
@@ -192,15 +196,18 @@ export default function PortOnePayment({
       
       if (!redirectUrl || (payment && payment.success === true && !payment.code)) {
          setPaymentStatus({ status: 'PENDING', message: '결제 확인 중...' });
-         console.log(`[PortOnePayment] Verifying payment with ID: ${payment.paymentId}`);
+         const payloadForApi = {
+           paymentId: payment.paymentId,
+           impUid: payment.impUid,
+         };
+         console.log(`[PortOnePayment] (Non-redirect) Verifying payment. Sending to /api/payment/complete:`, JSON.stringify(payloadForApi, null, 2));
+         
          const completeResponse = await fetch('/api/payment/complete', {
            method: 'POST',
            headers: {
              'Content-Type': 'application/json',
            },
-           body: JSON.stringify({
-             paymentId: payment.paymentId,
-           }),
+           body: JSON.stringify(payloadForApi),
          });
          
          if (completeResponse.ok) {

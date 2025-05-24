@@ -30,11 +30,11 @@ function PaymentPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(1000);
   const [totalAmountKRW, setTotalAmountKRW] = useState<number>(0);
-  const [currentPaymentPageUrl, setCurrentPaymentPageUrl] = useState('');
+  const [cleanRedirectUrl, setCleanRedirectUrl] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setCurrentPaymentPageUrl(window.location.href);
+      setCleanRedirectUrl(window.location.origin + window.location.pathname);
     }
     try {
       const storedRate = localStorage.getItem('sgt-exchange-rate');
@@ -180,7 +180,7 @@ function PaymentPageContent() {
             orderName={orderName}
             totalAmount={totalAmountKRW}
             currency="KRW"
-            redirectUrl={currentPaymentPageUrl}
+            redirectUrl={cleanRedirectUrl}
             customData={{
               kioskOrderId: kioskOrderId,
               totalAmountSGT: totalAmountSGT,
