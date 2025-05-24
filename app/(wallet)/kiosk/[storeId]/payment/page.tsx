@@ -53,13 +53,15 @@ function PaymentPageContent() {
   }, [totalAmountSGT]);
 
   const handlePaymentSuccess = (paymentResult: any) => {
-    // paymentResult from PortOnePayment component should contain the merchant_uid (kioskOrderId)
-    // and other details if needed.
-    // The backend (/api/payment/complete) will update the order status.
-    // Here, we just navigate to the main success page for the kiosk order.
-    router.push(
-      `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`
-    );
+    // Only redirect if payment was successful
+    if (paymentResult.status === 'PAID') {
+      router.push(
+        `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`
+      );
+    } else {
+      // Handle non-successful payment (should be rare since we have onPaymentFailed for failures)
+      setError(`결제 처리 오류: ${paymentResult.message || '알 수 없는 오류가 발생했습니다.'} (주문 ID: ${kioskOrderId})`);
+    }
   };
 
   const handlePaymentFailure = (paymentError: any) => {
