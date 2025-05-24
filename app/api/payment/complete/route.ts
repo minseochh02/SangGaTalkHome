@@ -51,8 +51,8 @@ export async function POST(request: Request) {
 
     const { data: kioskOrder, error: orderError } = await supabase
       .from('kiosk_orders')
-      .select('id, total_amount_krw, status') // Only select necessary fields
-      .eq('id', kioskOrderId)
+      .select('kiosk_order_id, total_amount_krw, status') // Selected kiosk_order_id for clarity, though id was okay here if it worked
+      .eq('kiosk_order_id', kioskOrderId) // Corrected to use kiosk_order_id
       .single();
 
     if (orderError || !kioskOrder) {
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
           payment_provider_details: portOnePayment, 
           paid_at: new Date().toISOString(),
         })
-        .eq('id', kioskOrderId);
+        .eq('kiosk_order_id', kioskOrderId); // Corrected to use kiosk_order_id
 
       if (updateError) {
         console.error(
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
           portone_imp_uid: impUid,
           payment_provider_details: portOnePayment,
         })
-        .eq('id', kioskOrderId);
+        .eq('kiosk_order_id', kioskOrderId); // Corrected to use kiosk_order_id
 
       if (updateError) {
         console.error(
