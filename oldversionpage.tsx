@@ -27,8 +27,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Dialog, Transition } from '@headlessui/react';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import KioskSalesHistory from './KioskSalesHistory';
 import KioskActiveSessions from './KioskActiveSessions';
 import KioskOrdersManagement from './KioskOrdersManagement';
@@ -40,8 +38,6 @@ import GlobalOptionEditor from './GlobalOptionEditor';
 import AddDividerPlaceholder from './AddDividerPlaceholder';
 import SortableDividerItem from './SortableDividerItem';
 import { v4 as uuidv4 } from 'uuid';
-import ProductCreateModal from './ProductCreateModal';
-import { toast } from "@/components/ui/use-toast";
 
 // Define a frontend-only divider type
 interface KioskDivider {
@@ -119,9 +115,6 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   // Product Edit Modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
-  // State for the new product modal
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Kiosk Settings States
   const [dineInEnabled, setDineInEnabled] = useState(false);
@@ -460,45 +453,16 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   // Track drag over containers
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event;
-    if (!over) {
-      // If we are not over a droppable target, and currentContainer was set,
-      // it implies we might have dragged out of a valid zone.
-      // Setting currentContainer to null can be an option here if dragEnd
-      // should ignore drops outside designated areas.
-      // For now, if !over, we simply return. The dragEnd will handle !over.
-      return;
-    }
-
-    let newOverContainerId: string | null = null;
-
-    // Is the 'over' target one of the main droppable container IDs?
-    if (over.id === 'availableProducts' || over.id === 'kioskProducts') {
-      newOverContainerId = over.id.toString();
-    } else {
-      // If not a container ID, is 'over.id' an item ID belonging to 'availableProducts'?
-      // availableProducts are those in allProducts but not in kioskProducts.
-      // Their useSortable ID is product.product_id.toString().
-      if (allProducts.some(p => 
-            !kioskProducts.some(kp => kp.product_id === p.product_id) && // Check if it's truly in available
-            p.product_id.toString() === over.id.toString()
-      )) {
-        newOverContainerId = 'availableProducts';
-      }
-      // Is 'over.id' an item ID belonging to 'kioskProducts' (either a product or a divider)?
-      // These items have prefixed IDs: `kiosk-${product_id}` or `divider-${id}`.
-      else if (kioskProducts.some(p => `kiosk-${p.product_id}` === over.id.toString()) ||
-               dividers.some(d => `divider-${d.id}` === over.id.toString())) {
-        newOverContainerId = 'kioskProducts';
-      }
-    }
-
-    // Update currentContainer state if it has changed to a valid container
-    if (newOverContainerId && newOverContainerId !== currentContainer) {
-      setCurrentContainer(newOverContainerId);
-    } else if (!newOverContainerId && currentContainer !== null) {
-      // If we are over something, but it's not identifiable as part of our containers,
-      // set currentContainer to null. This indicates dragging to an invalid area.
-      setCurrentContainer(null);
+    
+    // Exit if not dragging over anything
+    if (!over) return;
+    
+    const containerId = over.id.toString();
+    
+    // If over a different container than the one we started from, update current container
+    if ((containerId === 'availableProducts' || containerId === 'kioskProducts') && 
+        containerId !== currentContainer) {
+      setCurrentContainer(containerId);
     }
   };
 
@@ -507,7 +471,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     const { active, over } = event;
     
     if (!over) {
-      // Reset states if not dropped on a valid target
+      // Reset states
       setActiveId(null);
       setActiveProduct(null);
       setActiveDivider(null);
@@ -516,71 +480,93 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     }
     
     const activeIdString = String(active.id);
-    const overIdString = String(over.id); // The ID of the droppable or sortable item underneath
+    const overIdString = String(over.id);
     
     console.log("Drag end:", { activeIdString, overIdString, currentContainer });
     
     let kioskConfigChanged = false;
     let finalKioskProductsForSave: Product[] = [...kioskProducts];
+    
+    // Create a combined ordered list of all items in the kiosk menu
     const combinedItems = createCombinedMenuItems(kioskProducts, dividers);
-
-    // Case 1: Dropping directly onto one of the main containers (availableProducts or kioskProducts)
+    
+    // Case 1: Dragging between containers (available products ↔ kiosk products)
     if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
+      // Product removed from kiosk to available products
       if (activeIdString.startsWith('kiosk-') && overIdString === 'availableProducts') {
-        // Product removed from kiosk to available products
         const productId = activeIdString.replace('kiosk-', '');
         const newKioskProducts = kioskProducts.filter(p => p.product_id.toString() !== productId);
         const updatedKioskProducts = newKioskProducts.map((product, index) => ({
           ...product,
           kiosk_order: index
-        }));
-        setKioskProducts(updatedKioskProducts);
-        finalKioskProductsForSave = updatedKioskProducts;
+          }));
+
+          setKioskProducts(updatedKioskProducts);
+          finalKioskProductsForSave = updatedKioskProducts;
         kioskConfigChanged = true;
-      } else if (activeProduct && !activeIdString.startsWith('kiosk-') && !activeIdString.startsWith('divider-') && overIdString === 'kioskProducts') {
-        // Product added from available to kiosk (dropped directly on kiosk container - add to end)
+      } 
+      // Product added from available to kiosk (at the end)
+      else if (!activeIdString.startsWith('kiosk-') && !activeIdString.startsWith('divider-') && overIdString === 'kioskProducts') {
         const productId = activeIdString;
         const productToAdd = allProducts.find(p => p.product_id.toString() === productId);
+        
         if (productToAdd) {
           const newKioskProducts = [...kioskProducts, {
             ...productToAdd,
             is_kiosk_enabled: true,
-            kiosk_order: kioskProducts.length // Add to end
+            kiosk_order: kioskProducts.length
           }];
+          
           setKioskProducts(newKioskProducts);
           finalKioskProductsForSave = newKioskProducts;
-          kioskConfigChanged = true;
-        }
-      } else if (activeIdString.startsWith('divider-') && overIdString === 'availableProducts') {
-        // A divider dragged to available products container - no change, reset (or disallow)
-        // This case should ideally be prevented or handled, but for now, no state change.
+                kioskConfigChanged = true;
+              }
+            }
+      // A divider cannot be dragged to the available products list - enforce this
+      else if (activeIdString.startsWith('divider-') && overIdString === 'availableProducts') {
+        // No change, reset states
+    setActiveId(null);
+    setActiveDivider(null);
+    setCurrentContainer(null);
+        return;
       }
     }
-    // Case 2: Reordering within kiosk menu (product or divider dragged onto another kiosk item)
+    // Case 2: Reordering within kiosk menu (product or divider dragged onto another item)
     else if (currentContainer === 'kioskProducts' && 
-             (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-')) &&
-             (activeIdString.startsWith('kiosk-') || activeIdString.startsWith('divider-'))) {
+            (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-')) &&
+            (activeIdString.startsWith('kiosk-') || activeIdString.startsWith('divider-'))) {
       
+      // Find indices in the combined list
       const activeIndex = combinedItems.findIndex(item => item.id === activeIdString);
       const overIndex = combinedItems.findIndex(item => item.id === overIdString);
       
       if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
+        // Use arrayMove to reorder the combined list
         const newCombinedItems = arrayMove(combinedItems, activeIndex, overIndex);
         
+        // Reconstruct kioskProducts and dividers from the new order
         const newKioskProducts: Product[] = [];
         const newDividers: KioskDivider[] = [];
         
+        // Assign new positions to all items based on their index in the combined list
         newCombinedItems.forEach((item, index) => {
           if (item.type === 'product') {
             const product = item.item as Product;
             newKioskProducts.push({
-              ...product,
-              kiosk_order: index
+          ...product,
+          kiosk_order: index
             });
-          } else { 
+          } else { // item.type === 'divider'
             const divider = item.item as KioskDivider;
+            
+            // Determine what product this divider comes after
             let afterProductId: string | null = null;
-            if (index > 0) {
+            
+            if (index === 0) {
+              // If first item, it comes at the beginning
+              afterProductId = null;
+            } else {
+              // Find the nearest product before this divider
               for (let i = index - 1; i >= 0; i--) {
                 if (newCombinedItems[i].type === 'product') {
                   afterProductId = newCombinedItems[i].itemId;
@@ -588,6 +574,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                 }
               }
             }
+            
             newDividers.push({
               ...divider,
               position: index,
@@ -601,59 +588,72 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         finalKioskProductsForSave = newKioskProducts;
         kioskConfigChanged = true;
         
+        // Check if a divider was moved, which requires special handling
         if (activeIdString.startsWith('divider-')) {
+          // Force an immediate save of the categories when a divider is moved
           setTimeout(() => {
             saveCategories().catch(err => console.error('Error saving categories after divider move:', err));
           }, 100);
         }
       }
     }
-    // Case 3: Adding a product from available to kiosk by dropping on a specific kiosk item
-    else if (activeProduct && 
-             !activeIdString.startsWith('kiosk-') && 
-             !activeIdString.startsWith('divider-') && 
-             currentContainer === 'availableProducts' && // Drag started from available products
-             (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-'))) { // Dropped on a kiosk item
+    // Case 3: Adding a product from available to kiosk by dropping on a specific item
+    else if (!activeIdString.startsWith('kiosk-') && !activeIdString.startsWith('divider-') && 
+             currentContainer === 'availableProducts' && 
+             (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-'))) {
       
       const productId = activeIdString;
       const productToAdd = allProducts.find(p => p.product_id.toString() === productId);
       
       if (productToAdd) {
+        // Find where to insert the product
         const overIndex = combinedItems.findIndex(item => item.id === overIdString);
         
         if (overIndex !== -1) {
-          const newProductItem: CombinedMenuItem = {
+          // Create new product entry with appropriate kiosk_order
+          const newProduct = {
+            ...productToAdd,
+            is_kiosk_enabled: true,
+            kiosk_order: overIndex // We'll adjust all kiosk_order values after insertion
+          };
+          
+          // Insert into combined list
+          const newCombinedItems = [...combinedItems];
+          newCombinedItems.splice(overIndex, 0, {
             id: `kiosk-${productToAdd.product_id}`,
             type: 'product',
             itemId: productToAdd.product_id.toString(),
-            position: overIndex, // Will be re-calculated based on insertion point
-            item: { ...productToAdd, is_kiosk_enabled: true, kiosk_order: 0 } // kiosk_order placeholder
-          };
-
-          const tempCombinedItems = [...combinedItems];
-          tempCombinedItems.splice(overIndex, 0, newProductItem);
+            position: overIndex,
+            item: newProduct
+          });
           
+          // Reconstruct kioskProducts and dividers from the new order (similar to Case 2)
           const newKioskProducts: Product[] = [];
           const newDividers: KioskDivider[] = [];
-
-          tempCombinedItems.forEach((item, index) => {
+          
+          newCombinedItems.forEach((item, index) => {
             if (item.type === 'product') {
               const product = item.item as Product;
               newKioskProducts.push({
                 ...product,
                 kiosk_order: index
               });
-            } else { 
+            } else { // item.type === 'divider'
               const divider = item.item as KioskDivider;
+              
               let afterProductId: string | null = null;
-              if (index > 0) {
+              
+              if (index === 0) {
+                afterProductId = null;
+              } else {
                 for (let i = index - 1; i >= 0; i--) {
-                  if (tempCombinedItems[i].type === 'product') {
-                    afterProductId = tempCombinedItems[i].itemId;
+                  if (newCombinedItems[i].type === 'product') {
+                    afterProductId = newCombinedItems[i].itemId;
                     break;
                   }
                 }
               }
+              
               newDividers.push({
                 ...divider,
                 position: index,
@@ -670,6 +670,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       }
     }
     
+    // Reset states
     setActiveId(null);
     setActiveProduct(null);
     setActiveDivider(null);
@@ -942,18 +943,6 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     }
   };
 
-  // Callback for when a new product is created by the modal
-  const handleProductCreated = (newProduct: Product) => {
-    setAllProducts((prevProducts) => [newProduct, ...prevProducts]);
-    // Optionally, if you want to immediately add it to the kiosk list (though typically users might do this manually):
-    // setKioskProducts((prevKiosk) => [newProduct, ...prevKiosk]); 
-    // Consider if you need to re-sort or update kiosk_order if adding directly to kioskProducts
-    toast({
-      title: "상품 추가됨",
-      description: `${newProduct.product_name}이(가) 전체 상품 목록에 추가되었습니다. 키오스크에 표시하려면 메뉴 구성에서 추가하세요.`,
-    });
-  };
-
   if (loading) {
     return (
       <div className="container mx-auto p-6 min-h-screen flex items-center justify-center">
@@ -1213,7 +1202,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
           <div className="mt-8 text-right">
             <button 
               onClick={handleSaveKioskOptions}
-              className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition ease-in-out duration-150"
+              className="px-6 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
             >
               서비스 옵션 저장
             </button>
@@ -1258,150 +1247,138 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       {/* Dynamic section content */}
       {activeSection === 'menu' && (
         <div>
-          <DndContext 
-            sensors={sensors} 
+          <DndContext
+            sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
           >
-            <section>
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">메뉴 구성</h2>
-              
-              {/* Add New Product Button */}
-              <div className="mb-4">
-                <Button onClick={() => setIsAddModalOpen(true)} variant="outline">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  새 상품 추가 (키오스크 목록과 별도)
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Available Products Column */}
-                <div className="flex-1">
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
-                    <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
-                  </div>
-                  
-                  <DroppableContainer 
-                    id="availableProducts" 
-                    items={availableProducts.map(p => p.product_id.toString())}
-                  >
-                    {availableProducts.length === 0 ? (
-                      <div className="flex justify-center items-center h-32 text-gray-400">
-                        모든 상품이 키오스크에 추가되었습니다.
-                      </div>
-                    ) : (
-                      <SortableContext
-                        items={availableProducts.map(p => p.product_id.toString())}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {availableProducts.map(product => (
-                          <SortableProductItem 
-                            key={product.product_id} 
-                            product={product}
-                            onToggleSoldOut={handleToggleSoldOut}
-                            onEditProduct={handleEditProduct}
-                          />
-                        ))}
-                      </SortableContext>
-                    )}
-                  </DroppableContainer>
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Available Products Column */}
+              <div className="flex-1">
+                <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
+                  <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
                 </div>
-
-                {/* Kiosk Products Column */}
-                <div className="flex-1">
-                  <div className="bg-green-50 p-4 rounded-lg mb-4">
-                    <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
-                    <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
-                    
-                    {/* Add the Save Categories button here */}
-                    <div className="flex justify-end">
-                      <button
-                        onClick={saveCategories}
-                        className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center"
-                        disabled={savingCategories || savingProducts}
-                      >
-                        {savingCategories ? (
-                          <>
-                            <svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            저장 중...
-                          </>
-                        ) : (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                            </svg>
-                            카테고리 저장
-                          </>
-                        )}
-                      </button>
+                
+                <DroppableContainer 
+                  id="availableProducts" 
+                  items={availableProducts.map(p => p.product_id.toString())}
+                >
+                  {availableProducts.length === 0 ? (
+                    <div className="flex justify-center items-center h-32 text-gray-400">
+                      모든 상품이 키오스크에 추가되었습니다.
                     </div>
-                  </div>
-                  
-                  <DroppableContainer 
-                    id="kioskProducts" 
-                    items={[...kioskProducts.map(p => `kiosk-${p.product_id}`), ...dividers.map(d => `divider-${d.id}`)]}
-                  >
+                  ) : (
                     <SortableContext
-                      items={getCombinedItemIds(createCombinedMenuItems(kioskProducts, dividers))}
+                      items={availableProducts.map(p => p.product_id.toString())}
                       strategy={verticalListSortingStrategy}
                     >
-                      {displayKioskItems()}
+                      {availableProducts.map(product => (
+                        <SortableProductItem 
+                          key={product.product_id} 
+                          product={product}
+                          onToggleSoldOut={handleToggleSoldOut}
+                          onEditProduct={handleEditProduct}
+                        />
+                      ))}
                     </SortableContext>
-                  </DroppableContainer>
-                </div>
+                  )}
+                </DroppableContainer>
               </div>
 
-              {/* Drag overlay for visual feedback */}
-              <DragOverlay>
-                {activeProduct && (
-                  <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
-                    <div className="flex items-center gap-3">
-                      {activeProduct.image_url ? (
-                        <img 
-                          src={activeProduct.image_url} 
-                          alt={activeProduct.product_name}
-                          className="w-12 h-12 object-cover rounded"
-                        />
+              {/* Kiosk Products Column */}
+              <div className="flex-1">
+                <div className="bg-green-50 p-4 rounded-lg mb-4">
+                  <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
+                  <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
+                  
+                  {/* Add the Save Categories button here */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={saveCategories}
+                      className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center"
+                      disabled={savingCategories || savingProducts}
+                    >
+                      {savingCategories ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          저장 중...
+                        </>
                       ) : (
-                        <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                          No Image
-                        </div>
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                          </svg>
+                          카테고리 저장
+                        </>
                       )}
-                      <div className="flex-1">
-                        <h4 className="font-medium">{activeProduct.product_name}</h4>
-                        <div className="flex text-sm gap-2">
-                          <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
-                          {activeProduct.sgt_price && (
-                            <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
-                          )}
-                        </div>
+                    </button>
+                  </div>
+                </div>
+                
+                <DroppableContainer 
+                  id="kioskProducts" 
+                  items={[...kioskProducts.map(p => `kiosk-${p.product_id}`), ...dividers.map(d => `divider-${d.id}`)]}
+                >
+                  <SortableContext
+                    items={getCombinedItemIds(createCombinedMenuItems(kioskProducts, dividers))}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {displayKioskItems()}
+                  </SortableContext>
+                </DroppableContainer>
+              </div>
+            </div>
+
+            {/* Drag overlay for visual feedback */}
+            <DragOverlay>
+              {activeProduct && (
+                <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
+                  <div className="flex items-center gap-3">
+                    {activeProduct.image_url ? (
+                      <img 
+                        src={activeProduct.image_url} 
+                        alt={activeProduct.product_name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                        No Image
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h4 className="font-medium">{activeProduct.product_name}</h4>
+                      <div className="flex text-sm gap-2">
+                        <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
+                        {activeProduct.sgt_price && (
+                          <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
+                        )}
                       </div>
                     </div>
                   </div>
-                )}
-                {activeDivider && (
-                  <div className="p-3 my-2 rounded-md border-2 border-blue-400 bg-blue-50 shadow-xl opacity-90">
-                    <div className="flex items-center">
-                      <div className="mr-2 text-blue-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                        </svg>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-blue-700">{activeDivider.name}</span>
-                        <span className="text-xs text-blue-500">카테고리</span>
-                      </div>
+                </div>
+              )}
+              {activeDivider && (
+                <div className="p-3 my-2 rounded-md border-2 border-blue-400 bg-blue-50 shadow-xl opacity-90">
+                  <div className="flex items-center">
+                    <div className="mr-2 text-blue-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-blue-700">{activeDivider.name}</span>
+                      <span className="text-xs text-blue-500">카테고리</span>
                     </div>
                   </div>
-                )}
-              </DragOverlay>
-            </section>
+                </div>
+              )}
+            </DragOverlay>
           </DndContext>
         </div>
       )}
@@ -1434,18 +1411,6 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       
       {/* Active Kiosk Sessions Section - Now displayed conditionally */}
       {activeSection === 'orders' && <KioskActiveSessions storeId={storeId} />}
-
-      {/* Product Create Modal */}
-      {user && store && (
-        <ProductCreateModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          storeId={storeId}
-          userId={user.id} // Pass the user ID
-          onProductCreated={handleProductCreated}
-          storeWalletAddress={store.store_wallet_address} // Pass store wallet address
-        />
-      )}
     </div>
   );
 }
