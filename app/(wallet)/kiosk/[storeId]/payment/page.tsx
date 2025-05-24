@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 
 // Dynamically import the PortOnePayment component with no SSR
 const PortOnePayment = dynamic(() => import('@/components/payment/PortOnePayment'), { 
@@ -148,6 +149,18 @@ function PaymentPageContent() {
           >
             주문 방법 다시 선택 또는 취소
           </button>
+          
+          {/* Legal policy links */}
+          <div className="mt-6 text-xs text-gray-500 text-center">
+            <p>결제 진행 시 아래 정책에 동의하는 것으로 간주합니다:</p>
+            <div className="flex justify-center mt-1 space-x-3">
+              <Link href="/terms" target="_blank" className="hover:underline text-blue-600">이용약관</Link>
+              <span>|</span>
+              <Link href="/privacy" target="_blank" className="hover:underline text-blue-600">개인정보처리방침</Link>
+              <span>|</span>
+              <Link href="/return-policy" target="_blank" className="hover:underline text-blue-600">환불정책</Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

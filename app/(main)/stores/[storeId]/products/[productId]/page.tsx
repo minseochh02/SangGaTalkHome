@@ -573,6 +573,18 @@ function ProductDetailsContent({
 							</svg>
 							찜하기
 						</button>
+						
+						{/* Legal policy links */}
+						<div className="mt-6 text-xs text-gray-500 text-center">
+							<p>상품 구매 시 아래 정책에 동의하는 것으로 간주합니다:</p>
+							<div className="flex justify-center mt-1 space-x-3">
+								<Link href="/terms" target="_blank" className="hover:underline text-blue-600">이용약관</Link>
+								<span>|</span>
+								<Link href="/privacy" target="_blank" className="hover:underline text-blue-600">개인정보처리방침</Link>
+								<span>|</span>
+								<Link href="/return-policy" target="_blank" className="hover:underline text-blue-600">환불정책</Link>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
