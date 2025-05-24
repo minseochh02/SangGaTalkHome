@@ -574,7 +574,11 @@ function AddProductContent({ storeId }: AddProductPageProps) {
 							value={formData.description}
 							onChange={handleChange}
 							rows={4}
+							maxLength={200}
 						/>
+						<p className="text-sm text-muted-foreground">
+							{formData.description.length}/200자 (최대 200자)
+						</p>
 					</div>
 
 					{/* Status */}
