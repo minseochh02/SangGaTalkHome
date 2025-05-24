@@ -27,6 +27,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Dialog, Transition } from '@headlessui/react';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 import KioskSalesHistory from './KioskSalesHistory';
 import KioskActiveSessions from './KioskActiveSessions';
 import KioskOrdersManagement from './KioskOrdersManagement';
@@ -38,6 +40,8 @@ import GlobalOptionEditor from './GlobalOptionEditor';
 import AddDividerPlaceholder from './AddDividerPlaceholder';
 import SortableDividerItem from './SortableDividerItem';
 import { v4 as uuidv4 } from 'uuid';
+import ProductCreateModal from './ProductCreateModal';
+import { toast } from "@/components/ui/use-toast";
 
 // Define a frontend-only divider type
 interface KioskDivider {
@@ -116,6 +120,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  // State for the new product modal
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
   // Kiosk Settings States
   const [dineInEnabled, setDineInEnabled] = useState(false);
   const [takeoutEnabled, setTakeoutEnabled] = useState(false);
@@ -130,9 +137,6 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
   // Add this state near the other state declarations
   const [savingCategories, setSavingCategories] = useState(false);
-
-  // Add new state for Create Product Modal
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Setup DnD sensors
   const sensors = useSensors(
@@ -919,77 +923,43 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       }
       
       // Update local state
-      setAllProducts(prev => prev.map(p => p.product_id === updatedProduct.product_id ? updatedProduct : p));
-      setKioskProducts(prev => prev.map(p => p.product_id === updatedProduct.product_id ? updatedProduct : p));
+      setAllProducts(prevProducts => 
+        prevProducts.map(product => 
+          product.product_id === updatedProduct.product_id 
+            ? updatedProduct 
+            : product
+        )
+      );
       
-      // If the product was just added to kiosk, ensure it has a kiosk_order
-      const inKiosk = kioskProducts.some(p => p.product_id === updatedProduct.product_id);
-      const wasInKiosk = allProducts.find(p => p.product_id === updatedProduct.product_id)?.is_kiosk_enabled;
-
-      if (updatedProduct.is_kiosk_enabled && !inKiosk && !wasInKiosk) {
-        // Add to kioskProducts with a high order, will be re-sorted on next full save
-        updatedProduct.kiosk_order = kioskProducts.length > 0 ? Math.max(...kioskProducts.map(p => p.kiosk_order || 0)) + 1 : 0;
-        setKioskProducts(prev => [...prev, updatedProduct]);
-      }
+      setKioskProducts(prevProducts => 
+        prevProducts.map(product => 
+          product.product_id === updatedProduct.product_id 
+            ? updatedProduct 
+            : product
+        )
+      );
       
+      // Close modal
       setIsEditModalOpen(false);
       setEditingProduct(null);
-      // No need to call fetchProducts here if we are updating local state correctly
+      
+      alert('상품 정보가 성공적으로 업데이트되었습니다.');
     } catch (err) {
       console.error('Error in handleSaveEditedProduct:', err);
       alert('상품 정보 업데이트 중 오류가 발생했습니다.');
     }
   };
 
-  // Placeholder for creating a new product
-  const handleCreateProduct = async (newProductData: Omit<Product, 'product_id' | 'store_id' | 'created_at' | 'updated_at' | 'user_id'>) => {
-    if (!store || !user) {
-      console.error("Store or user not available for creating product");
-      // Potentially show a toast message
-      return;
-    }
-    console.log("Creating new product with data:", newProductData);
-    
-    // Construct the full product object to save
-    const productToSave = {
-      ...newProductData,
-      store_id: store.store_id,
-      user_id: user.id,
-      // Default other fields as necessary, or let the DB handle them if possible
-      // e.g., is_kiosk_enabled, kiosk_order, status might be set by default or post-creation
-      status: 1, // Assuming new products are active by default
-      is_kiosk_enabled: false, // Or based on a checkbox in the create modal
-      // image_url will be handled by the modal's image upload logic
-    };
-
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .insert([productToSave])
-        .select()
-        .single(); // Assuming you want the created product back
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        // Add to allProducts list
-        setAllProducts(prevProducts => [data as Product, ...prevProducts]);
-        // If it was set to be on kiosk, add to kioskProducts too
-        if ((data as Product).is_kiosk_enabled) {
-          const newKioskProduct = { ...(data as Product), kiosk_order: kioskProducts.length }; // Simple append, or more sophisticated order
-          setKioskProducts(prevKioskProducts => [...prevKioskProducts, newKioskProduct]);
-        }
-        // Potentially show a success toast
-        console.log("Product created successfully:", data);
-      }
-    } catch (error) {
-      console.error("Error creating product:", error);
-      // Potentially show an error toast
-    } finally {
-      setIsCreateModalOpen(false);
-    }
+  // Callback for when a new product is created by the modal
+  const handleProductCreated = (newProduct: Product) => {
+    setAllProducts((prevProducts) => [newProduct, ...prevProducts]);
+    // Optionally, if you want to immediately add it to the kiosk list (though typically users might do this manually):
+    // setKioskProducts((prevKiosk) => [newProduct, ...prevKiosk]); 
+    // Consider if you need to re-sort or update kiosk_order if adding directly to kioskProducts
+    toast({
+      title: "상품 추가됨",
+      description: `${newProduct.product_name}이(가) 전체 상품 목록에 추가되었습니다. 키오스크에 표시하려면 메뉴 구성에서 추가하세요.`,
+    });
   };
 
   if (loading) {
@@ -1163,151 +1133,277 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
-      {/* ... (loading, error, not owner checks) ... */}
+    <div className="container mx-auto py-6">
+      <h1 className="text-2xl font-bold mb-6">키오스크 편집</h1>
       
-      {/* Store Name and Kiosk Link */}
-      {store && (
-        <div className="mb-6 p-4 border rounded-lg shadow-sm bg-white">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold">{store.store_name} - 키오스크 편집</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                키오스크에 표시될 상품 목록과 순서를 관리합니다. 드래그 앤 드롭으로 상품 순서를 변경할 수 있습니다.
+      {/* Main content area */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        {/* Kiosk QR Code Section */}
+        <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">키오스크 QR 코드</h2>
+          <div className="flex flex-col items-center space-y-4">
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100 flex flex-col items-center">
+              <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/${storeId}`} size={200} />
+              <p className="mt-4 text-sm text-gray-600 text-center">
+                QR 코드를 스캔하여 웹 키오스크 모드에 바로 접속하세요.
+              </p>
+              <p className="mt-2 text-sm text-gray-500 text-center">
+                이 QR 코드는 웹 브라우저에서 스토어의 키오스크 모드에 바로 접속할 수 있는 링크입니다.
               </p>
             </div>
-            <Link href={`/kiosk/${storeId}`} target="_blank">
-              <button className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">
-                키오스크 보기 (새 탭)
-              </button>
-            </Link>
           </div>
-          <div className="mt-4">
-            <h2 className="text-lg font-semibold mb-2">키오스크 QR 코드</h2>
-            <div className="p-2 bg-gray-100 inline-block rounded">
-              <QRCodeSVG value={`${window.location.origin}/kiosk/${storeId}`} size={128} />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">고객들이 이 QR코드를 스캔하여 키오스크를 이용할 수 있습니다.</p>
-          </div>
-        </div>
-      )}
-      
-      {/* Tab Navigation */}
-      <div className="mb-6 border-b">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          <button
-            onClick={() => setActiveSection('menu')}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeSection === 'menu' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-            메뉴 및 순서 관리
-          </button>
-          <button
-            onClick={() => setActiveSection('options')}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeSection === 'options' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-            키오스크 공통 옵션
-          </button>
-          <button
-            onClick={() => setActiveSection('orders')}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeSection === 'orders' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-            주문 및 세션 관리
-          </button>
-        </nav>
-      </div>
-
-      {activeSection === 'menu' && (
-        <>
-          {/* Product Management Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Left: Available Products */}
-            <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">전체 상품 목록</h2>
-                <button 
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition"
-                  title="새 상품 추가"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                </button>
+        </section>
+        
+        {/* Service Option Toggles */}
+        <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">서비스 옵션 활성화</h2>
+          <div className="space-y-6">
+            {/* Dine-in Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800">매장에서</h3>
+                <p className="text-sm text-gray-500">키오스크에서 매장 내 수령 옵션을 제공합니다.</p>
               </div>
-              <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
-              <DroppableContainer 
-                id="availableProducts" 
-                items={availableProducts.map(p => p.product_id.toString())}
+              <button
+                onClick={() => setDineInEnabled(!dineInEnabled)}
+                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  dineInEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
               >
-                {availableProducts.length === 0 ? (
-                  <div className="flex justify-center items-center h-32 text-gray-400">
-                    모든 상품이 키오스크에 추가되었습니다.
+                <span
+                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    dineInEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Takeout Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800">포장 (가져가기)</h3>
+                <p className="text-sm text-gray-500">키오스크에서 포장 옵션을 제공합니다.</p>
+              </div>
+              <button
+                onClick={() => setTakeoutEnabled(!takeoutEnabled)}
+                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  takeoutEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    takeoutEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Delivery Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800">배달</h3>
+                <p className="text-sm text-gray-500">키오스크에서 배달 옵션을 제공합니다. (추가 설정 필요할 수 있음)</p>
+              </div>
+              <button
+                onClick={() => setDeliveryEnabled(!deliveryEnabled)}
+                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  deliveryEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    deliveryEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+          <div className="mt-8 text-right">
+            <button 
+              onClick={handleSaveKioskOptions}
+              className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition ease-in-out duration-150"
+            >
+              서비스 옵션 저장
+            </button>
+          </div>
+        </section>
+      </div>
+      
+      {/* Navigation for sections */}
+      <div className="flex border-b mb-6">
+        <button
+          onClick={() => setActiveSection('menu')}
+          className={`px-6 py-3 text-lg font-medium transition-colors ${
+            activeSection === 'menu' 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          메뉴 관리
+        </button>
+        <button
+          onClick={() => setActiveSection('options')}
+          className={`px-6 py-3 text-lg font-medium transition-colors ${
+            activeSection === 'options' 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          상세 주문 옵션
+        </button>
+        <button
+          onClick={() => setActiveSection('orders')}
+          className={`px-6 py-3 text-lg font-medium transition-colors ${
+            activeSection === 'orders' 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          주문 관리
+        </button>
+      </div>
+      
+      {/* Dynamic section content */}
+      {activeSection === 'menu' && (
+        <div>
+          <section>
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">메뉴 구성</h2>
+            
+            {/* Add New Product Button */}
+            <div className="mb-4">
+              <Button onClick={() => setIsAddModalOpen(true)} variant="outline">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                새 상품 추가 (키오스크 목록과 별도)
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Available Products Column */}
+              <div className="flex-1">
+                <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
+                  <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
+                </div>
+                
+                <DroppableContainer 
+                  id="availableProducts" 
+                  items={availableProducts.map(p => p.product_id.toString())}
+                >
+                  {availableProducts.length === 0 ? (
+                    <div className="flex justify-center items-center h-32 text-gray-400">
+                      모든 상품이 키오스크에 추가되었습니다.
+                    </div>
+                  ) : (
+                    <SortableContext
+                      items={availableProducts.map(p => p.product_id.toString())}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {availableProducts.map(product => (
+                        <SortableProductItem 
+                          key={product.product_id} 
+                          product={product}
+                          onToggleSoldOut={handleToggleSoldOut}
+                          onEditProduct={handleEditProduct}
+                        />
+                      ))}
+                    </SortableContext>
+                  )}
+                </DroppableContainer>
+              </div>
+
+              {/* Kiosk Products Column */}
+              <div className="flex-1">
+                <div className="bg-green-50 p-4 rounded-lg mb-4">
+                  <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
+                  <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
+                  
+                  {/* Add the Save Categories button here */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={saveCategories}
+                      className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center"
+                      disabled={savingCategories || savingProducts}
+                    >
+                      {savingCategories ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          저장 중...
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                          </svg>
+                          카테고리 저장
+                        </>
+                      )}
+                    </button>
                   </div>
-                ) : (
+                </div>
+                
+                <DroppableContainer 
+                  id="kioskProducts" 
+                  items={[...kioskProducts.map(p => `kiosk-${p.product_id}`), ...dividers.map(d => `divider-${d.id}`)]}
+                >
                   <SortableContext
-                    items={availableProducts.map(p => p.product_id.toString())}
+                    items={getCombinedItemIds(createCombinedMenuItems(kioskProducts, dividers))}
                     strategy={verticalListSortingStrategy}
                   >
-                    {availableProducts.map(product => (
-                      <SortableProductItem 
-                        key={product.product_id} 
-                        product={product}
-                        onToggleSoldOut={handleToggleSoldOut}
-                        onEditProduct={handleEditProduct}
-                      />
-                    ))}
+                    {displayKioskItems()}
                   </SortableContext>
-                )}
-              </DroppableContainer>
+                </DroppableContainer>
+              </div>
             </div>
 
-            {/* Kiosk Products Column */}
-            <div className="flex-1">
-              <div className="bg-green-50 p-4 rounded-lg mb-4">
-                <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
-                <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
-                
-                {/* Add the Save Categories button here */}
-                <div className="flex justify-end">
-                  <button
-                    onClick={saveCategories}
-                    className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center"
-                    disabled={savingCategories || savingProducts}
-                  >
-                    {savingCategories ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        저장 중...
-                      </>
+            {/* Drag overlay for visual feedback */}
+            <DragOverlay>
+              {activeProduct && (
+                <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
+                  <div className="flex items-center gap-3">
+                    {activeProduct.image_url ? (
+                      <img 
+                        src={activeProduct.image_url} 
+                        alt={activeProduct.product_name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
                     ) : (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                        </svg>
-                        카테고리 저장
-                      </>
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                        No Image
+                      </div>
                     )}
-                  </button>
+                    <div className="flex-1">
+                      <h4 className="font-medium">{activeProduct.product_name}</h4>
+                      <div className="flex text-sm gap-2">
+                        <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
+                        {activeProduct.sgt_price && (
+                          <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
-              <DroppableContainer 
-                id="kioskProducts" 
-                items={[...kioskProducts.map(p => `kiosk-${p.product_id}`), ...dividers.map(d => `divider-${d.id}`)]}
-              >
-                <SortableContext
-                  items={getCombinedItemIds(createCombinedMenuItems(kioskProducts, dividers))}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {displayKioskItems()}
-                </SortableContext>
-              </DroppableContainer>
-            </div>
-          </div>
-        </>
+              )}
+              {activeDivider && (
+                <div className="p-3 my-2 rounded-md border-2 border-blue-400 bg-blue-50 shadow-xl opacity-90">
+                  <div className="flex items-center">
+                    <div className="mr-2 text-blue-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-blue-700">{activeDivider.name}</span>
+                      <span className="text-xs text-blue-500">카테고리</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </DragOverlay>
+          </section>
+        </div>
       )}
       
       {activeSection === 'options' && (
@@ -1322,37 +1418,32 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       )}
       
       {/* Modal for product editing */}
-      {isEditModalOpen && editingProduct && (
-        <ProductEditModal
-          isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setEditingProduct(null);
-          }}
-          product={editingProduct}
-          onSave={(productData) => {
-            // In edit mode, productData will be a full Product object.
-            // We assert it here to satisfy handleSaveEditedProduct's expectation.
-            if (productData && 'product_id' in productData) {
-              handleSaveEditedProduct(productData as Product);
-            } else {
-              // This case should not happen in edit mode, but good for type safety
-              console.error("onSave called in edit mode without a full product object");
-            }
-          }}
-          storeId={storeId}
-        />
-      )}
+      <ProductEditModal 
+        isOpen={isEditModalOpen}
+        product={editingProduct}
+        storeId={storeId}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingProduct(null);
+        }}
+        onSave={handleSaveEditedProduct}
+      />
+      
+      {/* Kiosk Sales History Section - Now displayed conditionally */}
+      {activeSection === 'orders' && <KioskSalesHistory storeId={storeId} />}
+      
+      {/* Active Kiosk Sessions Section - Now displayed conditionally */}
+      {activeSection === 'orders' && <KioskActiveSessions storeId={storeId} />}
 
-      {/* Product Create Modal (using ProductEditModal) */}
-      {isCreateModalOpen && (
-        <ProductEditModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          product={null} 
-          mode="create" 
-          onSave={handleCreateProduct} 
+      {/* Product Create Modal */}
+      {user && store && (
+        <ProductCreateModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
           storeId={storeId}
+          userId={user.id} // Pass the user ID
+          onProductCreated={handleProductCreated}
+          storeWalletAddress={store.store_wallet_address} // Pass store wallet address
         />
       )}
     </div>
