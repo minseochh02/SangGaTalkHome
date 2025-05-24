@@ -73,7 +73,8 @@ function PaymentProcessingPageContent() {
           console.log(`[PaymentProcessingPage] Order status update received: ${updatedOrder.kiosk_order_id}, New Status: ${updatedOrder.status}`);
           setCurrentOrderStatus(updatedOrder.status);
 
-          if (updatedOrder.status === 'completed') {
+          // If payment is successful (processing) or already marked fully completed, redirect to success page
+          if (updatedOrder.status === 'processing' || updatedOrder.status === 'completed') {
             router.push(
               `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`
             );
@@ -105,7 +106,8 @@ function PaymentProcessingPageContent() {
         console.error('[PaymentProcessingPage] Error fetching initial order status:', fetchError);
       } else if (data) {
         console.log(`[PaymentProcessingPage] Initial status for ${kioskOrderId}: ${data.status}`);
-        if (data.status === 'completed') {
+        // If payment is successful (processing) or already marked fully completed, redirect to success page
+        if (data.status === 'processing' || data.status === 'completed') {
            router.push(
               `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`
             );
@@ -220,14 +222,14 @@ function PaymentProcessingPageContent() {
                     <span className="text-gray-500">현재 주문 상태:</span>
                     <span className={`font-medium ${
                         currentOrderStatus === 'completed' ? 'text-green-600' :
-                        currentOrderStatus === 'failed' ? 'text-red-600' :
                         currentOrderStatus === 'processing' ? 'text-blue-600' :
+                        currentOrderStatus === 'failed' ? 'text-red-600' :
                         'text-gray-700'
                     }`}>
                         {currentOrderStatus === 'pending_payment' ? '결제 대기 중' :
-                         currentOrderStatus === 'processing' ? '처리 중' :
-                         currentOrderStatus === 'completed' ? '완료됨' :
-                         currentOrderStatus === 'failed' ? '실패' : currentOrderStatus}
+                         currentOrderStatus === 'processing' ? '결제 완료 (처리중)' :
+                         currentOrderStatus === 'completed' ? '주문 완료됨' :
+                         currentOrderStatus === 'failed' ? '결제 실패' : currentOrderStatus}
                     </span>
                 </div>
              )}
@@ -268,8 +270,8 @@ function PaymentProcessingPageContent() {
           {currentOrderStatus === 'completed' && (
             <div className="text-center py-8">
               <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-8m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              <p className="text-xl font-semibold text-green-700">결제가 성공적으로 완료되었습니다!</p>
-              <p className="text-sm text-gray-600 mt-2">곧 성공 페이지로 이동합니다...</p>
+              <p className="text-xl font-semibold text-green-700">결제가 성공적으로 처리되었습니다!</p>
+              <p className="text-sm text-gray-600 mt-2">주문 확인 페이지로 이동합니다...</p>
             </div>
           )}
            {currentOrderStatus === 'failed' && !error && ( // If status is failed but no specific PortOne error shown

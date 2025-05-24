@@ -86,23 +86,23 @@ export async function POST(request: Request) {
       const { error: updateError } = await supabase
         .from('kiosk_orders')
         .update({
-          status: 'completed',
+          status: 'processing',
           portone_imp_uid: impUid,
           payment_provider_details: portOnePayment, 
           paid_at: new Date().toISOString(),
         })
-        .eq('kiosk_order_id', kioskOrderId); // Corrected to use kiosk_order_id
+        .eq('kiosk_order_id', kioskOrderId);
 
       if (updateError) {
         console.error(
-          `[Supabase] Failed to update order ${kioskOrderId} to completed: ${updateError.message}`
+          `[Supabase] Failed to update order ${kioskOrderId} to processing: ${updateError.message}`
         );
         return NextResponse.json(
           { status: 'FAILED', message: '결제는 성공했으나 주문 상태 업데이트에 실패했습니다. 관리자에게 문의하세요.' },
           { status: 500 }
         );
       }
-      console.log(`[Payment Complete API] Order ${kioskOrderId} updated to completed, returning PAID status`);
+      console.log(`[Payment Complete API] Order ${kioskOrderId} updated to processing, returning PAID status`);
       return NextResponse.json(
         { status: 'PAID', message: '결제가 성공적으로 완료되었습니다.', orderId: kioskOrderId },
         { status: 200 }

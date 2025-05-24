@@ -77,7 +77,7 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
           .from('kiosk_orders')
           .select('*')
           .eq('store_id', storeId)
-          .in('status', ['pending', 'processing']) // Only get orders needing attention
+          .in('status', ['processing']) // Only get orders with 'processing' status
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -169,8 +169,8 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
             const oldOrder = payload.old as KioskOrder;
 
             if (payload.eventType === 'INSERT') {
-              // Only add if it's a pending or processing order
-              if (newOrder.status === 'pending' || newOrder.status === 'processing') {
+              // Only add if it's a processing order
+              if (newOrder.status === 'processing') {
                 // Fetch the complete order details including items and options
                 fetchOrderDetails(newOrder).then(orderWithDetails => {
                   setOrders((prevOrders) => 
@@ -182,11 +182,11 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
               }
             } else if (payload.eventType === 'UPDATE') {
               setOrders((prevOrders) => {
-                // Filter out orders that are now ready_for_pickup or completed
+                // Filter out orders that are not 'processing'
                 const updatedOrders = prevOrders
                   .map((order) => order.order_id === newOrder.order_id ? {...order, ...newOrder} : order)
                   .filter(order => 
-                    order.status === 'pending' || order.status === 'processing'
+                    order.status === 'processing' // Keep only 'processing' orders
                   );
                 return updatedOrders.sort((a, b) => 
                   new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -382,7 +382,7 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
               .from('kiosk_orders')
               .select('*')
               .eq('store_id', storeId)
-              .in('status', ['pending', 'processing'])
+              .in('status', ['processing']) // Only get orders with 'processing' status for manual refresh
               .order('created_at', { ascending: false })
               .then(async ({ data, error }) => {
                 if (error) {
@@ -439,8 +439,7 @@ export default function KioskOrdersManagement({ storeId }: KioskOrdersManagement
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {order.status === 'pending' ? '대기 중' : 
-                     order.status === 'processing' ? '처리 중' : order.status || '상태 없음'}
+                    {order.status === 'processing' ? '처리 중' : order.status || '상태 없음'}
                   </span>
                   {order.order_type && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
