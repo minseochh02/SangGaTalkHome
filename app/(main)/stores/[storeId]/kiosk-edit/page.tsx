@@ -460,16 +460,45 @@ function KioskEditContent({ storeId }: { storeId: string }) {
   // Track drag over containers
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event;
-    
-    // Exit if not dragging over anything
-    if (!over) return;
-    
-    const containerId = over.id.toString();
-    
-    // If over a different container than the one we started from, update current container
-    if ((containerId === 'availableProducts' || containerId === 'kioskProducts') && 
-        containerId !== currentContainer) {
-      setCurrentContainer(containerId);
+    if (!over) {
+      // If we are not over a droppable target, and currentContainer was set,
+      // it implies we might have dragged out of a valid zone.
+      // Setting currentContainer to null can be an option here if dragEnd
+      // should ignore drops outside designated areas.
+      // For now, if !over, we simply return. The dragEnd will handle !over.
+      return;
+    }
+
+    let newOverContainerId: string | null = null;
+
+    // Is the 'over' target one of the main droppable container IDs?
+    if (over.id === 'availableProducts' || over.id === 'kioskProducts') {
+      newOverContainerId = over.id.toString();
+    } else {
+      // If not a container ID, is 'over.id' an item ID belonging to 'availableProducts'?
+      // availableProducts are those in allProducts but not in kioskProducts.
+      // Their useSortable ID is product.product_id.toString().
+      if (allProducts.some(p => 
+            !kioskProducts.some(kp => kp.product_id === p.product_id) && // Check if it's truly in available
+            p.product_id.toString() === over.id.toString()
+      )) {
+        newOverContainerId = 'availableProducts';
+      }
+      // Is 'over.id' an item ID belonging to 'kioskProducts' (either a product or a divider)?
+      // These items have prefixed IDs: `kiosk-${product_id}` or `divider-${id}`.
+      else if (kioskProducts.some(p => `kiosk-${p.product_id}` === over.id.toString()) ||
+               dividers.some(d => `divider-${d.id}` === over.id.toString())) {
+        newOverContainerId = 'kioskProducts';
+      }
+    }
+
+    // Update currentContainer state if it has changed to a valid container
+    if (newOverContainerId && newOverContainerId !== currentContainer) {
+      setCurrentContainer(newOverContainerId);
+    } else if (!newOverContainerId && currentContainer !== null) {
+      // If we are over something, but it's not identifiable as part of our containers,
+      // set currentContainer to null. This indicates dragging to an invalid area.
+      setCurrentContainer(null);
     }
   };
 
@@ -498,9 +527,9 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     const combinedItems = createCombinedMenuItems(kioskProducts, dividers);
     
     // Case 1: Dragging between containers (available products ↔ kiosk products)
-    if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
+    if (currentContainer === 'availableProducts' || currentContainer === 'kioskProducts') {
       // Product removed from kiosk to available products
-      if (activeIdString.startsWith('kiosk-') && overIdString === 'availableProducts') {
+      if (activeIdString.startsWith('kiosk-') && currentContainer === 'availableProducts') {
         const productId = activeIdString.replace('kiosk-', '');
         const newKioskProducts = kioskProducts.filter(p => p.product_id.toString() !== productId);
         const updatedKioskProducts = newKioskProducts.map((product, index) => ({
@@ -513,7 +542,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         kioskConfigChanged = true;
       } 
       // Product added from available to kiosk (at the end)
-      else if (!activeIdString.startsWith('kiosk-') && !activeIdString.startsWith('divider-') && overIdString === 'kioskProducts') {
+      else if (activeProduct && !activeIdString.startsWith('kiosk-') && !activeIdString.startsWith('divider-') && currentContainer === 'kioskProducts') {
         const productId = activeIdString;
         const productToAdd = allProducts.find(p => p.product_id.toString() === productId);
         
@@ -530,7 +559,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
               }
             }
       // A divider cannot be dragged to the available products list - enforce this
-      else if (activeIdString.startsWith('divider-') && overIdString === 'availableProducts') {
+      else if (activeIdString.startsWith('divider-') && currentContainer === 'availableProducts') {
         // No change, reset states
     setActiveId(null);
     setActiveDivider(null);
