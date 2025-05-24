@@ -90,10 +90,10 @@ export default function ProductCreateModal({
 
 	const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
-		const numericValue = value.replace(/[^\\d]/g, "");
+		const numericValue = value.replace(/[^\d]/g, "");
 		if (numericValue.length > 10) return;
 		const formattedValue = numericValue
-			? numericValue.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")
+			? numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 			: "";
 		setDisplayPrice(formattedValue);
 		setFormData((prev) => ({ ...prev, price: numericValue }));
@@ -101,14 +101,14 @@ export default function ProductCreateModal({
 
 	const handleSgtPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
-		if (!/^[\\d,]*\\.?\\d*$/.test(value) && value !== "") return;
+		if (!/^[\d,]*\.?\d*$/.test(value) && value !== "") return;
 		const parts = value.split(".");
-		const integerPart = parts[0].replace(/[^\\d]/g, "");
-		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\\d]/g, "") : "";
+		const integerPart = parts[0].replace(/[^\d]/g, "");
+		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : "";
 		if (integerPart.length > 10) return;
 		if (decimalPart.length > 10) decimalPart = decimalPart.substring(0, 10);
 		const formattedIntegerPart = integerPart
-			? integerPart.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")
+			? integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 			: "0";
 		const formattedValue = decimalPart
 			? `${formattedIntegerPart}.${decimalPart}`
@@ -137,31 +137,31 @@ export default function ProductCreateModal({
 
 	const handleDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
-		const numericValue = value.replace(/[^\\d]/g, "");
+		const numericValue = value.replace(/[^\d]/g, "");
 		if (numericValue.length > 10) return;
-		const formattedValue = numericValue ? numericValue.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",") : "";
+		const formattedValue = numericValue ? numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "";
 		setDisplayWonDeliveryFee(formattedValue);
 		setFormData((prev) => ({ ...prev, won_delivery_fee: numericValue }));
 	};
 
 	const handleSpecialDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
-		const numericValue = value.replace(/[^\\d]/g, "");
+		const numericValue = value.replace(/[^\d]/g, "");
 		if (numericValue.length > 10) return;
-		const formattedValue = numericValue ? numericValue.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",") : "";
+		const formattedValue = numericValue ? numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "";
 		setDisplayWonSpecialDeliveryFee(formattedValue);
 		setFormData((prev) => ({ ...prev, won_special_delivery_fee: numericValue }));
 	};
 	
 	const handleSgtDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
-		if (!/^[\\d,]*\\.?\\d*$/.test(value) && value !== "") return;
+		if (!/^[\d,]*\.?\d*$/.test(value) && value !== "") return;
 		const parts = value.split(".");
-		const integerPart = parts[0].replace(/[^\\d]/g, "");
-		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\\d]/g, "") : "";
+		const integerPart = parts[0].replace(/[^\d]/g, "");
+		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : "";
 		if (integerPart.length > 10) return;
 		if (decimalPart.length > 10) decimalPart = decimalPart.substring(0, 10);
-		const formattedIntegerPart = integerPart ? integerPart.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",") : "0";
+		const formattedIntegerPart = integerPart ? integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "0";
 		const formattedValue = decimalPart ? `${formattedIntegerPart}.${decimalPart}` : (value.includes(".") ? `${formattedIntegerPart}.` : formattedIntegerPart);
 		setDisplaySgtDeliveryFee(formattedValue);
 		const numericValueForStorage = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
@@ -170,13 +170,13 @@ export default function ProductCreateModal({
 
 	const handleSgtSpecialDeliveryFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
-		if (!/^[\\d,]*\\.?\\d*$/.test(value) && value !== "") return;
+		if (!/^[\d,]*\.?\d*$/.test(value) && value !== "") return;
 		const parts = value.split(".");
-		const integerPart = parts[0].replace(/[^\\d]/g, "");
-		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\\d]/g, "") : "";
+		const integerPart = parts[0].replace(/[^\d]/g, "");
+		let decimalPart = parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : "";
 		if (integerPart.length > 10) return;
 		if (decimalPart.length > 10) decimalPart = decimalPart.substring(0, 10);
-		const formattedIntegerPart = integerPart ? integerPart.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",") : "0";
+		const formattedIntegerPart = integerPart ? integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "0";
 		const formattedValue = decimalPart ? `${formattedIntegerPart}.${decimalPart}` : (value.includes(".") ? `${formattedIntegerPart}.` : formattedIntegerPart);
 		setDisplaySgtSpecialDeliveryFee(formattedValue);
 		const numericValueForStorage = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
