@@ -1495,7 +1495,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {/* Available Products Column */}
                 <div className="flex-1">
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4 sticky top-4">
+                  <div className="bg-gray-50 p-4 rounded-lg mb-4 sticky top-4 z-10">
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
                     <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 선택하고 아래 버튼을 누르세요.</p>
                     <Button
@@ -1549,7 +1549,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
                 {/* Kiosk Products Column */}
                 <div className="flex-1">
-                  <div className="bg-green-50 p-4 rounded-lg mb-4 sticky top-4">
+                  <div className="bg-green-50 p-4 rounded-lg mb-4 sticky top-4 z-10">
                     <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
                     <p className="text-sm text-gray-600 mb-4">상품을 선택하고 아래 버튼을 눌러 제거하거나, 드래그하여 순서를 변경하세요.</p>
                     <Button
