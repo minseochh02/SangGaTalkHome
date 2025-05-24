@@ -33,7 +33,6 @@ import KioskSalesHistory from './KioskSalesHistory';
 import KioskActiveSessions from './KioskActiveSessions';
 import KioskOrdersManagement from './KioskOrdersManagement';
 import ProductEditModal from './ProductEditModal';
-import SortableProductItem from './SortableProductItem';
 import DroppableContainer from './DroppableContainer';
 import { QRCodeSVG } from 'qrcode.react';
 import GlobalOptionEditor from './GlobalOptionEditor';
@@ -42,6 +41,132 @@ import SortableDividerItem from './SortableDividerItem';
 import { v4 as uuidv4 } from 'uuid';
 import ProductCreateModal from './ProductCreateModal';
 import { toast } from "@/components/ui/use-toast";
+
+// Define SortableProductItemProps
+interface SortableProductItemProps {
+  product: Product;
+  isKioskProduct?: boolean; // Optional, as it's not always a kiosk product
+  onToggleSoldOut: (productId: string | number, currentStatus: boolean) => void;
+  onEditProduct: (product: Product) => void;
+  // New props for selection
+  listType: 'available' | 'kiosk';
+  isSelected: boolean;
+  onSelect: (productId: string, select: boolean) => void;
+}
+
+// Define a basic SortableProductItem component structure for now
+// This would ideally be in its own file (e.g., ./SortableProductItem.tsx)
+// For the purpose of this exercise, defining it here to resolve linter errors.
+const SortableProductItem: React.FC<SortableProductItemProps> = ({
+  product,
+  isKioskProduct,
+  onToggleSoldOut,
+  onEditProduct,
+  listType,
+  isSelected,
+  onSelect
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: isKioskProduct ? `kiosk-${product.product_id}` : product.product_id.toString() });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    onSelect(product.product_id.toString(), event.target.checked);
+  };
+  
+  // Helper function to format price with commas (copied from KioskEditContent for now)
+  const formatPrice = (price: number | null): string => {
+    if (price === null) return "0";
+    return price.toLocaleString();
+  };
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      {...attributes} 
+      className="p-3 my-1 rounded-md border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow relative"
+    >
+      <div className="flex items-center gap-3">
+        {/* Checkbox for selection */}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={handleCheckboxChange}
+          className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+          onClick={(e) => e.stopPropagation()} // Prevent D&D from starting when clicking checkbox
+        />
+
+        {/* Drag Handle (conditionally rendered or styled if needed) */}
+        <button 
+          {...listeners} 
+          className="cursor-grab p-1 text-gray-400 hover:text-gray-600"
+          aria-label="Drag to reorder"
+          // Optional: Disable drag handle if item is selected for a different action, or style it.
+          // For now, keep it active for intra-list reordering.
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+          </svg>
+        </button>
+
+        {product.image_url ? (
+          <img 
+            src={product.image_url} 
+            alt={product.product_name}
+            className="w-12 h-12 object-cover rounded"
+          />
+        ) : (
+          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+            No Img
+          </div>
+        )}
+        <div className="flex-1">
+          <h4 className="font-medium text-gray-800">{product.product_name}</h4>
+          <div className="flex text-sm gap-2">
+            <span className="text-gray-600">{formatPrice(product.won_price)}원</span>
+            {product.sgt_price !== null && product.sgt_price !== undefined && (
+              <span className="text-blue-600">{formatPrice(product.sgt_price)} SGT</span>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col items-end space-y-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEditProduct(product); }}
+            className="px-2 py-1 text-xs bg-yellow-400 text-yellow-800 rounded hover:bg-yellow-500 transition-colors"
+          >
+            수정
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSoldOut(product.product_id, product.is_sold_out || false); }}
+            className={`px-2 py-1 text-xs rounded transition-colors ${
+              product.is_sold_out 
+                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+          >
+            {product.is_sold_out ? '품절 해제' : '품절 처리'}
+          </button>
+        </div>
+      </div>
+      {/* Display kiosk_order if it's a kiosk product (for debugging/info) */}
+      {isKioskProduct && product.kiosk_order !== undefined && (
+        <div className="absolute top-1 right-1 text-xs text-gray-400 bg-gray-100 px-1 rounded-sm">
+          KO: {product.kiosk_order}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Define a frontend-only divider type
 interface KioskDivider {
@@ -137,6 +262,10 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
   // Add this state near the other state declarations
   const [savingCategories, setSavingCategories] = useState(false);
+
+  // Add new state variables for selections
+  const [selectedAvailableProductIds, setSelectedAvailableProductIds] = useState<Set<string>>(new Set());
+  const [selectedKioskProductIds, setSelectedKioskProductIds] = useState<Set<string>>(new Set());
 
   // Setup DnD sensors
   const sensors = useSensors(
@@ -372,66 +501,107 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     setSavingProducts(true);
     
     try {
-      // The currentKioskProducts should already have the correct kiosk_order from handleDragEnd or other updates
+      // The currentKioskProducts should already have the correct kiosk_order
       console.log('[KioskEditPage] Saving kiosk product settings with list (expecting correct kiosk_order):', currentKioskProducts.map(p => ({id: p.product_id, name: p.product_name, order: p.kiosk_order})));
       
       // Step 1: Enable and set order for kiosk products in one batch
       if (currentKioskProducts.length > 0) {
-        const kioskUpdates = currentKioskProducts.map((product) => { // Removed index from map
-          // Use the product.kiosk_order that was calculated by drag & drop logic or initial load
+        const kioskUpdates = currentKioskProducts.map((product) => {
           if (product.kiosk_order === undefined || product.kiosk_order === null) {
             console.warn(`Product ${product.product_id} is missing kiosk_order. This should not happen for products in kiosk list.`);
-            // Assign a fallback or skip? For now, let's be strict and expect it.
-            // If we allow it, it might get a default order of 0 which could be problematic.
           }
           return supabase
             .from('products')
             .update({ 
               is_kiosk_enabled: true,
-              kiosk_order: product.kiosk_order // USE THE PRE-CALCULATED KIOSK_ORDER
+              kiosk_order: product.kiosk_order
             })
             .eq('product_id', product.product_id);
         });
         
-        // Execute all updates in parallel
         await Promise.all(kioskUpdates);
       }
       
-      // Step 2: Disable products not in currentKioskProducts in one query
+      // Step 2: Disable products not in currentKioskProducts
       const kioskProductIds = currentKioskProducts.map(p => p.product_id);
       
-      if (kioskProductIds.length > 0) {
-        // Only run this query if there are kiosk products to exclude
-        const { error } = await supabase
-          .from('products')
-          .update({ is_kiosk_enabled: false })
-          .eq('store_id', storeId)
-          .not('product_id', 'in', `(${kioskProductIds.join(',')})`);
+      const { error: disableError } = await supabase
+        .from('products')
+        .update({ is_kiosk_enabled: false, kiosk_order: null }) // Also nullify kiosk_order for disabled ones
+        .eq('store_id', storeId)
+        .not('product_id', 'in', `(${kioskProductIds.length > 0 ? kioskProductIds.join(',') : ''})`); // Handle empty kioskProductIds
           
-        if (error) {
-          console.error('Error disabling other products:', error);
-          throw error;
-        }
-      } else {
-        // If no products are enabled for kiosk, disable all products for this store
-        const { error } = await supabase
-          .from('products')
-          .update({ is_kiosk_enabled: false })
-          .eq('store_id', storeId);
-          
-        if (error) {
-          console.error('Error disabling all products:', error);
-          throw error;
-        }
+      if (disableError) {
+        console.error('Error disabling other products:', disableError);
+        throw disableError;
       }
       
       alert('키오스크 상품 설정이 성공적으로 저장되었습니다.');
+      // Refresh products from DB to ensure consistency after save, especially for kiosk_order nullification
+      await fetchProducts(storeId);
+
     } catch (err) {
       console.error('Error saving kiosk products:', err);
       alert('상품 설정 저장 중 오류가 발생했습니다.');
     } finally {
       setSavingProducts(false);
     }
+  };
+
+  // ---- Button Handlers for Moving Products ----
+  const handleAddToKiosk = async () => {
+    if (selectedAvailableProductIds.size === 0) return;
+
+    const productsToAdd = allProducts.filter(p => selectedAvailableProductIds.has(p.product_id.toString()));
+    
+    // Create a new list of kiosk products, adding new ones at the end
+    let newKioskProductList = [...kioskProducts];
+    
+    productsToAdd.forEach(product => {
+      // Avoid adding duplicates if somehow selected again before state updates
+      if (!newKioskProductList.some(kp => kp.product_id === product.product_id)) {
+        newKioskProductList.push({
+          ...product,
+          is_kiosk_enabled: true,
+          // kiosk_order will be set below
+        });
+      }
+    });
+
+    // Re-assign kiosk_order for all items in the new list
+    const updatedKioskProductsWithOrder = newKioskProductList.map((product, index) => ({
+      ...product,
+      kiosk_order: index
+    }));
+
+    setKioskProducts(updatedKioskProductsWithOrder);
+    setSelectedAvailableProductIds(new Set()); // Clear selection
+
+    // Save changes
+    await handleSaveKioskProducts(updatedKioskProductsWithOrder);
+    // Consider if saveCategories is needed if dividers' relative positions are affected
+    // For now, adding to end might not directly impact divider logic unless they need re-sorting
+  };
+
+  const handleRemoveFromKiosk = async () => {
+    if (selectedKioskProductIds.size === 0) return;
+
+    let newKioskProductList = kioskProducts.filter(p => !selectedKioskProductIds.has(p.product_id.toString()));
+
+    // Re-assign kiosk_order for the remaining items
+    const updatedKioskProductsWithOrder = newKioskProductList.map((product, index) => ({
+      ...product,
+      kiosk_order: index
+    }));
+    
+    setKioskProducts(updatedKioskProductsWithOrder);
+    setSelectedKioskProductIds(new Set()); // Clear selection
+
+    // Save changes
+    await handleSaveKioskProducts(updatedKioskProductsWithOrder);
+    // Consider if saveCategories is needed
+    // If a product that a divider was 'after' is removed, saveCategories might be important
+    await saveCategories(); // Saving categories to update their afterProductId if needed
   };
 
   // Handle drag start for both products and dividers
@@ -498,6 +668,8 @@ function KioskEditContent({ storeId }: { storeId: string }) {
     const combinedItems = createCombinedMenuItems(kioskProducts, dividers);
     
     // Case 1: Dragging between containers (available products ↔ kiosk products)
+    // THIS CASE WILL BE REMOVED OR DISABLED as per new requirements
+    /*
     if (overIdString === 'availableProducts' || overIdString === 'kioskProducts') {
       // Product removed from kiosk to available products
       if (activeIdString.startsWith('kiosk-') && overIdString === 'availableProducts') {
@@ -532,14 +704,16 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       // A divider cannot be dragged to the available products list - enforce this
       else if (activeIdString.startsWith('divider-') && overIdString === 'availableProducts') {
         // No change, reset states
-    setActiveId(null);
-    setActiveDivider(null);
-    setCurrentContainer(null);
+        setActiveId(null);
+        setActiveDivider(null);
+        setCurrentContainer(null);
         return;
       }
     }
+    */
     // Case 2: Reordering within kiosk menu (product or divider dragged onto another item)
-    else if (currentContainer === 'kioskProducts' && 
+    // This case remains for intra-list D&D
+    if (currentContainer === 'kioskProducts' && 
             (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-')) &&
             (activeIdString.startsWith('kiosk-') || activeIdString.startsWith('divider-'))) {
       
@@ -605,6 +779,8 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       }
     }
     // Case 3: Adding a product from available to kiosk by dropping on a specific item
+    // THIS CASE WILL BE REMOVED OR DISABLED
+    /*
     else if (!activeIdString.startsWith('kiosk-') && !activeIdString.startsWith('divider-') && 
              currentContainer === 'availableProducts' && 
              (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-'))) {
@@ -676,7 +852,25 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         }
       }
     }
+    */
     
+    // Check if the drag operation was not one of the disabled ones
+    // Only proceed if it's an intra-kiosk D&D operation
+    const isIntraKioskDrag = currentContainer === 'kioskProducts' &&
+                           (overIdString.startsWith('kiosk-') || overIdString.startsWith('divider-')) &&
+                           (activeIdString.startsWith('kiosk-') || activeIdString.startsWith('divider-'));
+
+    if (!isIntraKioskDrag && activeIdString && overIdString) {
+        // If it's not an intra-kiosk drag (e.g. drag from available to kiosk, or kiosk to available)
+        // and we are disabling this, then we just reset and do nothing.
+        console.log("Drag operation between lists is disabled. Resetting.");
+        setActiveId(null);
+        setActiveProduct(null);
+        setActiveDivider(null);
+        setCurrentContainer(null);
+        return; // Explicitly return to prevent further processing
+    }
+
     // Reset states
     setActiveId(null);
     setActiveProduct(null);
@@ -1070,6 +1264,20 @@ function KioskEditContent({ storeId }: { storeId: string }) {
           isKioskProduct={true}
           onToggleSoldOut={handleToggleSoldOut}
           onEditProduct={handleEditProduct}
+          // Props for selection
+          listType="kiosk"
+          isSelected={selectedKioskProductIds.has(product.product_id.toString())}
+          onSelect={(productId, select) => {
+            setSelectedKioskProductIds(prev => {
+              const newSet = new Set(prev);
+              if (select) {
+                newSet.add(productId);
+              } else {
+                newSet.delete(productId);
+              }
+              return newSet;
+            });
+          }}
         />
           </div>
         );
@@ -1284,12 +1492,19 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {/* Available Products Column */}
                 <div className="flex-1">
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <div className="bg-gray-50 p-4 rounded-lg mb-4 sticky top-4">
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
-                    <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
+                    <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 선택하고 아래 버튼을 누르세요.</p>
+                    <Button
+                      onClick={handleAddToKiosk}
+                      disabled={selectedAvailableProductIds.size === 0 || savingProducts}
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      {savingProducts && selectedAvailableProductIds.size > 0 ? '추가 중...' : `선택된 ${selectedAvailableProductIds.size}개 상품 키오스크에 추가 →`}
+                    </Button>
                   </div>
                   
                   <DroppableContainer 
@@ -1311,6 +1526,20 @@ function KioskEditContent({ storeId }: { storeId: string }) {
                             product={product}
                             onToggleSoldOut={handleToggleSoldOut}
                             onEditProduct={handleEditProduct}
+                            // Props for selection
+                            listType="available"
+                            isSelected={selectedAvailableProductIds.has(product.product_id.toString())}
+                            onSelect={(productId, select) => {
+                              setSelectedAvailableProductIds(prev => {
+                                const newSet = new Set(prev);
+                                if (select) {
+                                  newSet.add(productId);
+                                } else {
+                                  newSet.delete(productId);
+                                }
+                                return newSet;
+                              });
+                            }}
                           />
                         ))}
                       </SortableContext>
@@ -1320,35 +1549,16 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
                 {/* Kiosk Products Column */}
                 <div className="flex-1">
-                  <div className="bg-green-50 p-4 rounded-lg mb-4">
+                  <div className="bg-green-50 p-4 rounded-lg mb-4 sticky top-4">
                     <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
-                    <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
-                    
-                    {/* Add the Save Categories button here */}
-                    <div className="flex justify-end">
-                      <button
-                        onClick={saveCategories}
-                        className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center"
-                        disabled={savingCategories || savingProducts}
-                      >
-                        {savingCategories ? (
-                          <>
-                            <svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            저장 중...
-                          </>
-                        ) : (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                            </svg>
-                            카테고리 저장
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    <p className="text-sm text-gray-600 mb-4">상품을 선택하고 아래 버튼을 눌러 제거하거나, 드래그하여 순서를 변경하세요.</p>
+                    <Button
+                      onClick={handleRemoveFromKiosk}
+                      disabled={selectedKioskProductIds.size === 0 || savingProducts}
+                      className="w-full bg-red-500 hover:bg-red-600 text-white mb-2"
+                    >
+                      {savingProducts && selectedKioskProductIds.size > 0 ? '제거 중...' : `← 선택된 ${selectedKioskProductIds.size}개 상품 키오스크에서 제거`}
+                    </Button>
                   </div>
                   
                   <DroppableContainer 
