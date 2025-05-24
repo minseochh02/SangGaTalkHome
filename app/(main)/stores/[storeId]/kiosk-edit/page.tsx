@@ -1266,143 +1266,151 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       {/* Dynamic section content */}
       {activeSection === 'menu' && (
         <div>
-          <section>
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">메뉴 구성</h2>
-            
-            {/* Add New Product Button */}
-            <div className="mb-4">
-              <Button onClick={() => setIsAddModalOpen(true)} variant="outline">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                새 상품 추가 (키오스크 목록과 별도)
-              </Button>
-            </div>
+          <DndContext 
+            sensors={sensors} 
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <section>
+              <h2 className="text-xl font-semibold text-gray-700 mb-4">메뉴 구성</h2>
+              
+              {/* Add New Product Button */}
+              <div className="mb-4">
+                <Button onClick={() => setIsAddModalOpen(true)} variant="outline">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  새 상품 추가 (키오스크 목록과 별도)
+                </Button>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Available Products Column */}
-              <div className="flex-1">
-                <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
-                  <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Available Products Column */}
+                <div className="flex-1">
+                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">모든 상품</h3>
+                    <p className="text-sm text-gray-500 mb-4">키오스크에 추가할 상품을 오른쪽으로 드래그하세요.</p>
+                  </div>
+                  
+                  <DroppableContainer 
+                    id="availableProducts" 
+                    items={availableProducts.map(p => p.product_id.toString())}
+                  >
+                    {availableProducts.length === 0 ? (
+                      <div className="flex justify-center items-center h-32 text-gray-400">
+                        모든 상품이 키오스크에 추가되었습니다.
+                      </div>
+                    ) : (
+                      <SortableContext
+                        items={availableProducts.map(p => p.product_id.toString())}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {availableProducts.map(product => (
+                          <SortableProductItem 
+                            key={product.product_id} 
+                            product={product}
+                            onToggleSoldOut={handleToggleSoldOut}
+                            onEditProduct={handleEditProduct}
+                          />
+                        ))}
+                      </SortableContext>
+                    )}
+                  </DroppableContainer>
                 </div>
-                
-                <DroppableContainer 
-                  id="availableProducts" 
-                  items={availableProducts.map(p => p.product_id.toString())}
-                >
-                  {availableProducts.length === 0 ? (
-                    <div className="flex justify-center items-center h-32 text-gray-400">
-                      모든 상품이 키오스크에 추가되었습니다.
+
+                {/* Kiosk Products Column */}
+                <div className="flex-1">
+                  <div className="bg-green-50 p-4 rounded-lg mb-4">
+                    <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
+                    <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
+                    
+                    {/* Add the Save Categories button here */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={saveCategories}
+                        className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center"
+                        disabled={savingCategories || savingProducts}
+                      >
+                        {savingCategories ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            저장 중...
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                            </svg>
+                            카테고리 저장
+                          </>
+                        )}
+                      </button>
                     </div>
-                  ) : (
+                  </div>
+                  
+                  <DroppableContainer 
+                    id="kioskProducts" 
+                    items={[...kioskProducts.map(p => `kiosk-${p.product_id}`), ...dividers.map(d => `divider-${d.id}`)]}
+                  >
                     <SortableContext
-                      items={availableProducts.map(p => p.product_id.toString())}
+                      items={getCombinedItemIds(createCombinedMenuItems(kioskProducts, dividers))}
                       strategy={verticalListSortingStrategy}
                     >
-                      {availableProducts.map(product => (
-                        <SortableProductItem 
-                          key={product.product_id} 
-                          product={product}
-                          onToggleSoldOut={handleToggleSoldOut}
-                          onEditProduct={handleEditProduct}
-                        />
-                      ))}
+                      {displayKioskItems()}
                     </SortableContext>
-                  )}
-                </DroppableContainer>
+                  </DroppableContainer>
+                </div>
               </div>
 
-              {/* Kiosk Products Column */}
-              <div className="flex-1">
-                <div className="bg-green-50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-green-700 mb-2">키오스크 메뉴</h3>
-                  <p className="text-sm text-gray-600 mb-4">여기에 표시된 상품만 키오스크에 표시됩니다. 순서를 조정하려면 드래그하세요.</p>
-                  
-                  {/* Add the Save Categories button here */}
-                  <div className="flex justify-end">
-                    <button
-                      onClick={saveCategories}
-                      className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center"
-                      disabled={savingCategories || savingProducts}
-                    >
-                      {savingCategories ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          저장 중...
-                        </>
+              {/* Drag overlay for visual feedback */}
+              <DragOverlay>
+                {activeProduct && (
+                  <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
+                    <div className="flex items-center gap-3">
+                      {activeProduct.image_url ? (
+                        <img 
+                          src={activeProduct.image_url} 
+                          alt={activeProduct.product_name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
                       ) : (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                          </svg>
-                          카테고리 저장
-                        </>
+                        <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                          No Image
+                        </div>
                       )}
-                    </button>
-                  </div>
-                </div>
-                
-                <DroppableContainer 
-                  id="kioskProducts" 
-                  items={[...kioskProducts.map(p => `kiosk-${p.product_id}`), ...dividers.map(d => `divider-${d.id}`)]}
-                >
-                  <SortableContext
-                    items={getCombinedItemIds(createCombinedMenuItems(kioskProducts, dividers))}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {displayKioskItems()}
-                  </SortableContext>
-                </DroppableContainer>
-              </div>
-            </div>
-
-            {/* Drag overlay for visual feedback */}
-            <DragOverlay>
-              {activeProduct && (
-                <div className="p-3 rounded-lg border-2 border-blue-400 bg-white shadow-lg opacity-80">
-                  <div className="flex items-center gap-3">
-                    {activeProduct.image_url ? (
-                      <img 
-                        src={activeProduct.image_url} 
-                        alt={activeProduct.product_name}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                        No Image
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <h4 className="font-medium">{activeProduct.product_name}</h4>
-                      <div className="flex text-sm gap-2">
-                        <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
-                        {activeProduct.sgt_price && (
-                          <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
-                        )}
+                      <div className="flex-1">
+                        <h4 className="font-medium">{activeProduct.product_name}</h4>
+                        <div className="flex text-sm gap-2">
+                          <span className="text-gray-600">{formatPrice(activeProduct.won_price)}원</span>
+                          {activeProduct.sgt_price && (
+                            <span className="text-blue-600">{formatPrice(activeProduct.sgt_price)} SGT</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-              {activeDivider && (
-                <div className="p-3 my-2 rounded-md border-2 border-blue-400 bg-blue-50 shadow-xl opacity-90">
-                  <div className="flex items-center">
-                    <div className="mr-2 text-blue-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-blue-700">{activeDivider.name}</span>
-                      <span className="text-xs text-blue-500">카테고리</span>
+                )}
+                {activeDivider && (
+                  <div className="p-3 my-2 rounded-md border-2 border-blue-400 bg-blue-50 shadow-xl opacity-90">
+                    <div className="flex items-center">
+                      <div className="mr-2 text-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                        </svg>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-blue-700">{activeDivider.name}</span>
+                        <span className="text-xs text-blue-500">카테고리</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </DragOverlay>
-          </section>
+                )}
+              </DragOverlay>
+            </section>
+          </DndContext>
         </div>
       )}
       
