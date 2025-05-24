@@ -130,6 +130,7 @@ export default function PortOnePayment({
     
     try {
       const paymentId = merchantUidFromCaller || randomId();
+      console.log(`[PortOnePayment] Initiating payment with ID: ${paymentId}`);
       
       const requestPayload: any = {
         storeId,
@@ -169,6 +170,7 @@ export default function PortOnePayment({
       
       if (!redirectUrl || (payment && payment.success === true && !payment.code)) {
          setPaymentStatus({ status: 'PENDING', message: '결제 확인 중...' });
+         console.log(`[PortOnePayment] Verifying payment with ID: ${payment.paymentId}`);
          const completeResponse = await fetch('/api/payment/complete', {
            method: 'POST',
            headers: {
@@ -181,10 +183,16 @@ export default function PortOnePayment({
          
          if (completeResponse.ok) {
            const paymentComplete = await completeResponse.json();
+           console.log(`[PortOnePayment] Payment verification response:`, paymentComplete);
            setPaymentStatus({
              status: paymentComplete.status,
            });
-           if (onPaymentComplete) onPaymentComplete({...paymentComplete, paymentId: payment.paymentId});
+           if (onPaymentComplete) {
+             console.log(`[PortOnePayment] Calling onPaymentComplete with status: ${paymentComplete.status}`);
+             onPaymentComplete({...paymentComplete, paymentId: payment.paymentId});
+           } else {
+             console.log(`[PortOnePayment] onPaymentComplete callback is not defined`);
+           }
          } else {
            const errorMessage = await completeResponse.text();
            setPaymentStatus({

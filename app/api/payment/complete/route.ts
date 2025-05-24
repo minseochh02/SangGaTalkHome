@@ -9,17 +9,21 @@ const paymentApiClient = PaymentClient({
 });
 
 export async function POST(request: Request) {
+  console.log("[Payment Complete API] Request received");
   const supabase = await createClient();
   let requestBody;
   try {
     requestBody = await request.json();
+    console.log("[Payment Complete API] Request body:", requestBody);
   } catch (error) {
+    console.error("[Payment Complete API] Invalid request body:", error);
     return NextResponse.json({ status: 'FAILED', message: 'Invalid request body.' }, { status: 400 });
   }
 
   const { paymentId, impUid } = requestBody;
 
   if (!paymentId || !impUid) {
+    console.error("[Payment Complete API] Missing paymentId or impUid:", { paymentId, impUid });
     return NextResponse.json(
       { status: 'FAILED', message: 'Missing paymentId or impUid.' },
       { status: 400 }
@@ -27,6 +31,7 @@ export async function POST(request: Request) {
   }
 
   const kioskOrderId = paymentId;
+  console.log(`[Payment Complete API] Processing payment for order: ${kioskOrderId}, impUid: ${impUid}`);
 
   try {
     const portOnePayment = await paymentApiClient.getPayment({ paymentId: impUid });
@@ -61,6 +66,7 @@ export async function POST(request: Request) {
     }
 
     if (kioskOrder.status === 'completed') {
+      console.log(`[Payment Complete API] Order ${kioskOrderId} already completed`);
       return NextResponse.json(
         { status: 'PAID', message: '이미 처리된 주문입니다.', orderId: kioskOrderId },
         { status: 200 }
@@ -76,6 +82,7 @@ export async function POST(request: Request) {
     const amountToBePaid = kioskOrder.total_amount_krw;
 
     if (paymentStatusString === 'PAID' && amountPaid === amountToBePaid) {
+      console.log(`[Payment Complete API] Payment verified for order ${kioskOrderId}: ${amountPaid}`);
       const { error: updateError } = await supabase
         .from('kiosk_orders')
         .update({
@@ -95,6 +102,7 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
+      console.log(`[Payment Complete API] Order ${kioskOrderId} updated to completed, returning PAID status`);
       return NextResponse.json(
         { status: 'PAID', message: '결제가 성공적으로 완료되었습니다.', orderId: kioskOrderId },
         { status: 200 }

@@ -53,12 +53,23 @@ function PaymentPageContent() {
   }, [totalAmountSGT]);
 
   const handlePaymentSuccess = (paymentResult: any) => {
+    console.log("[PaymentPage] Payment result received:", paymentResult);
     // Only redirect if payment was successful
     if (paymentResult.status === 'PAID') {
-      router.push(
-        `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`
-      );
+      const successUrl = `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`;
+      console.log(`[PaymentPage] Payment success, redirecting to: ${successUrl}`);
+      
+      // Try using window.location for a hard redirect instead of router.push
+      try {
+        router.push(successUrl);
+        console.log('[PaymentPage] router.push completed');
+      } catch (error) {
+        console.error('[PaymentPage] Error with router.push:', error);
+        // Fallback to window.location
+        window.location.href = successUrl;
+      }
     } else {
+      console.log(`[PaymentPage] Payment not successful, status: ${paymentResult.status}`);
       // Handle non-successful payment (should be rare since we have onPaymentFailed for failures)
       setError(`결제 처리 오류: ${paymentResult.message || '알 수 없는 오류가 발생했습니다.'} (주문 ID: ${kioskOrderId})`);
     }
@@ -144,6 +155,21 @@ function PaymentPageContent() {
             onClose={handlePaymentModalClose}
             showModals={true}
           />
+          
+          {/* Add debug button for manual testing */}
+          <div className="mt-4 p-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600 mb-2">디버깅 도구</p>
+            <button
+              onClick={() => {
+                const successUrl = `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`;
+                console.log(`[PaymentPage] Manual redirect to: ${successUrl}`);
+                window.location.href = successUrl;
+              }}
+              className="w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            >
+              수동으로 성공 페이지로 이동 (테스트)
+            </button>
+          </div>
           
           <button
             onClick={() => router.push(`/kiosk/${storeId}/checkout?sessionId=${originalSessionId}&deviceNumber=${originalDeviceNumber}`)}
