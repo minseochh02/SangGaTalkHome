@@ -10,13 +10,15 @@ const ProductEditModal = ({
   product, 
   storeId,
   onClose, 
-  onSave 
+  onSave,
+  mode = 'edit'
 }: { 
   isOpen: boolean; 
   product: Product | null;
   storeId: string;
   onClose: () => void;
-  onSave: (updatedProduct: Product) => void;
+  onSave: (productData: Product | Omit<Product, 'product_id' | 'store_id' | 'created_at' | 'updated_at' | 'user_id'>) => void | Promise<void>;
+  mode?: 'create' | 'edit';
 }) => {
   const supabase = createClient();
   const [name, setName] = useState('');
@@ -31,7 +33,7 @@ const ProductEditModal = ({
 
   // Load basic product data when product changes
   useEffect(() => {
-    if (product) {
+    if (mode === 'edit' && product) {
       setName(product.product_name || '');
       setDescription(product.description || '');
       setSgtPrice(product.sgt_price ? product.sgt_price.toString() : '');
@@ -40,8 +42,17 @@ const ProductEditModal = ({
       
       // Load product options from database when product changes
       loadProductOptions(product.product_id);
+    } else if (mode === 'create') {
+      // Reset fields for create mode
+      setName('');
+      setDescription('');
+      setSgtPrice('');
+      setWonPrice('');
+      setImageUrl('');
+      setProductOptions([]);
+      setActiveTab('basic');
     }
-  }, [product]);
+  }, [product, mode, supabase]);
 
   // Load product options from database
   const loadProductOptions = async (productId: string) => {
@@ -223,27 +234,49 @@ const ProductEditModal = ({
     console.log('[ProductEditModal] handleSubmit triggered.');
     e.preventDefault();
     
-    if (!product) return;
-    
     setIsSaving(true);
-    
-    const updatedProduct: Product = {
-      ...product,
-      product_name: name,
-      description,
-      sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
-      won_price: wonPrice ? parseFloat(wonPrice) : 0,
-      image_url: imageUrl,
-      options: productOptions, // Include options in the product object
-    };
-    
-    // First save the product
-    onSave(updatedProduct);
-    
-    // Then save the options separately to our new tables
-    await saveProductOptions(product.product_id, productOptions);
+
+    if (mode === 'create') {
+      // Construct data that matches Omit<Product, 'product_id' | 'store_id' | 'created_at' | 'updated_at' | 'user_id'>
+      // Fields not in the simple form are given defaults or null.
+      const newProductData: Omit<Product, 'product_id' | 'store_id' | 'created_at' | 'updated_at' | 'user_id'> = {
+        product_name: name,
+        description,
+        sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
+        won_price: wonPrice ? parseFloat(wonPrice) : 0,
+        image_url: imageUrl || null, 
+        item_type: 'PRODUCT', 
+        status: 1, 
+        is_kiosk_enabled: false, 
+        kiosk_order: undefined,
+        is_sold_out: false, 
+        options: [], 
+        category_id: null, 
+        sgt_price_text: sgtPrice || undefined,
+        won_delivery_fee: 0,
+        won_special_delivery_fee: 0,
+        is_sgt_product: !!(sgtPrice && parseFloat(sgtPrice) > 0),
+        sgt_delivery_fee: 0,
+        sgt_special_delivery_fee: 0,
+        deleted_at: null,
+      };
+      onSave(newProductData);
+    } else if (mode === 'edit' && product) {
+      const updatedProduct: Product = {
+        ...product,
+        product_name: name,
+        description,
+        sgt_price: sgtPrice ? parseFloat(sgtPrice) : null,
+        won_price: wonPrice ? parseFloat(wonPrice) : 0,
+        image_url: imageUrl,
+        options: productOptions, 
+      };
+      onSave(updatedProduct);
+      await saveProductOptions(product.product_id, productOptions);
+    }
     
     setIsSaving(false);
+    // onClose(); // Consider if onClose should be called here or by the parent
   };
 
   const handleSaveOptions = async (productId: string | number, options: ProductOptionCategory[]) => {
@@ -290,9 +323,9 @@ const ProductEditModal = ({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 shadow-xl transition-all">
-                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                  상품 정보 수정
+              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
+                  {mode === 'create' ? '새 상품 추가' : '상품 정보 수정'}
                 </Dialog.Title>
                 
                 {/* Tab navigation */}
