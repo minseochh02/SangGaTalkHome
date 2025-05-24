@@ -402,16 +402,13 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     setError(null); // Clear previous errors
     
-    // Calculate total_amount_krw using the current exchangeRate
     const calculatedTotalAmountKRW = Math.round(totalAmount * exchangeRate);
 
     try {
       // For delivery, first redirect to the delivery address page to gather address
       if (orderType === 'kiosk_delivery') {
-        // Pass current cart total (SGT) and session info to delivery address page
-        router.push(`/kiosk/${storeId}/delivery-address?totalAmountSGT=${totalAmount}&sessionId=${sessionId || ''}&deviceNumber=${deviceNumber || ''}&orderType=${orderType}`);
-        // The delivery address page will then handle order creation and redirect to /payment
-        setIsSubmitting(false); // Allow submission again if user navigates back
+        router.push(`/kiosk/${storeId}/delivery-address?totalAmountSGT=${totalAmount}&totalAmountKRW=${calculatedTotalAmountKRW}&sessionId=${sessionId || ''}&deviceNumber=${deviceNumber || ''}&orderType=${orderType}`);
+        setIsSubmitting(false);
         return;
       }
       
@@ -501,16 +498,13 @@ export default function CheckoutPage() {
         }
       }
       
-      // 4. Redirect to the new payment page
-      const orderName = `${storeName} - ${orderType === 'kiosk_dine_in' ? '매장식사' : '포장'}`; // Example order name
+      // 4. Redirect to the new payment processing page
+      const orderNameForPayment = `${storeName} - ${orderType === 'kiosk_dine_in' ? '매장식사' : '포장'}`;
       
-      // Clear cart from localStorage *before* redirecting to payment page.
-      // If payment fails on the payment page, the user would need to start a new order.
       localStorage.removeItem(`kiosk-cart-${storeId}`);
 
-      router.push(
-        `/kiosk/${storeId}/payment?kioskOrderId=${kioskOrderId}&orderName=${encodeURIComponent(orderName)}&totalAmountSGT=${totalAmount}&orderType=${orderType}&originalSessionId=${sessionId || ''}&originalDeviceNumber=${deviceNumber || ''}`
-      );
+      const processingUrl = `/kiosk/${storeId}/payment-processing?kioskOrderId=${kioskOrderId}&orderName=${encodeURIComponent(orderNameForPayment)}&totalAmountKRW=${calculatedTotalAmountKRW}&orderType=${orderType}&originalSessionId=${sessionId || ''}&originalDeviceNumber=${deviceNumber || ''}`;
+      router.push(processingUrl);
 
     } catch (err) {
       console.error('Error in order submission process:', err);
