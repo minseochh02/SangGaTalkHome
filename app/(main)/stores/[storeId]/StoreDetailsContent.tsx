@@ -423,7 +423,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 					)}
 
 					{/* Products Section */}
-					<div
+					{/* <div
 						id="products-section"
 						className="bg-white rounded-xl shadow-md p-6"
 					>
@@ -510,7 +510,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								)}
 							</>
 						)}
-					</div>
+					</div> */}
 
 					{/* Location */}
 					{store.address && (store.latitude || store.longitude) && (
