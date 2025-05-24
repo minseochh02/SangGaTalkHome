@@ -87,12 +87,51 @@ function PaymentPageContent() {
     checkOrderStatus();
   }, [kioskOrderId, storeId, orderType, originalSessionId, isLoading, supabase]);
 
-  const handlePaymentSuccess = (paymentResult: any) => {
+  const handlePaymentSuccess = async (paymentResult: any) => {
     console.log("[PaymentPage] Payment result received:", paymentResult);
-    // Only redirect if payment was successful
-    if (paymentResult.status === 'PAID') {
-      const successUrl = `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`;
-      console.log(`[PaymentPage] Payment success, redirecting to: ${successUrl}`);
+
+    // Ensure we have the necessary IDs
+    const portoneImpUid = paymentResult?.imp_uid;
+    const merchantUid = paymentResult?.merchant_uid; // This should be our kioskOrderId
+
+    if (!portoneImpUid || !merchantUid) {
+      console.error('[PaymentPage] Critical: PortOne imp_uid or merchant_uid missing in payment result.', paymentResult);
+      setError('결제 정보가 완전하지 않아 주문을 확정할 수 없습니다. 관리자에게 문의하세요.');
+      return;
+    }
+
+    try {
+      // Update the kiosk_order with the portone_imp_uid
+      console.log(`[PaymentPage] Updating order ${merchantUid} with portone_imp_uid ${portoneImpUid}`);
+      const { error: updateError } = await supabase
+        .from('kiosk_orders')
+        .update({ 
+          portone_imp_uid: portoneImpUid,
+          payment_provider_response: paymentResult // Store the full PortOne response for auditing
+        })
+        .eq('kiosk_order_id', merchantUid);
+
+      if (updateError) {
+        console.error(`[PaymentPage] Error updating order ${merchantUid} with portone_imp_uid:`, updateError);
+        // Even if this update fails, if the webhook later finds the order by merchant_uid, it might self-correct.
+        // However, it's best to notify the user or log this as a critical issue if it persists.
+        setError('주문 정보를 결제 서비스와 연결하는 데 실패했습니다. 문제가 지속되면 관리자에게 문의하세요.');
+        // Depending on severity, you might not want to redirect yet or handle this differently.
+      } else {
+        console.log(`[PaymentPage] Successfully updated order ${merchantUid} with portone_imp_uid ${portoneImpUid}.`);
+      }
+
+    } catch (e) {
+      console.error('[PaymentPage] Exception while updating order with PortOne imp_uid:', e);
+      setError('주문 정보 업데이트 중 예외가 발생했습니다.');
+      // Potentially do not redirect if this fails, to avoid confusion.
+    }
+
+    // Only redirect if payment was reported as PAID by PortOne SDK
+    // The server-side webhook is the source of truth for final status updates.
+    if (paymentResult.status === 'PAID' || paymentResult.success === true || String(paymentResult.success).toLowerCase() === 'true') { // Check various success indicators
+      const successUrl = `/kiosk/${storeId}/success?orderId=${merchantUid}&orderType=${orderType}&sessionId=${originalSessionId}`;
+      console.log(`[PaymentPage] Payment SDK reported success for ${merchantUid}, redirecting to: ${successUrl}`);
       
       // Always use window.location.href for a hard redirect
       // This is more reliable after payment processing
