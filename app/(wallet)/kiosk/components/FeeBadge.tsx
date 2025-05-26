@@ -8,6 +8,7 @@ interface FeeBadgeProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   refreshInterval?: number;
+  wonPrice?: number | null;
 }
 
 const FeeBadge: React.FC<FeeBadgeProps> = ({
@@ -16,14 +17,22 @@ const FeeBadge: React.FC<FeeBadgeProps> = ({
   showWon = true,
   size = 'md',
   className = '',
-  refreshInterval = 0
+  refreshInterval = 0,
+  wonPrice = null
 }) => {
   const [fetchedImpact, setFetchedImpact] = useState<number | null>(null);
+  const [fetchedWonPrice, setFetchedWonPrice] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
   const effectivePriceImpact = priceImpact !== undefined ? priceImpact : fetchedImpact ?? 0;
-
+  
+  const effectiveWonPrice = wonPrice !== null ? wonPrice : 
+                          fetchedWonPrice !== null ? fetchedWonPrice : 
+                          effectivePriceImpact * 1000;
+  
   useEffect(() => {
+    console.log(`[FeeBadge] Initialized with priceImpact=${priceImpact}, optionId=${optionId}, wonPrice=${wonPrice}`);
+    
     let intervalId: NodeJS.Timeout | null = null;
     let isMounted = true;
     
@@ -33,8 +42,12 @@ const FeeBadge: React.FC<FeeBadgeProps> = ({
       setIsLoading(true);
       try {
         const optionData = await fetchOptionFeeById(optionId);
+        console.log(`[FeeBadge] Fetched data for option ${optionId}:`, optionData);
+        
         if (isMounted && optionData) {
           setFetchedImpact(optionData.price_impact);
+          setFetchedWonPrice(optionData.won_price);
+          console.log(`[FeeBadge] Updated state: impact=${optionData.price_impact}, wonPrice=${optionData.won_price}`);
         }
       } catch (err) {
         console.error('Error fetching option fee data:', err);
@@ -59,7 +72,11 @@ const FeeBadge: React.FC<FeeBadgeProps> = ({
         clearInterval(intervalId);
       }
     };
-  }, [optionId, priceImpact, refreshInterval]);
+  }, [optionId, priceImpact, wonPrice, refreshInterval]);
+
+  useEffect(() => {
+    console.log(`[FeeBadge] Rendering with effectivePriceImpact=${effectivePriceImpact}, effectiveWonPrice=${effectiveWonPrice}`);
+  }, [effectivePriceImpact, effectiveWonPrice]);
 
   // Format price with commas
   const formatPrice = (price: number): string => {
@@ -112,7 +129,7 @@ const FeeBadge: React.FC<FeeBadgeProps> = ({
       
       {showWon && effectivePriceImpact !== 0 && (
         <div className={`${sizeClasses[size === 'lg' ? 'md' : 'sm']} text-gray-500 mt-0.5`}>
-          {getLabel()} {formatPrice(Math.abs(effectivePriceImpact * 1000))}원
+          {getLabel()} {formatPrice(Math.abs(effectiveWonPrice))}원
         </div>
       )}
     </div>

@@ -61,6 +61,8 @@ export const fetchProductOptionFees = async (productId: string): Promise<OptionG
       return [];
     }
     
+    console.log('[optionUtils] Raw option choices from DB:', choices);
+    
     // Map data to our structure
     const optionGroups: OptionGroup[] = groups.map(group => ({
       id: group.id,
@@ -68,15 +70,26 @@ export const fetchProductOptionFees = async (productId: string): Promise<OptionG
       icon: group.icon || undefined,
       choices: choices
         .filter(choice => choice.group_id === group.id)
-        .map(choice => ({
-          id: choice.id,
-          name: choice.name,
-          price_impact: choice.price_impact || 0,
-          won_price: choice.won_price,
-          sgt_price: choice.sgt_price || 0,
-          icon: choice.icon || undefined,
-          is_default: choice.is_default || false
-        }))
+        .map(choice => {
+          // Prefer to use sgt_price directly as price_impact if it exists
+          // Otherwise fall back to price_impact field
+          const effectivePriceImpact = 
+            choice.sgt_price !== null && choice.sgt_price !== undefined ? 
+            choice.sgt_price : 
+            (choice.price_impact || 0);
+            
+          console.log(`[optionUtils] Option ${choice.name}: sgt_price=${choice.sgt_price}, price_impact=${choice.price_impact}, effective=${effectivePriceImpact}`);
+          
+          return {
+            id: choice.id,
+            name: choice.name,
+            price_impact: effectivePriceImpact,
+            won_price: choice.won_price,
+            sgt_price: choice.sgt_price || 0,
+            icon: choice.icon || undefined,
+            is_default: choice.is_default || false
+          };
+        })
     }));
     
     return optionGroups;
@@ -104,10 +117,18 @@ export const fetchOptionFeeById = async (optionId: string): Promise<OptionFee | 
       return null;
     }
     
+    // Use sgt_price as the primary price impact value if available
+    const effectivePriceImpact = 
+      data.sgt_price !== null && data.sgt_price !== undefined ? 
+      data.sgt_price : 
+      (data.price_impact || 0);
+      
+    console.log(`[optionUtils] Option ${data.name} (ID: ${data.id}): sgt_price=${data.sgt_price}, price_impact=${data.price_impact}, effective=${effectivePriceImpact}`);
+    
     return {
       id: data.id,
       name: data.name,
-      price_impact: data.price_impact || 0,
+      price_impact: effectivePriceImpact,
       won_price: data.won_price,
       sgt_price: data.sgt_price || 0,
       icon: data.icon || undefined,
@@ -135,7 +156,7 @@ export const calculateTotalFeeImpact = (selectedOptions: string[]): Promise<numb
       
       const { data, error } = await supabase
         .from('store_option_choices')
-        .select('price_impact')
+        .select('price_impact, sgt_price')
         .in('id', selectedOptions);
       
       if (error || !data) {
@@ -144,7 +165,15 @@ export const calculateTotalFeeImpact = (selectedOptions: string[]): Promise<numb
         return;
       }
       
-      totalImpact = data.reduce((sum, option) => sum + (option.price_impact || 0), 0);
+      totalImpact = data.reduce((sum, option) => {
+        // Use sgt_price as the primary price impact value if available
+        const effectivePriceImpact = 
+          option.sgt_price !== null && option.sgt_price !== undefined ? 
+          option.sgt_price : 
+          (option.price_impact || 0);
+          
+        return sum + effectivePriceImpact;
+      }, 0);
     } catch (err) {
       console.error('Error in calculateTotalFeeImpact:', err);
     }

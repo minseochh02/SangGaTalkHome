@@ -64,6 +64,7 @@ interface ProductOptionChoice {
   icon?: string;
   price_impact: number;
   is_default: boolean;
+  won_price?: number | null; // Add won_price field
 }
 
 interface ProductOptionGroup {
@@ -78,11 +79,13 @@ interface SelectedOption {
   choiceId: string;
   name: string;
   price_impact: number;
+  won_price?: number | null; // Add won_price field
 }
 
 interface CartItemWithOptions extends CartItem {
   options?: SelectedOption[];
   total_price: number; // Base price + all option price impacts
+  total_won_price?: number; // Base won price + all option won price impacts
 }
 
 export default function KioskPage() {
@@ -475,11 +478,18 @@ export default function KioskPage() {
     try {
       localStorage.setItem(`kiosk-cart-${storeId}`, JSON.stringify(cartItemsWithOptions));
       
-      // Update total amount
-      const total = cartItemsWithOptions.reduce(
+      // Update total SGT amount
+      const totalSgt = cartItemsWithOptions.reduce(
         (sum, item) => sum + (item.total_price * item.quantity), 0
       );
-      setTotalAmount(total);
+      
+      // Update total Won amount
+      const totalWon = cartItemsWithOptions.reduce(
+        (sum, item) => sum + ((item.total_won_price || item.won_price) * item.quantity), 0
+      );
+      
+      setTotalAmount(totalSgt); // Keep this as SGT for backwards compatibility
+      console.log(`[Kiosk] Cart updated. Total SGT: ${totalSgt}, Total Won: ${totalWon}`);
     } catch (err) {
       console.error('Error saving cart to localStorage:', err);
     }
@@ -505,7 +515,8 @@ export default function KioskPage() {
           name: choice.name,
           icon: choice.icon,
           price_impact: choice.price_impact,
-          is_default: choice.is_default
+          is_default: choice.is_default,
+          won_price: choice.won_price
         }))
       }));
       
@@ -530,7 +541,8 @@ export default function KioskPage() {
           groupId: group.id,
           choiceId: defaultChoice.id,
           name: `${group.name}: ${defaultChoice.name}`,
-          price_impact: defaultChoice.price_impact
+          price_impact: defaultChoice.price_impact,
+          won_price: defaultChoice.won_price
         });
       }
     });
@@ -565,9 +577,25 @@ export default function KioskPage() {
       );
 
       let newCart;
-      const optionPrice = options.reduce((sum, opt) => sum + opt.price_impact, 0);
+      // Calculate SGT option price
+      const optionSgtPrice = options.reduce((sum, opt) => sum + opt.price_impact, 0);
+      
+      // Calculate Won option price - use direct won_price when available
+      const optionWonPrice = options.reduce((sum, opt) => {
+        if (opt.won_price !== undefined && opt.won_price !== null) {
+          return sum + opt.won_price;
+        } else {
+          // Fallback to calculating from SGT if won_price not available
+          return sum + (opt.price_impact * 1000);
+        }
+      }, 0);
+      
+      console.log('[Kiosk] Adding to cart with options. SGT total:', optionSgtPrice, 'Won total:', optionWonPrice);
+      
       const itemBasePrice = product.sgt_price;
-      const itemTotalPrice = itemBasePrice + optionPrice;
+      const itemBaseWonPrice = product.won_price;
+      const itemTotalSgtPrice = itemBasePrice + optionSgtPrice;
+      const itemTotalWonPrice = itemBaseWonPrice + optionWonPrice;
 
       if (existingItemIndex > -1) {
         newCart = prevCart.map((item, index) => 
@@ -578,11 +606,12 @@ export default function KioskPage() {
           product_id: product.product_id, 
           product_name: product.product_name, 
           sgt_price: itemBasePrice, // Store base price
-          won_price: product.won_price, // Added won_price field
+          won_price: itemBaseWonPrice, // Store base won price
           quantity: 1, 
           image_url: product.image_url,
           options: options,
-          total_price: itemTotalPrice // Store total price per unit including options
+          total_price: itemTotalSgtPrice, // Store total SGT price per unit including options
+          total_won_price: itemTotalWonPrice // Store total Won price per unit including options
         }];
       }
       triggerCartAnimation(product.product_id);
@@ -600,7 +629,8 @@ export default function KioskPage() {
         groupId,
         choiceId: choice.id,
         name: `${productOptions.get(selectedProduct?.product_id || '')?.find(g => g.id === groupId)?.name || ''}: ${choice.name}`,
-        price_impact: choice.price_impact
+        price_impact: choice.price_impact,
+        won_price: choice.won_price
       }];
     });
   };
@@ -1197,6 +1227,7 @@ export default function KioskPage() {
                             <FeeBadge 
                               optionId={choice.id} 
                               priceImpact={choice.price_impact} // Fallback to direct value
+                              wonPrice={choice.won_price} // Pass won_price directly
                               refreshInterval={60000} // Refresh every minute
                             />
                           ) : (
@@ -1223,7 +1254,8 @@ export default function KioskPage() {
                     <span className="text-gray-600 text-sm">{option.name}</span>
                     <FeeBadge 
                       optionId={option.choiceId}
-                      priceImpact={option.price_impact} // Fallback to direct value 
+                      priceImpact={option.price_impact} // Fallback to direct value
+                      wonPrice={option.won_price} // Pass won_price directly
                       size="sm" 
                       refreshInterval={60000} 
                     />
@@ -1365,6 +1397,7 @@ export default function KioskPage() {
                                 <FeeBadge 
                                   optionId={option.choiceId}
                                   priceImpact={option.price_impact} // Fallback to direct value
+                                  wonPrice={option.won_price} // Pass won_price directly
                                   size="sm" 
                                   refreshInterval={60000}
                                 />
@@ -1387,8 +1420,16 @@ export default function KioskPage() {
             <div className="flex justify-between items-center mb-4">
               <span className="text-gray-700 font-medium">총 금액</span>
               <div>
-                <span className="text-xl font-bold">{formatPrice(totalAmount * 1000)}원</span>
-                <div className="text-sm text-gray-600">{formatPrice(totalAmount)} SGT</div>
+                <span className="text-xl font-bold">
+                  {formatPrice(cartItemsWithOptions.reduce(
+                    (sum, item) => sum + ((item.total_won_price || item.won_price) * item.quantity), 0
+                  ))}원
+                </span>
+                <div className="text-sm text-gray-600">
+                  {formatPrice(cartItemsWithOptions.reduce(
+                    (sum, item) => sum + (item.total_price * item.quantity), 0
+                  ))} SGT
+                </div>
               </div>
             </div>
             
