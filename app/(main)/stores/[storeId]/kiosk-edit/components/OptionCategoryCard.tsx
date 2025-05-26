@@ -73,11 +73,9 @@ const OptionCategoryCard: React.FC<OptionCategoryCardProps> = ({
                           : 'bg-gray-100 text-gray-400 border border-gray-200'
                       }`}>
                         <FontAwesomeIcon icon={['fas', 'won-sign']} className="h-2.5 w-2.5" />
-                        {choice.won_price && choice.won_price > 0 && (
-                          <span className="ml-0.5 text-[10px] font-medium">
-                            {choice.won_price.toLocaleString()}
-                          </span>
-                        )}
+                        <span className="ml-0.5 text-[10px] font-medium">
+                          {choice.won_price ? choice.won_price.toLocaleString() : '0'}
+                        </span>
                       </div>
                       
                       {/* SGT price badge */}
@@ -87,12 +85,10 @@ const OptionCategoryCard: React.FC<OptionCategoryCardProps> = ({
                             ? 'bg-blue-100 text-blue-700 border border-blue-200' 
                             : 'bg-gray-100 text-gray-400 border border-gray-200'
                         }`}>
-                          <FontAwesomeIcon icon={['fas', 'coins']} className="h-2.5 w-2.5" />
-                          {choice.sgt_price > 0 && (
-                            <span className="ml-0.5 text-[10px] font-medium">
-                              {choice.sgt_price.toLocaleString()}
-                            </span>
-                          )}
+                          <span className="text-[10px] font-medium">SGT</span>
+                          <span className="ml-0.5 text-[10px] font-medium">
+                            {choice.sgt_price ? choice.sgt_price.toLocaleString() : '0'}
+                          </span>
                         </div>
                       )}
                     </div>
