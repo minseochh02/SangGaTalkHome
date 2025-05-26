@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { library, IconPrefix, IconName, findIconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
+import FeeBadge from '../components/FeeBadge';
 
 // Add all FontAwesome icons to the library
 library.add(fas, far);
@@ -1227,13 +1228,10 @@ export default function KioskPage() {
                             <span>{choice.name}</span>
                           </div>
                           
-                          {choice.price_impact !== 0 && (
-                            <span className={`text-sm font-medium ${
-                              choice.price_impact > 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {choice.price_impact > 0 ? '+' : ''}
-                              {formatPrice(choice.price_impact)}
-                            </span>
+                          {choice.price_impact !== 0 ? (
+                            <FeeBadge priceImpact={choice.price_impact} />
+                          ) : (
+                            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-md">무료 옵션</span>
                           )}
                         </button>
                       );
@@ -1254,12 +1252,7 @@ export default function KioskPage() {
                 {selectedOptions.length > 0 && selectedOptions.map((option, index) => (
                   <div key={index} className="flex justify-between items-center py-1">
                     <span className="text-gray-600 text-sm">{option.name}</span>
-                    <span className={`text-sm ${
-                      option.price_impact > 0 ? 'text-green-600' : option.price_impact < 0 ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {option.price_impact > 0 ? '+' : ''}
-                      {formatPrice(option.price_impact)}
-                    </span>
+                    <FeeBadge priceImpact={option.price_impact} size="sm" />
                   </div>
                 ))}
                 
@@ -1394,11 +1387,10 @@ export default function KioskPage() {
                           {item.options.map((option, optionIndex) => (
                             <li key={optionIndex} className="flex justify-between py-1">
                               <span>{option.name}</span>
-                              {option.price_impact !== 0 && (
-                                <span className={option.price_impact > 0 ? 'text-green-600' : 'text-red-600'}>
-                                  {option.price_impact > 0 ? '+' : ''}
-                                  {formatPrice(option.price_impact)}
-                                </span>
+                              {option.price_impact !== 0 ? (
+                                <FeeBadge priceImpact={option.price_impact} size="sm" />
+                              ) : (
+                                <span className="text-xs text-gray-500">무료</span>
                               )}
                             </li>
                           ))}

@@ -597,7 +597,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             여기서 생성한 옵션은 여러 상품에 공통으로 적용할 수 있습니다. 옵션을 생성한 후 원하는 상품에 연결하세요.<br/>
             아이콘은 목록에서 선택하거나 이모지 (예: 🧊)를 직접 입력할 수 있습니다. (형식: "fas 아이콘이름" 또는 "far 아이콘이름")<br/>
             옵션 카드를 클릭하여 기본 선택을 빠르게 변경할 수 있습니다.<br/>
-            각 옵션에 원화와 SGT 추가 요금을 설정할 수 있습니다. 0원은 무료 옵션입니다. SGT 가격을 비워두면 SGT로 결제할 수 없습니다.
+            <span className="text-red-600 font-medium">각 옵션에 원화와 SGT 추가 요금을 설정할 수 있습니다. 추가 요금은 고객에게 명확하게 표시됩니다.</span><br/>
+            추가 요금이 0원이면 무료 옵션으로 표시됩니다. SGT 가격을 비워두면 SGT로 결제할 수 없습니다.
           </p>
 
           {!showNewCategory ? (
