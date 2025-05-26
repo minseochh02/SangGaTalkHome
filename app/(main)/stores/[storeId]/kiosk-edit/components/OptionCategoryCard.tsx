@@ -59,39 +59,39 @@ const OptionCategoryCard: React.FC<OptionCategoryCardProps> = ({
                       기본값
                     </div>
                   )}
+                  
+                  {/* Price badges as overlays */}
+                  <div className="absolute -top-2 left-2 flex gap-1">
+                    {/* Won price badge */}
+                    <div className={`rounded-full py-0.5 px-1.5 inline-flex items-center shadow-sm ${
+                      choice.won_price && choice.won_price > 0 
+                        ? 'bg-orange-100 text-orange-700 border border-orange-200' 
+                        : 'bg-gray-100 text-gray-400 border border-gray-200'
+                    }`}>
+                      <FontAwesomeIcon icon={['fas', 'won-sign']} className="h-2.5 w-2.5" />
+                      <span className="ml-0.5 text-[10px] font-medium">
+                        {choice.won_price ? choice.won_price.toLocaleString() : '0'}
+                      </span>
+                    </div>
+                    
+                    {/* SGT price badge */}
+                    {(choice.sgt_price !== undefined && choice.sgt_price !== null) && (
+                      <div className={`rounded-full py-0.5 px-1.5 inline-flex items-center shadow-sm ${
+                        choice.sgt_price > 0 
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                          : 'bg-gray-100 text-gray-400 border border-gray-200'
+                      }`}>
+                        <span className="text-[10px] font-medium">SGT</span>
+                        <span className="ml-0.5 text-[10px] font-medium">
+                          {choice.sgt_price ? choice.sgt_price.toLocaleString() : '0'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
                   <div className="flex flex-col items-center justify-center flex-grow">
                     {renderIconDisplay(choice.icon, "text-2xl mb-1.5")}
                     <span className="text-xs sm:text-sm text-slate-700 leading-tight">{choice.name}</span>
-                  </div>
-                  
-                  <div className="mt-2 w-full">
-                    <div className="flex justify-center gap-1.5">
-                      {/* Won price badge */}
-                      <div className={`rounded-full py-0.5 px-1.5 inline-flex items-center ${
-                        choice.won_price && choice.won_price > 0 
-                          ? 'bg-orange-100 text-orange-700 border border-orange-200' 
-                          : 'bg-gray-100 text-gray-400 border border-gray-200'
-                      }`}>
-                        <FontAwesomeIcon icon={['fas', 'won-sign']} className="h-2.5 w-2.5" />
-                        <span className="ml-0.5 text-[10px] font-medium">
-                          {choice.won_price ? choice.won_price.toLocaleString() : '0'}
-                        </span>
-                      </div>
-                      
-                      {/* SGT price badge */}
-                      {(choice.sgt_price !== undefined && choice.sgt_price !== null) && (
-                        <div className={`rounded-full py-0.5 px-1.5 inline-flex items-center ${
-                          choice.sgt_price > 0 
-                            ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                            : 'bg-gray-100 text-gray-400 border border-gray-200'
-                        }`}>
-                          <span className="text-[10px] font-medium">SGT</span>
-                          <span className="ml-0.5 text-[10px] font-medium">
-                            {choice.sgt_price ? choice.sgt_price.toLocaleString() : '0'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               ))}
