@@ -70,7 +70,7 @@ interface NewChoice {
     icon?: string;
     isDefault?: boolean; // Add isDefault property to NewChoice
     won_price?: number; // Added for option extra charge in KRW
-    sgt_price: number; // SGT price is now non-nullable
+    sgt_price: string; // SGT price is now a string to allow partial decimal input
 }
 
 const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
@@ -85,8 +85,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('');
   const [newChoices, setNewChoices] = useState<NewChoice[]>([
-    { name: '', icon: '', won_price: 0, sgt_price: 0 }, 
-    { name: '', icon: '', won_price: 0, sgt_price: 0 }
+    { name: '', icon: '', won_price: 0, sgt_price: '0' }, 
+    { name: '', icon: '', won_price: 0, sgt_price: '0' }
   ]);
   
   const [selectedOption, setSelectedOption] = useState<ProductOptionCategory | null>(null);
@@ -209,7 +209,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           icon: c.icon?.trim() || undefined,
           isDefault: c.isDefault,
           won_price: c.won_price !== undefined ? c.won_price : 0, 
-          sgt_price: c.sgt_price !== undefined ? c.sgt_price : 0 
+          sgt_price: parseFloat(c.sgt_price) || 0 // Parse sgt_price string to number
         }))
         .filter(c => c.name !== '')
         .map(c => ({ 
@@ -217,7 +217,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           icon: c.icon, 
           isDefault: c.isDefault,
           won_price: c.won_price,
-          sgt_price: c.sgt_price
+          sgt_price: c.sgt_price // This is now the parsed number
         }));
 
     if (validChoices.length === 0) {
@@ -249,34 +249,40 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     setShowNewCategory(false);
     setNewCategoryName('');
     setNewCategoryIcon('');
-    setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: 0 }, { name: '', icon: '', won_price: 0, sgt_price: 0 }]);
+    setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: '0' }, { name: '', icon: '', won_price: 0, sgt_price: '0' }]);
     showNotification('상세주문 옵션이 추가되었습니다.', 'success');
   };
 
-  const handleNewChoiceChange = (index: number, field: 'name' | 'icon' | 'isDefault' | 'won_price' | 'sgt_price', value: any) => {
+  const handleNewChoiceChange = (index: number, field: 'name' | 'icon' | 'isDefault' | 'won_price' | 'sgt_price', inputValue: any) => {
     const updatedChoices = [...newChoices];
-    
-    if (field === 'isDefault' && value === true) {
-      updatedChoices.forEach((choice, i) => {
-        if (i !== index) updatedChoices[i] = { ...updatedChoices[i], isDefault: false };
-      });
+    let finalValueToSet = inputValue; // Use a new variable to hold the value to be set
+
+    if (field === 'isDefault') {
+        if (inputValue === true) { // inputValue is boolean
+            updatedChoices.forEach((choice, i) => {
+                if (i !== index) updatedChoices[i].isDefault = false;
+            });
+        }
+        // finalValueToSet is already the correct boolean (inputValue)
+    } else if (field === 'won_price') { // inputValue is string from input e.target.value
+        if (inputValue === '' || inputValue === null || inputValue === undefined) {
+            finalValueToSet = 0;
+        } else {
+            const stringValue = String(inputValue).replace(/,/g, '');
+            const numValue = parseInt(stringValue, 10);
+            finalValueToSet = isNaN(numValue) ? 0 : numValue;
+        }
+    } else if (field === 'sgt_price') { // inputValue is string from input e.target.value
+        const stringValue = String(inputValue).replace(/,/g, '');
+        finalValueToSet = stringValue; // Store the cleaned string. Empty string is fine.
     }
-    
-    if (field === 'won_price' || field === 'sgt_price') {
-      if (value === '') {
-        value = 0; // Default to 0 if empty
-      } else {
-        const stringValue = value.toString().replace(/,/g, '');
-        const numValue = field === 'won_price' ? parseInt(stringValue, 10) : parseFloat(stringValue);
-        value = isNaN(numValue) ? 0 : numValue;
-      }
-    } 
-    
-    updatedChoices[index] = { ...updatedChoices[index], [field]: value };
+    // For 'name', 'icon', finalValueToSet remains inputValue (which is string from input)
+
+    updatedChoices[index] = { ...updatedChoices[index], [field]: finalValueToSet };
     setNewChoices(updatedChoices);
   };
 
-  const handleAddChoiceInput = () => setNewChoices([...newChoices, { name: '', icon: '', won_price: 0, sgt_price: 0 }]);
+  const handleAddChoiceInput = () => setNewChoices([...newChoices, { name: '', icon: '', won_price: 0, sgt_price: '0' }]);
   
   const handleRemoveNewChoice = (index: number) => {
     if (newChoices.length <= 1) {
@@ -756,7 +762,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-gray-700">상세주문 옵션 생성</h3>
                 <button
-                  onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: 0 }, { name: '', icon: '', won_price: 0, sgt_price: 0 }]); }}
+                  onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: '0' }, { name: '', icon: '', won_price: 0, sgt_price: '0' }]); }}
                   className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
                   title="닫기"
                 >
@@ -816,7 +822,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                               type="text" // Keep as text to allow decimal and comma input
                               placeholder="0" 
                               className="px-3 py-2.5 border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md placeholder-gray-400 w-24" // Slightly wider for decimals
-                              value={choice.sgt_price.toString()} 
+                              value={choice.sgt_price} 
                               onChange={(e) => handleNewChoiceChange(index, 'sgt_price', e.target.value)}
                               title="SGT 추가 요금 (0은 무료, 소수점 입력 가능)"
                             />
@@ -857,7 +863,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
               </div>
               
               <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-8 pt-6 border-t border-gray-200">
-                <button type="button" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: 0 }, { name: '', icon: '', won_price: 0, sgt_price: 0 }]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
+                <button type="button" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: '0' }, { name: '', icon: '', won_price: 0, sgt_price: '0' }]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
                 <button type="button" onClick={handleAddCategory} className="px-6 py-2.5 bg-blue-600 border border-transparent rounded-lg shadow-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">상세주문 옵션 추가 완료</button>
               </div>
             </div>
