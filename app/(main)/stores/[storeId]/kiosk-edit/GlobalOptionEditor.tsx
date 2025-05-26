@@ -21,6 +21,8 @@ interface ProductOptionChoice {
   icon?: string; // Icon for the choice (FA class "prefix icon-name" or emoji)
   price_impact?: number;
   isDefault?: boolean; // Mark if this is the default choice
+  won_price?: number; // Added for option extra charge in KRW
+  sgt_price?: number; // Added for option extra charge in SGT
 }
 
 interface ProductOptionCategory {
@@ -67,6 +69,8 @@ interface NewChoice {
     name: string;
     icon?: string;
     isDefault?: boolean; // Add isDefault property to NewChoice
+    won_price?: number; // Added for option extra charge in KRW
+    sgt_price?: number; // Added for option extra charge in SGT
 }
 
 const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
@@ -80,7 +84,10 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('');
-  const [newChoices, setNewChoices] = useState<NewChoice[]>([{ name: '', icon: '' }, { name: '', icon: '' }]);
+  const [newChoices, setNewChoices] = useState<NewChoice[]>([
+    { name: '', icon: '', won_price: 0, sgt_price: undefined }, 
+    { name: '', icon: '', won_price: 0, sgt_price: undefined }
+  ]);
   
   const [selectedOption, setSelectedOption] = useState<ProductOptionCategory | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -172,6 +179,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                   icon: choice.icon || undefined,
                   price_impact: choice.price_impact || 0,
                   isDefault: choice.is_default || false,
+                  won_price: choice.won_price !== undefined ? choice.won_price : 0, // Map won_price
+                  sgt_price: choice.sgt_price // Map sgt_price (can be undefined)
                 }))
             : []
         }));
@@ -198,10 +207,18 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
         .map(c => ({ 
           name: c.name.trim(), 
           icon: c.icon?.trim() || undefined,
-          isDefault: c.isDefault
+          isDefault: c.isDefault,
+          won_price: c.won_price !== undefined ? c.won_price : 0, // Default to 0 if undefined
+          sgt_price: c.sgt_price // Keep undefined if not set
         }))
         .filter(c => c.name !== '')
-        .map(c => ({ name: c.name, icon: c.icon, isDefault: c.isDefault }));
+        .map(c => ({ 
+          name: c.name, 
+          icon: c.icon, 
+          isDefault: c.isDefault,
+          won_price: c.won_price,
+          sgt_price: c.sgt_price
+        }));
 
     if (validChoices.length === 0) {
       showNotification('최소 하나의 옵션을 입력해주세요.', 'error');
@@ -232,11 +249,11 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     setShowNewCategory(false);
     setNewCategoryName('');
     setNewCategoryIcon('');
-    setNewChoices([{ name: '', icon: '' }, { name: '', icon: '' }]);
+    setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: undefined }, { name: '', icon: '', won_price: 0, sgt_price: undefined }]);
     showNotification('상세주문 옵션이 추가되었습니다.', 'success');
   };
 
-  const handleNewChoiceChange = (index: number, field: 'name' | 'icon' | 'isDefault', value: any) => {
+  const handleNewChoiceChange = (index: number, field: 'name' | 'icon' | 'isDefault' | 'won_price' | 'sgt_price', value: any) => {
     const updatedChoices = [...newChoices];
     
     if (field === 'isDefault' && value === true) {
@@ -245,11 +262,23 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       });
     }
     
+    // Convert price inputs to numbers
+    if (field === 'won_price' || field === 'sgt_price') {
+      // Handle empty string
+      if (value === '') {
+        value = field === 'won_price' ? 0 : undefined; // Default to 0 for won_price, undefined for sgt_price
+      } else {
+        // Remove commas and convert to number
+        const numValue = Number(value.toString().replace(/,/g, ''));
+        value = isNaN(numValue) ? (field === 'won_price' ? 0 : undefined) : numValue;
+      }
+    }
+    
     updatedChoices[index] = { ...updatedChoices[index], [field]: value };
     setNewChoices(updatedChoices);
   };
 
-  const handleAddChoiceInput = () => setNewChoices([...newChoices, { name: '', icon: '' }]);
+  const handleAddChoiceInput = () => setNewChoices([...newChoices, { name: '', icon: '', won_price: 0, sgt_price: undefined }]);
   
   const handleRemoveNewChoice = (index: number) => {
     if (newChoices.length <= 1) {
@@ -309,7 +338,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
       const dbGroupIds = dbGroups?.map(g => g.id) || [];
       const { data: dbChoices, error: dbChoicesError } = await supabase
         .from('store_option_choices')
-        .select('id, group_id, name, icon, price_impact, is_default, display_order')
+        .select('id, group_id, name, icon, price_impact, is_default, display_order, won_price, sgt_price') // Added won_price and sgt_price
         .in('group_id', dbGroupIds);
       if (dbChoicesError) throw dbChoicesError;
 
@@ -421,7 +450,9 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             icon: stateChoice.icon || null,
             price_impact: stateChoice.price_impact || 0,
             is_default: stateChoice.isDefault || false,
-            display_order: j
+            display_order: j,
+            won_price: stateChoice.won_price !== undefined ? stateChoice.won_price : 0,
+            sgt_price: stateChoice.sgt_price // This will be null if undefined, which is correct for DB
           };
 
           if (existingDbChoice) {
@@ -710,7 +741,8 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           <p className="text-gray-600 mb-8 text-sm sm:text-base leading-relaxed">
             여기서 생성한 옵션은 여러 상품에 공통으로 적용할 수 있습니다. 옵션을 생성한 후 원하는 상품에 연결하세요.<br/>
             아이콘은 목록에서 선택하거나 이모지 (예: 🧊)를 직접 입력할 수 있습니다. (형식: "fas 아이콘이름" 또는 "far 아이콘이름")<br/>
-            옵션 카드를 클릭하여 기본 선택을 빠르게 변경할 수 있습니다.
+            옵션 카드를 클릭하여 기본 선택을 빠르게 변경할 수 있습니다.<br/>
+            각 옵션에 원화와 SGT 추가 요금을 설정할 수 있습니다. 0원은 무료 옵션입니다. SGT 가격을 비워두면 SGT로 결제할 수 없습니다.
           </p>
 
           {!showNewCategory ? (
@@ -726,7 +758,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-gray-700">상세주문 옵션 생성</h3>
                 <button
-                  onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }}
+                  onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: undefined }, { name: '', icon: '', won_price: 0, sgt_price: undefined }]); }}
                   className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
                   title="닫기"
                 >
@@ -766,6 +798,33 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                           <button type="button" onClick={() => openIconPicker(index)} className="p-2.5 border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400" title="선택지 아이콘 선택">
                               {choice.icon ? renderIconForInput(choice.icon) : <FontAwesomeIcon icon={['far', 'image']} className="text-gray-400 w-5 h-5" />}
                           </button>
+                          
+                          {/* Won Price Input */}
+                          <div className="relative">
+                            <input 
+                              type="text" 
+                              placeholder="0" 
+                              className="px-3 py-2.5 border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md placeholder-gray-400 w-20"
+                              value={choice.won_price !== undefined ? choice.won_price.toLocaleString() : ''} 
+                              onChange={(e) => handleNewChoiceChange(index, 'won_price', e.target.value)}
+                              title="원화 추가 요금 (0원은 무료)"
+                            />
+                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">원</span>
+                          </div>
+                          
+                          {/* SGT Price Input */}
+                          <div className="relative">
+                            <input 
+                              type="text" 
+                              placeholder="0" 
+                              className="px-3 py-2.5 border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md placeholder-gray-400 w-20"
+                              value={choice.sgt_price !== undefined ? choice.sgt_price.toLocaleString() : ''} 
+                              onChange={(e) => handleNewChoiceChange(index, 'sgt_price', e.target.value)}
+                              title="SGT 추가 요금 (비워두면 SGT 결제 불가)"
+                            />
+                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">SGT</span>
+                          </div>
+                          
                           <button 
                             type="button" 
                             onClick={() => handleNewChoiceChange(index, 'isDefault', !choice.isDefault)} 
@@ -800,7 +859,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
               </div>
               
               <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-8 pt-6 border-t border-gray-200">
-                <button type="button" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
+                <button type="button" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', won_price: 0, sgt_price: undefined }, { name: '', icon: '', won_price: 0, sgt_price: undefined }]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
                 <button type="button" onClick={handleAddCategory} className="px-6 py-2.5 bg-blue-600 border border-transparent rounded-lg shadow-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">상세주문 옵션 추가 완료</button>
               </div>
             </div>
@@ -853,11 +912,21 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
                                 {renderIconDisplay(choice.icon, "text-2xl mb-1.5")}
                                 <span className="text-xs sm:text-sm text-slate-700 leading-tight">{choice.name}</span>
                               </div>
-                              {choice.price_impact !== undefined && ( // Display price impact if it exists
-                                  <span className={`mt-2 text-xs font-medium ${choice.price_impact > 0 ? 'text-green-600' : choice.price_impact < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                                      ({choice.price_impact > 0 ? '+' : ''}{choice.price_impact.toLocaleString()}원)
+                              
+                              {/* Price information */}
+                              <div className="mt-2 flex flex-col items-center text-xs">
+                                {/* Won price display */}
+                                <span className={`font-medium ${choice.won_price && choice.won_price > 0 ? 'text-orange-600' : 'text-gray-500'}`}>
+                                  {choice.won_price && choice.won_price > 0 ? `+${choice.won_price.toLocaleString()}원` : '무료'}
+                                </span>
+                                
+                                {/* SGT price display */}
+                                {choice.sgt_price !== undefined && (
+                                  <span className={`font-medium ${choice.sgt_price > 0 ? 'text-blue-600' : 'text-gray-500'}`}>
+                                    {choice.sgt_price > 0 ? `+${choice.sgt_price.toLocaleString()} SGT` : 'SGT 무료'}
                                   </span>
-                              )}
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>

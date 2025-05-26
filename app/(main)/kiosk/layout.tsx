@@ -8,7 +8,7 @@ const geistSans = Geist({
 
 export const metadata = {
   title: "SGT Kiosk",
-  description: "SangGaTalk Kiosk Interface",
+  description: "SGT Kiosk Interface",
 };
 
 // This makes the layout not inherit from parent layouts
