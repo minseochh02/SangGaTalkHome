@@ -210,13 +210,13 @@ export default function Navigation() {
 						>
 							스토어 등록
 						</Link>
-						<Link
+						{/* <Link
 							href="/sgt"
 							className="hover:text-primary py-2"
 							onClick={() => setMobileMenuOpen(false)}
 						>
 							SGT 이용
-						</Link>
+						</Link> */}
 						<Link
 							href="/support"
 							className="hover:text-primary py-2"
