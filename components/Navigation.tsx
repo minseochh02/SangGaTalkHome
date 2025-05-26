@@ -71,9 +71,9 @@ export default function Navigation() {
 							<Link href="/stores/locations" className="hover:text-primary">
 								지역별 스토어
 							</Link>
-							<Link href="/sgt/products" className="hover:text-primary">
+							{/* <Link href="/sgt/products" className="hover:text-primary">
 								SGT 상품
-							</Link>
+							</Link> */}
 							<Link href="/stores/register" className="hover:text-primary">
 								스토어 등록
 							</Link>
@@ -193,13 +193,13 @@ export default function Navigation() {
 						>
 							지역별 스토어
 						</Link>
-						<Link
+						{/* <Link
 							href="/sgt/products"
 							className="hover:text-primary py-2"
 							onClick={() => setMobileMenuOpen(false)}
 						>
 							SGT 상품
-						</Link>
+						</Link> */}
 						<Link
 							href="/stores/register"
 							className="hover:text-primary py-2"
