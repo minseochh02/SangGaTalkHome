@@ -713,7 +713,7 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             옵션 카드를 클릭하여 기본 선택을 빠르게 변경할 수 있습니다.
           </p>
 
-          {!showNewCategory && (
+          {!showNewCategory ? (
             <button
               onClick={() => setShowNewCategory(true)}
               className="mb-8 w-full p-4 border-2 border-dashed border-blue-500 rounded-xl flex items-center justify-center text-blue-600 hover:text-blue-700 hover:border-blue-600 hover:bg-blue-50 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-sm hover:shadow-md"
@@ -721,6 +721,89 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
               <FontAwesomeIcon icon={['fas', 'plus-circle']} className="w-6 h-6 mr-2.5" />
               상세주문 옵션 추가
             </button>
+          ) : (
+            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-200 mt-8 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-gray-700">상세주문 옵션 카테고리 생성</h3>
+                <button
+                  onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                  title="닫기"
+                >
+                  <FontAwesomeIcon icon={['fas', 'times']} className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-6">
+                <div>
+                  <label htmlFor="category-name" className="block text-sm font-medium text-gray-600 mb-1.5">옵션 카테고리 이름 <span className="text-red-500">*</span></label>
+                  <input type="text" id="category-name" placeholder="예: 얼음 양, 컵 선택" className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder-gray-400 sm:text-sm" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">카테고리 아이콘 (선택)</label>
+                  <div className="flex items-center space-x-2">
+                      <button type="button" onClick={() => openIconPicker('category')} className="flex-grow px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-left text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors min-h-[3rem] flex items-center">
+                          {newCategoryIcon ? renderIconForInput(newCategoryIcon) : <span className="text-gray-400">아이콘 선택...</span>}
+                      </button>
+                      {newCategoryIcon && (
+                          <button type="button" onClick={() => setNewCategoryIcon('')} className="p-2 text-gray-400 hover:text-red-600" title="아이콘 제거">
+                              <FontAwesomeIcon icon={['fas', 'trash-alt']} className="w-5 h-5" />
+                          </button>
+                      )}
+                  </div>
+                  <input type="text" placeholder='예: "fas coffee" 또는 🧊' className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder-gray-400 sm:text-xs" value={newCategoryIcon} onChange={(e) => setNewCategoryIcon(e.target.value)} title="선택한 아이콘이 여기에 표시됩니다. 직접 수정도 가능합니다."/>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">옵션 선택지 <span className="text-red-500">*</span></label>
+                <p className="text-xs text-gray-500 mb-3">각 선택지에 이름과 아이콘(선택)을 설정할 수 있습니다. 하나의 선택지를 기본값으로 지정하세요.</p>
+                <div className="space-y-3">
+                  {newChoices.map((choice, index) => (
+                    <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
+                      <div className="flex items-center space-x-3">
+                          <span className="text-gray-500 text-sm font-medium w-6 text-center">{index + 1}.</span>
+                          <input type="text" placeholder={`선택지 이름`} className="flex-grow px-3 py-2.5 border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md placeholder-gray-400" value={choice.name} onChange={(e) => handleNewChoiceChange(index, 'name', e.target.value)} />
+                          <button type="button" onClick={() => openIconPicker(index)} className="p-2.5 border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400" title="선택지 아이콘 선택">
+                              {choice.icon ? renderIconForInput(choice.icon) : <FontAwesomeIcon icon={['far', 'image']} className="text-gray-400 w-5 h-5" />}
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => handleNewChoiceChange(index, 'isDefault', !choice.isDefault)} 
+                            className={`p-2 rounded-md border ${choice.isDefault ? 'bg-blue-100 border-blue-400 text-blue-600' : 'border-gray-300 text-gray-400 hover:bg-gray-100'}`}
+                            title={choice.isDefault ? "기본 선택 해제" : "기본 선택으로 설정"}
+                          >
+                            <FontAwesomeIcon icon={['fas', 'check-circle']} className="w-5 h-5" />
+                          </button>
+                          {newChoices.length > 1 && ( // Only show remove button if there's more than one choice
+                              <button type="button" onClick={() => handleRemoveNewChoice(index)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors" title="선택지 삭제">
+                                  <FontAwesomeIcon icon={['fas', 'times-circle']} className="w-5 h-5" />
+                              </button>
+                          )}
+                      </div>
+                      <div className="mt-1.5 pl-10 flex items-center">
+                        {choice.isDefault && (
+                          <span className="inline-flex items-center mr-3 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded">
+                            <FontAwesomeIcon icon={['fas', 'check']} className="w-3 h-3 mr-1" /> 기본 선택
+                          </span>
+                        )}
+                        {choice.icon && ( // Show icon input only if an icon is selected/entered
+                            <input type="text" placeholder='예: "fas star" 또는 ⭐' className="block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder-gray-400 text-xs" value={choice.icon} onChange={(e) => handleNewChoiceChange(index, 'icon', e.target.value)} title="선택한 아이콘 (직접 수정 가능)"/>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={handleAddChoiceInput} className="mt-4 flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2 px-3 rounded-lg hover:bg-blue-100 transition-colors group">
+                  <FontAwesomeIcon icon={['fas', 'plus-circle']} className="w-5 h-5 mr-1.5 text-blue-500 group-hover:text-blue-600 transition-colors" />
+                  선택지 추가
+                </button>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-8 pt-6 border-t border-gray-200">
+                <button type="button" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
+                <button type="button" onClick={handleAddCategory} className="px-6 py-2.5 bg-blue-600 border border-transparent rounded-lg shadow-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">카테고리 추가 완료</button>
+              </div>
+            </div>
           )}
 
           {globalOptions.length > 0 ? (
@@ -814,93 +897,6 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           )}
         </div>
 
-        {!showNewCategory ? (
-          null
-        ) : (
-          <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-200 mt-8">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-gray-700">상세주문 옵션 카테고리 생성</h3>
-              <button
-                onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-                title="닫기"
-              >
-                <FontAwesomeIcon icon={['fas', 'times']} className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-6">
-              <div>
-                <label htmlFor="category-name" className="block text-sm font-medium text-gray-600 mb-1.5">옵션 카테고리 이름 <span className="text-red-500">*</span></label>
-                <input type="text" id="category-name" placeholder="예: 얼음 양, 컵 선택" className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder-gray-400 sm:text-sm" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">카테고리 아이콘 (선택)</label>
-                <div className="flex items-center space-x-2">
-                    <button type="button" onClick={() => openIconPicker('category')} className="flex-grow px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-left text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors min-h-[3rem] flex items-center">
-                        {newCategoryIcon ? renderIconForInput(newCategoryIcon) : <span className="text-gray-400">아이콘 선택...</span>}
-                    </button>
-                    {newCategoryIcon && (
-                        <button type="button" onClick={() => setNewCategoryIcon('')} className="p-2 text-gray-400 hover:text-red-600" title="아이콘 제거">
-                            <FontAwesomeIcon icon={['fas', 'trash-alt']} className="w-5 h-5" />
-                        </button>
-                    )}
-                </div>
-                <input type="text" placeholder='예: "fas coffee" 또는 🧊' className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder-gray-400 sm:text-xs" value={newCategoryIcon} onChange={(e) => setNewCategoryIcon(e.target.value)} title="선택한 아이콘이 여기에 표시됩니다. 직접 수정도 가능합니다."/>
-              </div>
-            </div>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">옵션 선택지 <span className="text-red-500">*</span></label>
-              <p className="text-xs text-gray-500 mb-3">각 선택지에 이름과 아이콘(선택)을 설정할 수 있습니다. 하나의 선택지를 기본값으로 지정하세요.</p>
-              <div className="space-y-3">
-                {newChoices.map((choice, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
-                    <div className="flex items-center space-x-3">
-                        <span className="text-gray-500 text-sm font-medium w-6 text-center">{index + 1}.</span>
-                        <input type="text" placeholder={`선택지 이름`} className="flex-grow px-3 py-2.5 border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md placeholder-gray-400" value={choice.name} onChange={(e) => handleNewChoiceChange(index, 'name', e.target.value)} />
-                        <button type="button" onClick={() => openIconPicker(index)} className="p-2.5 border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400" title="선택지 아이콘 선택">
-                            {choice.icon ? renderIconForInput(choice.icon) : <FontAwesomeIcon icon={['far', 'image']} className="text-gray-400 w-5 h-5" />}
-                        </button>
-                        <button 
-                          type="button" 
-                          onClick={() => handleNewChoiceChange(index, 'isDefault', !choice.isDefault)} 
-                          className={`p-2 rounded-md border ${choice.isDefault ? 'bg-blue-100 border-blue-400 text-blue-600' : 'border-gray-300 text-gray-400 hover:bg-gray-100'}`}
-                          title={choice.isDefault ? "기본 선택 해제" : "기본 선택으로 설정"}
-                        >
-                          <FontAwesomeIcon icon={['fas', 'check-circle']} className="w-5 h-5" />
-                        </button>
-                        {newChoices.length > 1 && ( // Only show remove button if there's more than one choice
-                            <button type="button" onClick={() => handleRemoveNewChoice(index)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors" title="선택지 삭제">
-                                <FontAwesomeIcon icon={['fas', 'times-circle']} className="w-5 h-5" />
-                            </button>
-                        )}
-                    </div>
-                    <div className="mt-1.5 pl-10 flex items-center">
-                      {choice.isDefault && (
-                        <span className="inline-flex items-center mr-3 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded">
-                          <FontAwesomeIcon icon={['fas', 'check']} className="w-3 h-3 mr-1" /> 기본 선택
-                        </span>
-                      )}
-                      {choice.icon && ( // Show icon input only if an icon is selected/entered
-                          <input type="text" placeholder='예: "fas star" 또는 ⭐' className="block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder-gray-400 text-xs" value={choice.icon} onChange={(e) => handleNewChoiceChange(index, 'icon', e.target.value)} title="선택한 아이콘 (직접 수정 가능)"/>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button type="button" onClick={handleAddChoiceInput} className="mt-4 flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2 px-3 rounded-lg hover:bg-blue-100 transition-colors group">
-                <FontAwesomeIcon icon={['fas', 'plus-circle']} className="w-5 h-5 mr-1.5 text-blue-500 group-hover:text-blue-600 transition-colors" />
-                선택지 추가
-              </button>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-8 pt-6 border-t border-gray-200">
-              <button type="button" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
-              <button type="button" onClick={handleAddCategory} className="px-6 py-2.5 bg-blue-600 border border-transparent rounded-lg shadow-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">카테고리 추가 완료</button>
-            </div>
-          </div>
-        )}
-        
         {showIconPicker && (
             <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
                 <div className="bg-white rounded-xl shadow-xl p-5 sm:p-6 w-full max-w-xl max-h-[80vh] flex flex-col">
