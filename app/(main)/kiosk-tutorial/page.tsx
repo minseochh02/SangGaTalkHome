@@ -60,7 +60,7 @@ export default function KioskTutorialPage() {
                     <li>주문하고 싶은 상점을 선택하세요.</li>
                     <li>상점 페이지에서 <strong>"키오스크 페이지로 이동"</strong> 버튼을 찾아 탭하세요.</li>
                   </ul>
-                  <img src="/images/kiosk_tutorial/customer_step_1a_app_navigation.png" alt="고객 - 1A단계 - '키오스크 페이지로 이동' 버튼 찾기" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+                  <img src="/images/kiosk_tutorial/customer_step_1a_app_navigation.jpeg" alt="고객 - 1A단계 - '키오스크 페이지로 이동' 버튼 찾기" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
                 </div>
                 <div>
                   <h4 className="text-lg font-medium text-gray-700">방법 B: QR 코드 스캔</h4>
