@@ -64,16 +64,26 @@ const OptionCategoryCard: React.FC<OptionCategoryCardProps> = ({
                     <span className="text-xs sm:text-sm text-slate-700 leading-tight">{choice.name}</span>
                   </div>
                   
-                  <div className="mt-2 flex flex-col items-center text-xs">
-                    <span className={`font-medium ${choice.won_price && choice.won_price > 0 ? 'text-orange-600' : 'text-gray-500'}`}>
-                      {choice.won_price && choice.won_price > 0 ? `+${choice.won_price.toLocaleString()}원` : '무료'}
-                    </span>
-                    
-                    {(choice.sgt_price !== undefined && choice.sgt_price !== null) && (
-                      <span className={`font-medium ${choice.sgt_price > 0 ? 'text-blue-600' : 'text-gray-500'}`}>
-                        {choice.sgt_price > 0 ? `+${choice.sgt_price.toLocaleString()} SGT` : 'SGT 무료'}
-                      </span>
-                    )}
+                  <div className="mt-2 w-full px-1">
+                    <div className="flex flex-col gap-1">
+                      {/* Won price display */}
+                      <div className={`rounded-md py-0.5 px-1 flex items-center justify-center gap-1 ${choice.won_price && choice.won_price > 0 ? 'bg-orange-50 text-orange-700' : 'text-gray-500'}`}>
+                        <FontAwesomeIcon icon={['fas', 'won-sign']} className="h-2.5 w-2.5" />
+                        <span className="text-xs font-medium">
+                          {choice.won_price && choice.won_price > 0 ? `+${choice.won_price.toLocaleString()}` : '무료'}
+                        </span>
+                      </div>
+                      
+                      {/* SGT price display */}
+                      {(choice.sgt_price !== undefined && choice.sgt_price !== null) && (
+                        <div className={`rounded-md py-0.5 px-1 flex items-center justify-center gap-1 ${choice.sgt_price > 0 ? 'bg-blue-50 text-blue-700' : 'text-gray-500'}`}>
+                          <FontAwesomeIcon icon={['fas', 'coins']} className="h-2.5 w-2.5" />
+                          <span className="text-xs font-medium">
+                            {choice.sgt_price > 0 ? `+${choice.sgt_price.toLocaleString()}` : '무료'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
