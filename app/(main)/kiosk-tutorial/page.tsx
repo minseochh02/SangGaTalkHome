@@ -65,7 +65,7 @@ export default function KioskTutorialPage() {
                 <div>
                   <h4 className="text-lg font-medium text-gray-700">방법 B: QR 코드 스캔</h4>
                   <p className="text-gray-600 mt-2">상점에 비치된 QR 코드를 찾으세요. 스마트폰 카메라를 사용하여 스캔하면 해당 상점의 키오스크 페이지로 바로 이동합니다.</p>
-                  <img src="/images/kiosk_tutorial/customer_step_1b_qr_scan.png" alt="고객 - 1B단계 - 고객 QR 코드 스캔" className="mt-3 w-full max-w-xs mx-auto rounded-lg shadow-md border border-gray-200" />
+                  <img src="/images/kiosk_tutorial/customer_step_1b_qr_scan.jpeg" alt="고객 - 1B단계 - 고객 QR 코드 스캔" className="mt-3 w-full max-w-xs mx-auto rounded-lg shadow-md border border-gray-200" />
                 </div>
               </div>
             </div>
@@ -73,27 +73,27 @@ export default function KioskTutorialPage() {
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">2. 키오스크 시작 및 상품 탐색</h3>
               <p className="text-gray-600 mb-3">키오스크 인터페이스가 로드되면 상점 이름과 키오스크 메뉴가 표시됩니다. 상품 카테고리를 탐색하거나 상품 목록을 스크롤하세요.</p>
-              <img src="/images/kiosk_tutorial/customer_step_2_welcome_browsing.png" alt="고객 - 2단계 - 카테고리 및 상품이 있는 키오스크 메인 페이지" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/customer_step_2_welcome_browsing.jpeg" alt="고객 - 2단계 - 카테고리 및 상품이 있는 키오스크 메인 페이지" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">3. 상품 선택 및 맞춤 설정</h3>
               <p className="text-gray-600 mb-3">상품을 탭하여 상세 정보를 보거나 맞춤 설정하세요. 옵션(사이즈, 토핑 등)이 있는 경우 선택 창이 나타납니다. 선택 사항을 정하고 가격 변동을 확인한 후, 장바구니에 추가하세요.</p>
-              <img src="/images/kiosk_tutorial/customer_step_3a_options_modal.png" alt="고객 - 3A단계 - 상품 상세/옵션 모달" className="mt-3 mb-2 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
-              <img src="/images/kiosk_tutorial/customer_step_3b_item_added_to_cart.png" alt="고객 - 3B단계 - 장바구니에 상품 추가 확인" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/customer_step_3a_options_modal.jpeg" alt="고객 - 3A단계 - 상품 상세/옵션 모달" className="mt-3 mb-2 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/customer_step_3b_item_added_to_cart.jpeg" alt="고객 - 3B단계 - 장바구니에 상품 추가 확인" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">4. 장바구니 검토 및 수정</h3>
-              <p className="text-gray-600 mb-3">장바구니 아이콘에는 상품 수량이 표시됩니다. 아이콘을 탭하여 주문 요약을 확인하세요. 상품 수량을 변경하거나 삭제할 수 있습니다.</p>
-              <img src="/images/kiosk_tutorial/customer_step_4_cart_summary.png" alt="고객 - 4단계 - 장바구니 요약 보기" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <p className="text-gray-600 mb-3">장바구니 아이콘에는 상품 수량, 옵션, 가격이 표시됩니다. 아이콘을 탭하여 주문 요약을 확인하세요. 상품 수량을 변경하거나 삭제할 수 있습니다.</p>
+              <img src="/images/kiosk_tutorial/customer_step_4_cart_summary.jpeg" alt="고객 - 4단계 - 장바구니 요약 보기" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">5. 수령 방법 선택</h3>
               <p className="text-gray-600 mb-3">주문 내용에 만족하셨다면 수령 방법을 선택하세요. 매장마다 제공하는 수령 방법이 다를 수 있습니다.</p>
-              <img src="/images/kiosk_tutorial/customer_step_5a_checkout_button.png" alt="고객 - 5A단계 - 결제 버튼" className="mt-3 mb-2 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
-              <img src="/images/kiosk_tutorial/customer_step_5b_policy_screen.png" alt="고객 - 5B단계 - 정책 표시/동의 화면" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/customer_step_5a_checkout_button.jpeg" alt="고객 - 5A단계 - 결제 버튼" className="mt-3 mb-2 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/customer_step_5b_policy_screen.jpeg" alt="고객 - 5B단계 - 정책 표시/동의 화면" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>

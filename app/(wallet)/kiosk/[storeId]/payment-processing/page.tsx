@@ -288,6 +288,14 @@ function PaymentProcessingPageContent() {
           </div>
         </div>
       </main>
+
+      <footer className="text-center py-4 text-sm text-gray-500 border-t border-gray-200 mt-auto">
+        <div className="container mx-auto">
+          <Link href="/privacy-policy" className="mx-2 hover:underline">개인정보처리방침</Link> |
+          <Link href="/return-policy" className="mx-2 hover:underline">반품 및 환불 정책</Link> |
+          <Link href="/terms-of-service" className="mx-2 hover:underline">서비스 이용약관</Link>
+        </div>
+      </footer>
     </div>
   );
 }
