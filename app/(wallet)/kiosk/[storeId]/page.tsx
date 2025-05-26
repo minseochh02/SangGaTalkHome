@@ -10,6 +10,8 @@ import { library, IconPrefix, IconName, findIconDefinition } from '@fortawesome/
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
 import FeeBadge from '../components/FeeBadge';
+import { useProductOptionFees, useTotalFeeImpact } from '../hooks/useOptionFees';
+import { fetchProductOptionFees } from '../utils/optionUtils';
 
 // Add all FontAwesome icons to the library
 library.add(fas, far);
@@ -491,58 +493,20 @@ export default function KioskPage() {
     }
     
     try {
-      // Fetch linked global option groups for this product
-      const { data: linkedOptions, error: linkError } = await supabase
-        .from('product_global_option_links')
-        .select('store_option_group_id')
-        .eq('product_id', productId);
+      const fetchedOptions = await fetchProductOptionFees(productId);
       
-      if (linkError || !linkedOptions || linkedOptions.length === 0) {
-        console.log(`No options found for product ${productId}`);
-        setProductOptions(prev => new Map(prev).set(productId, []));
-        return [];
-      }
-      
-      const groupIds = linkedOptions.map(link => link.store_option_group_id);
-      
-      // Fetch option groups
-      const { data: groups, error: groupError } = await supabase
-        .from('store_option_groups')
-        .select('*')
-        .in('id', groupIds)
-        .order('display_order', { ascending: true });
-      
-      if (groupError || !groups) {
-        console.error('Error fetching option groups:', groupError);
-        return [];
-      }
-      
-      // Fetch option choices for these groups
-      const { data: choices, error: choicesError } = await supabase
-        .from('store_option_choices')
-        .select('*')
-        .in('group_id', groupIds)
-        .order('display_order', { ascending: true });
-      
-      if (choicesError || !choices) {
-        console.error('Error fetching option choices:', choicesError);
-        return [];
-      }
-      
-      // Map data to our component structure
-      const productOptionGroups: ProductOptionGroup[] = groups.map(group => ({
+      // Map the fetched data to our component structure
+      const productOptionGroups: ProductOptionGroup[] = fetchedOptions.map(group => ({
         id: group.id,
         name: group.name,
-        icon: group.icon || undefined,
-        choices: choices
-          .filter(choice => choice.group_id === group.id)
-          .map(choice => ({
-            id: choice.id,
-            name: choice.name,
-            icon: choice.icon || undefined,
-            price_impact: choice.price_impact || 0,
-            is_default: choice.is_default || false
-          }))
+        icon: group.icon,
+        choices: group.choices.map(choice => ({
+          id: choice.id,
+          name: choice.name,
+          icon: choice.icon,
+          price_impact: choice.price_impact,
+          is_default: choice.is_default
+        }))
       }));
       
       // Update state
@@ -550,6 +514,7 @@ export default function KioskPage() {
       return productOptionGroups;
     } catch (err) {
       console.error('Error fetching product options:', err);
+      setProductOptions(prev => new Map(prev).set(productId, []));
       return [];
     }
   };
@@ -1229,7 +1194,11 @@ export default function KioskPage() {
                           </div>
                           
                           {choice.price_impact !== 0 ? (
-                            <FeeBadge priceImpact={choice.price_impact} />
+                            <FeeBadge 
+                              optionId={choice.id} 
+                              priceImpact={choice.price_impact} // Fallback to direct value
+                              refreshInterval={60000} // Refresh every minute
+                            />
                           ) : (
                             <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-md">무료 옵션</span>
                           )}
@@ -1252,7 +1221,12 @@ export default function KioskPage() {
                 {selectedOptions.length > 0 && selectedOptions.map((option, index) => (
                   <div key={index} className="flex justify-between items-center py-1">
                     <span className="text-gray-600 text-sm">{option.name}</span>
-                    <FeeBadge priceImpact={option.price_impact} size="sm" />
+                    <FeeBadge 
+                      optionId={option.choiceId}
+                      priceImpact={option.price_impact} // Fallback to direct value 
+                      size="sm" 
+                      refreshInterval={60000} 
+                    />
                   </div>
                 ))}
                 
@@ -1388,7 +1362,12 @@ export default function KioskPage() {
                             <li key={optionIndex} className="flex justify-between py-1">
                               <span>{option.name}</span>
                               {option.price_impact !== 0 ? (
-                                <FeeBadge priceImpact={option.price_impact} size="sm" />
+                                <FeeBadge 
+                                  optionId={option.choiceId}
+                                  priceImpact={option.price_impact} // Fallback to direct value
+                                  size="sm" 
+                                  refreshInterval={60000}
+                                />
                               ) : (
                                 <span className="text-xs text-gray-500">무료</span>
                               )}

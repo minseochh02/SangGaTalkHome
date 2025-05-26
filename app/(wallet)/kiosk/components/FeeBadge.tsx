@@ -1,18 +1,66 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchOptionFeeById } from '../utils/optionUtils';
 
 interface FeeBadgeProps {
-  priceImpact: number;
+  priceImpact?: number;
+  optionId?: string;
   showWon?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  refreshInterval?: number;
 }
 
 const FeeBadge: React.FC<FeeBadgeProps> = ({
   priceImpact,
+  optionId,
   showWon = true,
   size = 'md',
-  className = ''
+  className = '',
+  refreshInterval = 0
 }) => {
+  const [fetchedImpact, setFetchedImpact] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  const effectivePriceImpact = priceImpact !== undefined ? priceImpact : fetchedImpact ?? 0;
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    let isMounted = true;
+    
+    const fetchOptionData = async () => {
+      if (!optionId) return;
+      
+      setIsLoading(true);
+      try {
+        const optionData = await fetchOptionFeeById(optionId);
+        if (isMounted && optionData) {
+          setFetchedImpact(optionData.price_impact);
+        }
+      } catch (err) {
+        console.error('Error fetching option fee data:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    if (optionId && priceImpact === undefined) {
+      fetchOptionData();
+    }
+    
+    if (refreshInterval > 0 && optionId) {
+      intervalId = setInterval(fetchOptionData, refreshInterval);
+    }
+    
+    return () => {
+      isMounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [optionId, priceImpact, refreshInterval]);
+
   // Format price with commas
   const formatPrice = (price: number): string => {
     return price.toLocaleString();
@@ -27,36 +75,44 @@ const FeeBadge: React.FC<FeeBadgeProps> = ({
 
   // Determine color and prefix based on price impact
   const getColorClass = () => {
-    if (priceImpact > 0) return 'text-green-600';
-    if (priceImpact < 0) return 'text-red-600';
+    if (effectivePriceImpact > 0) return 'text-green-600';
+    if (effectivePriceImpact < 0) return 'text-red-600';
     return 'text-gray-500';
   };
 
   // Determine the label text
   const getLabel = () => {
-    if (priceImpact === 0) return '무료 옵션';
-    return priceImpact > 0 ? '추가 요금' : '할인';
+    if (effectivePriceImpact === 0) return '무료 옵션';
+    return effectivePriceImpact > 0 ? '추가 요금' : '할인';
   };
 
   // Determine the badge background color
   const getBgColorClass = () => {
-    if (priceImpact > 0) return 'bg-green-50';
-    if (priceImpact < 0) return 'bg-red-50';
+    if (effectivePriceImpact > 0) return 'bg-green-50';
+    if (effectivePriceImpact < 0) return 'bg-red-50';
     return 'bg-gray-50';
   };
+
+  if (isLoading && fetchedImpact === null) {
+    return (
+      <div className={`flex items-center ${className}`}>
+        <div className="animate-pulse bg-gray-200 h-5 w-16 rounded"></div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col items-end ${className}`}>
       <div className={`flex items-center ${getBgColorClass()} rounded-md px-2 py-0.5`}>
         <span className={`font-medium ${getColorClass()} ${sizeClasses[size]}`}>
-          {priceImpact > 0 ? '+' : priceImpact < 0 ? '-' : ''}
-          {formatPrice(Math.abs(priceImpact))} SGT
+          {effectivePriceImpact > 0 ? '+' : effectivePriceImpact < 0 ? '-' : ''}
+          {formatPrice(Math.abs(effectivePriceImpact))} SGT
         </span>
       </div>
       
-      {showWon && priceImpact !== 0 && (
+      {showWon && effectivePriceImpact !== 0 && (
         <div className={`${sizeClasses[size === 'lg' ? 'md' : 'sm']} text-gray-500 mt-0.5`}>
-          {getLabel()} {formatPrice(Math.abs(priceImpact * 1000))}원
+          {getLabel()} {formatPrice(Math.abs(effectivePriceImpact * 1000))}원
         </div>
       )}
     </div>
