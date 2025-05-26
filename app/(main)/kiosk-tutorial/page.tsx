@@ -93,26 +93,24 @@ export default function KioskTutorialPage() {
               <h3 className="text-xl font-medium text-gray-700 mb-3">5. 수령 방법 선택</h3>
               <p className="text-gray-600 mb-3">주문 내용에 만족하셨다면 수령 방법을 선택하세요. 매장마다 제공하는 수령 방법이 다를 수 있습니다.</p>
               <img src="/images/kiosk_tutorial/customer_step_5a_checkout_button.jpeg" alt="고객 - 5A단계 - 결제 버튼" className="mt-3 mb-2 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
-              <img src="/images/kiosk_tutorial/customer_step_5b_policy_screen.jpeg" alt="고객 - 5B단계 - 정책 표시/동의 화면" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">6. 결제 진행 및 정책 검토</h3>
-              <p className="text-gray-600 mb-3">주문 내용에 만족하셨다면 "결제하기" 또는 유사한 버튼을 탭하세요. <strong>중요:</strong> 결제 전에 구매 정책(서비스 이용 약관, 개인정보 처리방침 등)을 검토하고 동의해야 합니다.</p>
-              <img src="/images/kiosk_tutorial/customer_step_5a_checkout_button.png" alt="고객 - 5A단계 - 결제 버튼" className="mt-3 mb-2 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
-              <img src="/images/kiosk_tutorial/customer_step_5b_policy_screen.png" alt="고객 - 5B단계 - 정책 표시/동의 화면" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <p className="text-gray-600 mb-3">주문 내용에 만족하셨다면 원하시는 결제 방법을 선택하세요.</p>
+              <img src="/images/kiosk_tutorial/customer_step_6_policy_screen.jpeg" alt="고객 - 5B단계 - 정책 표시/동의 화면" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">7. 결제 및 주문 확인</h3>
               <p className="text-gray-600 mb-3">화면 안내에 따라 결제를 완료하세요. 결제가 성공하면 주문 번호가 포함된 확인 화면이 나타납니다.</p>
-              <img src="/images/kiosk_tutorial/customer_step_6_order_confirmation.png" alt="고객 - 6단계 - 주문 성공 확인" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/customer_step_7_order_confirmation.jpeg" alt="고객 - 6단계 - 주문 성공 확인" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">8. 주문 준비 완료 알림</h3>
               <p className="text-gray-600 mb-3">주문한 상품이 준비되면 시스템에서 알림(화면, 소리 또는 진동)을 보냅니다.</p>
-              <img src="/images/kiosk_tutorial/customer_step_7_order_ready_notification.png" alt="고객 - 7단계 - 주문 준비 완료 알림" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/customer_step_8_order_ready_notification.jpeg" alt="고객 - 7단계 - 주문 준비 완료 알림" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
           </div>
         </section>

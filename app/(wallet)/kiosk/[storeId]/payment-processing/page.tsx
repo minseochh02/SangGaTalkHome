@@ -256,6 +256,10 @@ function PaymentProcessingPageContent() {
                 onClose={handlePaymentModalClose}
                 showModals={true} 
               />
+              <div className="mt-3 text-center text-sm text-gray-600">
+                또는 <button className="text-blue-600 hover:underline font-semibold">[SGT포인트로 결제]</button>
+                <p className="text-xs text-gray-500 mt-1">*부분 결제는 불가능합니다.</p>
+              </div>
             </div>
           )}
           
