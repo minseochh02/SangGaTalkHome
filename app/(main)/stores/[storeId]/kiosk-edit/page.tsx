@@ -1342,7 +1342,7 @@ function KioskEditContent({ storeId }: { storeId: string }) {
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-6">키오스크 편집</h1>
+      <h1 className="text-2xl font-bold mb-6">키오스크 관리</h1>
       
       {/* Main content area */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">

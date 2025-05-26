@@ -136,7 +136,7 @@ export default function KioskTutorialPage() {
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">2. 키오스크 설정 대시보드</h3>
-              <p className="text-gray-600 mb-3">이것이 메인 제어판입니다. 메뉴 빌더, 주문 대시보드, 활성 세션, 판매 보고서 및 상품 옵션 관리 섹션을 찾을 수 있습니다.</p>
+              <p className="text-gray-600 mb-3">이 화면이 메인 제어판입니다. 메뉴 빌더, 주문 대시보드, 활성 세션, 판매 보고서 및 상품 옵션 관리 섹션을 찾을 수 있습니다.</p>
               <img src="/images/kiosk_tutorial/store_owner_step_2_config_dashboard.png" alt="점주 - 2단계 - 키오스크 설정 대시보드 개요" className="mt-3 w-full max-w-lg mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
