@@ -974,7 +974,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 										href={`/stores/${storeId}/kiosk-edit`}
 										className="ml-4 px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
 									>
-										키오스크 설정 수정
+										키오스크 관리
 									</Link>
 								)}
 							</h3>
@@ -985,7 +985,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								</p>
 							</div>
 						</div>
-						<div>
+						{/* <div>
 							<h3 className="text-xl font-semibold text-gray-700 mb-3">
 								스토어 지갑 주소
 							</h3>
@@ -1009,7 +1009,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 							) : (
 								<p className="text-gray-600">지갑 주소가 없습니다.</p>
 							)}
-						</div>
+						</div> */}
 					</div>
 				</div>
 			)}
