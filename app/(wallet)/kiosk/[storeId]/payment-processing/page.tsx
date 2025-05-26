@@ -256,9 +256,12 @@ function PaymentProcessingPageContent() {
                 onClose={handlePaymentModalClose}
                 showModals={true} 
               />
-              <div className="mt-3 text-center text-sm text-gray-600">
-                또는 <button className="text-blue-600 hover:underline font-semibold">[SGT포인트로 결제]</button>
-                <p className="text-xs text-gray-500 mt-1">*부분 결제는 불가능합니다.</p>
+              <div className="mt-4">
+                <hr className="border-gray-300 my-3" />
+                <button className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors">
+                  SGT포인트로 결제
+                </button>
+                <p className="text-xs text-gray-500 mt-1 text-center">*부분 결제는 불가능합니다.</p>
               </div>
             </div>
           )}
