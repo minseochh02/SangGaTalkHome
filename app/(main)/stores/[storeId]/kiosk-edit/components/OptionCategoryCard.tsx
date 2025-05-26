@@ -64,23 +64,35 @@ const OptionCategoryCard: React.FC<OptionCategoryCardProps> = ({
                     <span className="text-xs sm:text-sm text-slate-700 leading-tight">{choice.name}</span>
                   </div>
                   
-                  <div className="mt-2 w-full px-1">
-                    <div className="flex flex-col gap-1">
-                      {/* Won price display */}
-                      <div className={`rounded-md py-0.5 px-1 flex items-center justify-center gap-1 ${choice.won_price && choice.won_price > 0 ? 'bg-orange-50 text-orange-700' : 'text-gray-500'}`}>
+                  <div className="mt-2 w-full">
+                    <div className="flex justify-center gap-1.5">
+                      {/* Won price badge */}
+                      <div className={`rounded-full py-0.5 px-1.5 inline-flex items-center ${
+                        choice.won_price && choice.won_price > 0 
+                          ? 'bg-orange-100 text-orange-700 border border-orange-200' 
+                          : 'bg-gray-100 text-gray-400 border border-gray-200'
+                      }`}>
                         <FontAwesomeIcon icon={['fas', 'won-sign']} className="h-2.5 w-2.5" />
-                        <span className="text-xs font-medium">
-                          {choice.won_price && choice.won_price > 0 ? `+${choice.won_price.toLocaleString()}` : '무료'}
-                        </span>
+                        {choice.won_price && choice.won_price > 0 && (
+                          <span className="ml-0.5 text-[10px] font-medium">
+                            {choice.won_price.toLocaleString()}
+                          </span>
+                        )}
                       </div>
                       
-                      {/* SGT price display */}
+                      {/* SGT price badge */}
                       {(choice.sgt_price !== undefined && choice.sgt_price !== null) && (
-                        <div className={`rounded-md py-0.5 px-1 flex items-center justify-center gap-1 ${choice.sgt_price > 0 ? 'bg-blue-50 text-blue-700' : 'text-gray-500'}`}>
+                        <div className={`rounded-full py-0.5 px-1.5 inline-flex items-center ${
+                          choice.sgt_price > 0 
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                            : 'bg-gray-100 text-gray-400 border border-gray-200'
+                        }`}>
                           <FontAwesomeIcon icon={['fas', 'coins']} className="h-2.5 w-2.5" />
-                          <span className="text-xs font-medium">
-                            {choice.sgt_price > 0 ? `+${choice.sgt_price.toLocaleString()}` : '무료'}
-                          </span>
+                          {choice.sgt_price > 0 && (
+                            <span className="ml-0.5 text-[10px] font-medium">
+                              {choice.sgt_price.toLocaleString()}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
