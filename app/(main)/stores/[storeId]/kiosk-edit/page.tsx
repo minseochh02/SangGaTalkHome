@@ -1346,95 +1346,98 @@ function KioskEditContent({ storeId }: { storeId: string }) {
       
       {/* Main content area */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        {/* Kiosk QR Code Section */}
-        <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-6">키오스크 QR 코드</h2>
-          <div className="flex flex-col items-center space-y-4">
-            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100 flex flex-col items-center">
-              <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/${storeId}`} size={200} />
-              <p className="mt-4 text-sm text-gray-600 text-center">
-                QR 코드를 스캔하여 웹 키오스크 모드에 바로 접속하세요.
-              </p>
-              <p className="mt-2 text-sm text-gray-500 text-center">
-                이 QR 코드는 웹 브라우저에서 스토어의 키오스크 모드에 바로 접속할 수 있는 링크입니다.
-              </p>
-            </div>
-          </div>
-        </section>
-        
-        {/* Service Option Toggles */}
-        <section className="mb-12 bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-6">서비스 옵션 활성화</h2>
-          <div className="space-y-6">
-            {/* Dine-in Toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-gray-800">매장에서</h3>
-                <p className="text-sm text-gray-500">키오스크에서 매장 내 수령 옵션을 제공합니다.</p>
+        {/* Grid layout for QR code and Service options */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Kiosk QR Code Section */}
+          <section className="bg-white p-6 rounded-lg shadow-md h-full">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-6">키오스크 QR 코드</h2>
+            <div className="flex flex-col items-center space-y-4">
+              <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100 flex flex-col items-center">
+                <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/${storeId}`} size={200} />
+                <p className="mt-4 text-sm text-gray-600 text-center">
+                  QR 코드를 스캔하여 웹 키오스크 모드에 바로 접속하세요.
+                </p>
+                <p className="mt-2 text-sm text-gray-500 text-center">
+                  이 QR 코드는 웹 브라우저에서 스토어의 키오스크 모드에 바로 접속할 수 있는 링크입니다.
+                </p>
               </div>
-              <button
-                onClick={() => setDineInEnabled(!dineInEnabled)}
-                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  dineInEnabled ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                    dineInEnabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
             </div>
+          </section>
+          
+          {/* Service Option Toggles */}
+          <section className="bg-white p-6 rounded-lg shadow-md h-full">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-6">서비스 옵션 활성화</h2>
+            <div className="space-y-6">
+              {/* Dine-in Toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800">매장에서</h3>
+                  <p className="text-sm text-gray-500">키오스크에서 매장 내 수령 옵션을 제공합니다.</p>
+                </div>
+                <button
+                  onClick={() => setDineInEnabled(!dineInEnabled)}
+                  className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    dineInEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                      dineInEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
 
-            {/* Takeout Toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-gray-800">포장 (가져가기)</h3>
-                <p className="text-sm text-gray-500">키오스크에서 포장 옵션을 제공합니다.</p>
-              </div>
-              <button
-                onClick={() => setTakeoutEnabled(!takeoutEnabled)}
-                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  takeoutEnabled ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                    takeoutEnabled ? 'translate-x-6' : 'translate-x-1'
+              {/* Takeout Toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800">포장 (가져가기)</h3>
+                  <p className="text-sm text-gray-500">키오스크에서 포장 옵션을 제공합니다.</p>
+                </div>
+                <button
+                  onClick={() => setTakeoutEnabled(!takeoutEnabled)}
+                  className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    takeoutEnabled ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
-                />
-              </button>
-            </div>
+                >
+                  <span
+                    className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                      takeoutEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
 
-            {/* Delivery Toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-gray-800">배달</h3>
-                <p className="text-sm text-gray-500">키오스크에서 배달 옵션을 제공합니다. (추가 설정 필요할 수 있음)</p>
-              </div>
-              <button
-                onClick={() => setDeliveryEnabled(!deliveryEnabled)}
-                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  deliveryEnabled ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                    deliveryEnabled ? 'translate-x-6' : 'translate-x-1'
+              {/* Delivery Toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800">배달</h3>
+                  <p className="text-sm text-gray-500">키오스크에서 배달 옵션을 제공합니다. (추가 설정 필요할 수 있음)</p>
+                </div>
+                <button
+                  onClick={() => setDeliveryEnabled(!deliveryEnabled)}
+                  className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    deliveryEnabled ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
-                />
+                >
+                  <span
+                    className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                      deliveryEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+            <div className="mt-8 text-right">
+              <button 
+                onClick={handleSaveKioskOptions}
+                className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition ease-in-out duration-150"
+              >
+                서비스 옵션 저장
               </button>
             </div>
-          </div>
-          <div className="mt-8 text-right">
-            <button 
-              onClick={handleSaveKioskOptions}
-              className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition ease-in-out duration-150"
-            >
-              서비스 옵션 저장
-            </button>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
       
       {/* Navigation for sections */}
