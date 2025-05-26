@@ -744,7 +744,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 					</div>
 
 					{/* Wallet QR Code - Add after Business Details */}
-					{store.store_wallet_address && (
+					{/* {store.store_wallet_address && (
 						<div className="bg-white rounded-xl shadow-md p-6">
 							<h2 className="text-xl font-bold mb-4 flex items-center">
 								<svg
@@ -803,7 +803,7 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								</div>
 							</div>
 						</div>
-					)}
+					)} */}
 
 					{/* Owner Actions - Only visible to store owner */}
 					{isOwner && (
