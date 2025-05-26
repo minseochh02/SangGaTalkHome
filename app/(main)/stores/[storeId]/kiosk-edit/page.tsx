@@ -1650,11 +1650,13 @@ function KioskEditContent({ storeId }: { storeId: string }) {
         onSave={handleSaveEditedProduct}
       />
       
-      {/* Kiosk Sales History Section - Now displayed conditionally */}
-      {activeSection === 'orders' && <KioskSalesHistory storeId={storeId} />}
-      
-      {/* Active Kiosk Sessions Section - Now displayed conditionally */}
-      {activeSection === 'orders' && <KioskActiveSessions storeId={storeId} />}
+      {/* Kiosk Sales History and Active Sessions - Displayed side-by-side in 'orders' section */}
+      {activeSection === 'orders' && (
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <KioskSalesHistory storeId={storeId} />
+          <KioskActiveSessions storeId={storeId} />
+        </div>
+      )}
 
       {/* Product Create Modal */}
       {user && store && (

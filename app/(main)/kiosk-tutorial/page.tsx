@@ -162,9 +162,9 @@ export default function KioskTutorialPage() {
             </div>
 
             <div>
-              <h3 className="text-xl font-medium text-gray-700 mb-3">6. 키오스크 메뉴 저장 및 게시</h3>
+              <h3 className="text-xl font-medium text-gray-700 mb-3">6. 키오스크 메뉴 게시</h3>
               <p className="text-gray-600 mb-3">변경 사항들은 바로 고객 키오스크 화면에 적용됩니다.</p>
-              <img src="/images/kiosk_tutorial/store_owner_step_6_save_publish.png" alt="점주 - 6단계 - 저장 또는 게시 버튼" className="mt-3 w-full max-w-sm mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/store_owner_step_6_publish.png" alt="점주 - 6단계 - 게시 버튼" className="mt-3 w-full max-w-sm mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
