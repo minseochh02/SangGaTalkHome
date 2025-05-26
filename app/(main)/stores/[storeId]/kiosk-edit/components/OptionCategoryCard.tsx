@@ -50,7 +50,7 @@ const OptionCategoryCard: React.FC<OptionCategoryCardProps> = ({
                 <div 
                   key={choice.id} 
                   onClick={() => onSetDefaultChoice(category.id || '', choice.id || '')} 
-                  className={`bg-slate-50 p-3 rounded-lg flex flex-col items-center justify-center shadow-sm hover:bg-slate-100 transition-colors border ${choice.isDefault ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'} min-w-[80px] md:min-w-[100px] flex-1 text-center cursor-pointer relative overflow-hidden`}
+                  className={`bg-slate-50 p-3 rounded-lg flex flex-col items-center justify-center shadow-sm hover:bg-slate-100 transition-colors border ${choice.isDefault ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'} min-w-[80px] md:min-w-[100px] flex-1 text-center cursor-pointer relative`}
                   style={{ minHeight: '90px' }}
                   title={`클릭하여 "${choice.name}"을(를) 기본 선택으로 설정`}
                 >
@@ -59,19 +59,36 @@ const OptionCategoryCard: React.FC<OptionCategoryCardProps> = ({
                       기본값
                     </div>
                   )}
-                  <div className="flex flex-col items-center justify-center flex-grow w-full z-10">
+                  <div className="flex flex-col items-center justify-center flex-grow">
                     {renderIconDisplay(choice.icon, "text-2xl mb-1.5")}
                     <span className="text-xs sm:text-sm text-slate-700 leading-tight">{choice.name}</span>
                   </div>
                   
-                  {/* Overlay for prices at bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-100/90 to-transparent py-1 px-1 flex justify-center space-x-2 text-[10px]">
-                    <div className={choice.won_price && choice.won_price > 0 ? 'text-orange-700' : 'text-gray-500'}>
-                      ₩{choice.won_price ? choice.won_price.toLocaleString() : '0'}
+                  {/* Price badges overlay */}
+                  <div className="absolute bottom-1 right-1 flex gap-1">
+                    {/* Won price badge */}
+                    <div className={`rounded-full py-0.5 px-1.5 inline-flex items-center ${
+                      choice.won_price && choice.won_price > 0 
+                        ? 'bg-orange-100 text-orange-700 border border-orange-200' 
+                        : 'bg-gray-100 text-gray-400 border border-gray-200'
+                    }`}>
+                      <FontAwesomeIcon icon={['fas', 'won-sign']} className="h-2.5 w-2.5" />
+                      <span className="ml-0.5 text-[10px] font-medium">
+                        {choice.won_price ? choice.won_price.toLocaleString() : '0'}
+                      </span>
                     </div>
+                    
+                    {/* SGT price badge */}
                     {(choice.sgt_price !== undefined && choice.sgt_price !== null) && (
-                      <div className={choice.sgt_price > 0 ? 'text-blue-700' : 'text-gray-500'}>
-                        SGT {choice.sgt_price ? choice.sgt_price.toLocaleString() : '0'}
+                      <div className={`rounded-full py-0.5 px-1.5 inline-flex items-center ${
+                        choice.sgt_price > 0 
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                          : 'bg-gray-100 text-gray-400 border border-gray-200'
+                      }`}>
+                        <span className="text-[10px] font-medium">SGT</span>
+                        <span className="ml-0.5 text-[10px] font-medium">
+                          {choice.sgt_price ? choice.sgt_price.toLocaleString() : '0'}
+                        </span>
                       </div>
                     )}
                   </div>
