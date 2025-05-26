@@ -6,6 +6,11 @@ import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
 import { JSX } from 'react/jsx-runtime';
 import { createClient } from '@/utils/supabase/client'; // Remove mock comment, use actual client
+import NotificationPopup from './components/NotificationPopup'; // Import the new component
+import LoadingSpinner from './components/LoadingSpinner'; // Import the new component
+import IconPickerModal from './components/IconPickerModal'; // Import the new component
+import { renderIconDisplay } from './components/iconUtils'; // Import from iconUtils
+import LinkProductsModal from './components/LinkProductsModal'; // Import the new component
 // import { ProductOptionCategory, ProductOptionChoice, Product } from '@/utils/type'; // Assuming these types are defined in your project
 
 // Add all FontAwesome solid and regular icons to the library
@@ -25,7 +30,7 @@ interface ProductOptionChoice {
   sgt_price: number; // SGT price is now non-nullable
 }
 
-interface ProductOptionCategory {
+export interface ProductOptionCategory { // EXPORT THIS
   id?: string; // Make id optional since new categories won't have IDs until saved
   name: string;
   icon?: string; // Icon for the category (FA class "prefix icon-name" or emoji)
@@ -33,7 +38,7 @@ interface ProductOptionCategory {
   store_id?: string;
 }
 
-interface Product {
+export interface Product { // EXPORT THIS
   product_id: string;
   product_name: string;
 }
@@ -43,21 +48,6 @@ interface LinkedProductInfo {
   name: string;
 }
 
-// Curated list of Font Awesome icon names (without prefix)
-const faIconNames: IconName[] = [
-  "ice-cream", "mug-hot", "martini-glass-citrus", "beer-mug-empty",
-  "burger", "pizza-slice", "hotdog", "drumstick-bite",
-  "apple-whole", "carrot", "leaf", "seedling",
-  "store", "tags", "percent", "star",
-  "heart", "thumbs-up", "face-smile", "fire",
-  "pepper-hot", "lemon", "bread-slice", "cheese",
-  "blender", "utensils", "receipt", "gift",
-  "truck-fast", "clock", "calendar-days", "credit-card",
-  "bell-concierge", "temperature-high", "temperature-low", "snowflake",
-  "sun", "moon", "cloud", "droplet", "wine-glass", "champagne-glasses", "cookie-bite", "fish",
-  "cubes-stacked", "cube", "hand-holding-heart", "image", "question-circle", "save", "plus-circle", "times", "trash-alt", "times-circle", "folder-open", "check-circle", "check"
-];
-
 
 interface GlobalOptionEditorProps {
   storeId: string;
@@ -65,7 +55,7 @@ interface GlobalOptionEditorProps {
 }
 
 // Helper type for new choices being added
-interface NewChoice {
+export interface NewChoice { // EXPORT THIS
     name: string;
     icon?: string;
     isDefault?: boolean; // Add isDefault property to NewChoice
@@ -666,65 +656,24 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
     setPickingIconFor(null);
   };
 
-  const renderIconDisplay = useCallback((iconString?: string, sizeClass: string = "text-xl sm:text-2xl"): JSX.Element | null => {
-    if (!iconString || iconString.trim() === '') return null;
-    const parts = iconString.split(' ');
-    let parsedPrefix: IconPrefix | undefined = undefined;
-    let parsedIconName: IconName | undefined = undefined;
-
-    if (parts.length > 0) {
-        const firstPart = parts[0].toLowerCase();
-        let nameCandidate: string | undefined = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
-        if (firstPart === 'fas' || firstPart === 'fa-solid' || firstPart === 'solid') parsedPrefix = 'fas';
-        else if (firstPart === 'far' || firstPart === 'fa-regular' || firstPart === 'regular') parsedPrefix = 'far';
-        if (nameCandidate) {
-            if (nameCandidate.startsWith('fa-')) nameCandidate = nameCandidate.substring(3);
-            parsedIconName = nameCandidate as IconName;
-        }
-    }
-
-    if (parsedPrefix && parsedIconName) {
-        try {
-            // Check if the icon is in the library
-            const iconLookup = findIconDefinition({ prefix: parsedPrefix, iconName: parsedIconName });
-            if (iconLookup) {
-                return <FontAwesomeIcon icon={[parsedPrefix, parsedIconName]} className={`${sizeClass} flex-shrink-0`} />;
-            } else {
-                console.warn(`FontAwesome icon fas ${parsedIconName} or far ${parsedIconName} not found in library. Icon string: ${iconString}`);
-            }
-        } catch (e) { console.warn(`Error rendering FA icon: ${iconString}`, e); }
-    }
-    // Check for emoji (simplified check)
-    const faRelated = iconString.toLowerCase().includes('fa') || iconString.toLowerCase().includes('solid') || iconString.toLowerCase().includes('regular') || (parsedPrefix !== undefined);
-    if (!faRelated && (iconString.length <= 2 || iconString.match(/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]/))) {
-        return <span className={`${sizeClass} flex-shrink-0`}>{iconString}</span>;
-    }
-    // Fallback icon if not an emoji and not a valid FA icon
-    return <span className="text-gray-400 text-xs flex-shrink-0" title={`Unknown icon: ${iconString}`}><FontAwesomeIcon icon={['far', 'question-circle']} className={sizeClass} /></span>;
-  }, []);
-
   const renderIconForInput = useCallback((iconString?: string): JSX.Element | null => {
     return renderIconDisplay(iconString, "text-lg");
-  }, [renderIconDisplay]);
+  }, []);
 
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64 bg-gray-50">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="ml-3 text-gray-700 text-lg">옵션 로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner message="옵션 로딩 중..." />;
   }
 
   return (
     <div className="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8 font-sans">
       <div className="max-w-4xl mx-auto">
         {notification && (
-          <div className={`fixed top-5 right-5 z-[100] p-4 mb-4 rounded-md text-white shadow-lg ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`} role="alert">
-            {notification.message}
-            <button onClick={() => setNotification(null)} className="ml-4 float-right font-bold text-xl leading-none">&times;</button>
-          </div>
+          <NotificationPopup 
+            message={notification.message} 
+            type={notification.type} 
+            onClose={() => setNotification(null)} 
+          />
         )}
 
         <div className="bg-white rounded-xl shadow-xl p-6 sm:p-8 mb-8">
@@ -970,75 +919,25 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
           )}
         </div>
 
-        {showIconPicker && (
-            <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-xl shadow-xl p-5 sm:p-6 w-full max-w-xl max-h-[80vh] flex flex-col">
-                    <div className="flex justify-between items-center mb-4">
-                        <h4 className="text-lg font-semibold text-gray-800">아이콘 선택</h4>
-                        <button onClick={() => {setShowIconPicker(false); setPickingIconFor(null);}} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
-                            <FontAwesomeIcon icon={['fas', 'times']} className="w-6 h-6" />
-                        </button>
-                    </div>
-                    <div className="overflow-y-auto flex-grow grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 custom-scrollbar pr-2">
-                        {faIconNames.map(iconName => ( // Only map through curated list
-                            <button key={`fas-${iconName}`} type="button" onClick={() => handleIconSelect(`fas ${iconName}`)} className="p-3 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-blue-100 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all aspect-square" title={`fas ${iconName}`}>
-                                <FontAwesomeIcon icon={['fas', iconName]} className="text-2xl text-gray-700" />
-                            </button>
-                        ))}
-                        {faIconNames.map(iconName => (  // Only map through curated list
-                             <button key={`far-${iconName}`} type="button" onClick={() => handleIconSelect(`far ${iconName}`)} className="p-3 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-blue-100 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all aspect-square" title={`far ${iconName}`}>
-                                <FontAwesomeIcon icon={['far', iconName]} className="text-2xl text-gray-700" />
-                            </button>
-                        ))}
-                    </div>
-                     <div className="mt-4 pt-4 border-t border-gray-200 text-center">
-                        <button type="button" onClick={() => {setShowIconPicker(false); setPickingIconFor(null);}} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm">닫기</button>
-                     </div>
-                </div>
-            </div>
-        )}
+        <IconPickerModal 
+          isOpen={showIconPicker}
+          onClose={() => {
+            setShowIconPicker(false);
+            setPickingIconFor(null);
+          }}
+          onIconSelect={handleIconSelect}
+        />
 
-        {showLinkModal && selectedOption && (
-          <div className="fixed inset-0 z-[99] flex items-center justify-center bg-black bg-opacity-60 transition-opacity duration-300 ease-in-out p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-xl p-6 shadow-xl transform transition-all sm:max-w-lg w-full max-h-[90vh] flex flex-col">
-              <div className="flex justify-between items-center mb-5">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  {renderIconDisplay(selectedOption.icon)}
-                  <span className={`${selectedOption.icon ? 'ml-2' : ''}`}>"{selectedOption.name}" 옵션을 상품에 연결</span>
-                </h3>
-                <button onClick={() => setShowLinkModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100" aria-label="Close modal">
-                  <FontAwesomeIcon icon={['fas', 'times']} className="w-6 h-6" />
-                </button>
-              </div>
-              <div className="overflow-y-auto flex-grow pr-1 custom-scrollbar">
-                {products && products.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {products.map(product => (
-                      <label key={product.product_id} htmlFor={`product-${product.product_id}`} className="flex items-center p-3 hover:bg-gray-100 rounded-lg cursor-pointer border border-gray-200 transition-colors">
-                        <input
-                          type="checkbox"
-                          id={`product-${product.product_id}`}
-                          checked={selectedProducts.includes(product.product_id)}
-                          onChange={() => handleToggleProduct(product.product_id)}
-                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-offset-1"
-                        />
-                        <span className="ml-3 text-sm font-medium text-gray-700">{product.product_name}</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 italic text-center py-6">연결할 수 있는 상품이 없습니다. 먼저 상품을 추가해주세요.</p>
-                )}
-              </div>
-              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6 pt-5 border-t border-gray-200">
-                <button onClick={() => setShowLinkModal(false)} className="px-5 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 transition-colors w-full sm:w-auto">취소</button>
-                <button onClick={handleSaveLinking} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors shadow-md hover:shadow-lg w-full sm:w-auto" disabled={!selectedOption || saving}>
-                  {saving ? '저장 중...' : '연결 저장'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <LinkProductsModal 
+          isOpen={showLinkModal}
+          onClose={() => setShowLinkModal(false)}
+          selectedOption={selectedOption}
+          products={products}
+          selectedProducts={selectedProducts}
+          onToggleProduct={handleToggleProduct}
+          onSaveLinking={handleSaveLinking}
+          saving={saving}
+        />
       </div>
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
