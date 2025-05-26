@@ -261,7 +261,7 @@ function PaymentProcessingPageContent() {
                 <button className="w-full py-2.5 bg-black text-yellow-500 font-medium rounded-md hover:bg-gray-700 transition-colors">
                   SGT포인트로 결제
                 </button>
-                <p className="text-xs text-gray-500 mt-1 text-center">*부분 결제는 불가능합니다.</p>
+                <p className="text-xs text-red-500 mt-1 text-center">*부분 결제는 불가능합니다.</p>
               </div>
             </div>
           )}
