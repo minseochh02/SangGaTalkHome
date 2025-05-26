@@ -713,6 +713,16 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             옵션 카드를 클릭하여 기본 선택을 빠르게 변경할 수 있습니다.
           </p>
 
+          {!showNewCategory && (
+            <button
+              onClick={() => setShowNewCategory(true)}
+              className="mb-8 w-full p-4 border-2 border-dashed border-blue-500 rounded-xl flex items-center justify-center text-blue-600 hover:text-blue-700 hover:border-blue-600 hover:bg-blue-50 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-sm hover:shadow-md"
+            >
+              <FontAwesomeIcon icon={['fas', 'plus-circle']} className="w-6 h-6 mr-2.5" />
+              상세주문 옵션 추가
+            </button>
+          )}
+
           {globalOptions.length > 0 ? (
             <div className="space-y-8">
               {globalOptions.map(category => (
@@ -797,25 +807,19 @@ const GlobalOptionEditor: React.FC<GlobalOptionEditorProps> = ({
             !showNewCategory && (
               <div className="text-center py-12 px-6 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
                 <FontAwesomeIcon icon={['far', 'folder-open']} className="mx-auto h-16 w-16 text-gray-400" />
-                <h3 className="mt-4 text-lg font-medium text-gray-900">글로벌 옵션 없음</h3>
-                <p className="mt-1.5 text-sm text-gray-500">새로운 글로벌 옵션 카테고리를 추가하여 시작하세요.</p>
+                <h3 className="mt-4 text-lg font-medium text-gray-900">상세주문 옵션 없음</h3>
+                <p className="mt-1.5 text-sm text-gray-500">새로운 상세주문 옵션 카테고리를 추가하여 시작하세요.</p>
               </div>
             )
           )}
         </div>
 
         {!showNewCategory ? (
-          <button
-            onClick={() => setShowNewCategory(true)}
-            className="mt-6 w-full p-4 border-2 border-dashed border-blue-500 rounded-xl flex items-center justify-center text-blue-600 hover:text-blue-700 hover:border-blue-600 hover:bg-blue-50 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-sm hover:shadow-md"
-          >
-            <FontAwesomeIcon icon={['fas', 'plus-circle']} className="w-6 h-6 mr-2.5" />
-            새 글로벌 옵션 카테고리 추가
-          </button>
+          null
         ) : (
           <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-200 mt-8">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-gray-700">새 옵션 카테고리 생성</h3>
+              <h3 className="text-xl font-semibold text-gray-700">상세주문 옵션 카테고리 생성</h3>
               <button
                 onClick={() => { setShowNewCategory(false); setNewCategoryName(''); setNewCategoryIcon(''); setNewChoices([{ name: '', icon: '', isDefault: false }, { name: '', icon: '', isDefault: false }]); }}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"

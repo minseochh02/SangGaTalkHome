@@ -144,20 +144,20 @@ export default function KioskTutorialPage() {
               <h3 className="text-xl font-medium text-gray-700 mb-3">3. 키오스크 메뉴 설정</h3>
               <p className="text-gray-600 mb-3">상품이 시스템에 있는지 확인하세요. 듀얼 패널 레이아웃("사용 가능한 상점 상품" vs. "키오스크 메뉴 레이아웃")을 사용하여 상품을 키오스크 메뉴로 선택 후 이동하세요. 항목을 드래그 앤 드롭하여 순서를 변경하세요. "카테고리 구분선"을 추가, 이름 지정 및 배치하세요.</p>
               <img src="/images/kiosk_tutorial/store_owner_step_3a_menu_editor.png" alt="점주 - 3A단계 - 메뉴 편집기 레이아웃" className="mt-3 mb-2 w-full max-w-lg mx-auto rounded-lg shadow-md border border-gray-200" />
-              <img src="/images/kiosk_tutorial/store_owner_step_3b_drag_drop_example.gif" alt="점주 - 3B단계 - 드래그 앤 드롭 순서 변경 예시 (GIF)" className="mt-3 mb-2 w-full max-w-lg mx-auto rounded-lg shadow-md border border-gray-200" />
+              <img src="/images/kiosk_tutorial/store_owner_step_3b_move_example.png" alt="점주 - 3B단계 - 드래그 앤 드롭 순서 변경 예시 (GIF)" className="mt-3 mb-2 w-full max-w-lg mx-auto rounded-lg shadow-md border border-gray-200" />
               <p className="text-sm text-gray-500 text-center mt-1 mb-2">(예시: 순서 변경 GIF)</p>
               <img src="/images/kiosk_tutorial/store_owner_step_3c_product_edit_modal.png" alt="점주 - 3C단계 - 상품 편집/생성 모달" className="mt-3 w-full max-w-md mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">4. 상품 품절 처리 및 상세 정보 관리</h3>
-              <p className="text-gray-600 mb-3">키오스크 메뉴의 상품에 대해 "품절" 상태를 전환하거나 클릭하여 상세 정보(이름, 가격, 이미지)를 편집하고 옵션을 할당/맞춤 설정하세요.</p>
+              <p className="text-gray-600 mb-3">키오스크 메뉴의 상품에 대해 "품절 처리" 버튼으로 상태를 전환하거나 "수정" 버튼을 클릭하여 상세 정보(이름, 가격, 이미지)를 편집하고 옵션을 할당/맞춤 설정하세요.</p>
               <img src="/images/kiosk_tutorial/store_owner_step_4_product_availability.png" alt="점주 - 4단계 - '품절' 상태 전환 및 상품 편집 접근" className="mt-3 w-full max-w-lg mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">5. 재사용 가능한 상품 옵션 만들기 (전역 옵션 편집기)</h3>
-              <p className="text-gray-600 mb-3">"전역 상품 옵션" 편집기에서 옵션 그룹(예: "음료 사이즈")과 가격 조정이 포함된 선택 항목(예: "라지" +1,000원)을 만드세요. 이를 여러 상품에 적용할 수 있습니다.</p>
+              <p className="text-gray-600 mb-3">"전역 상품 옵션" 편집기에서 옵션 그룹(예: "음료 사이즈")을 만드세요. 이를 여러 상품에 적용할 수 있습니다.</p> {/* 추후 가격 조정 기능 추가 예정 "과 가격 조정이 포함된 선택 항목(예: "라지" +1,000원)"" */}
               <img src="/images/kiosk_tutorial/store_owner_step_5_global_options_editor.png" alt="점주 - 5단계 - 전역 옵션 편집기 인터페이스" className="mt-3 w-full max-w-lg mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
