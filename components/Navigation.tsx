@@ -83,6 +83,9 @@ export default function Navigation() {
 							<Link href="/support" className="hover:text-primary">
 								고객센터
 							</Link>
+							<Link href="/kiosk-tutorial" className="hover:text-primary">
+								키오스크 가이드
+							</Link>
 						</div>
 					</div>
 					<div className="hidden md:flex items-center gap-4">
@@ -220,6 +223,13 @@ export default function Navigation() {
 							onClick={() => setMobileMenuOpen(false)}
 						>
 							고객센터
+						</Link>
+						<Link
+							href="/kiosk-tutorial"
+							className="hover:text-primary py-2"
+							onClick={() => setMobileMenuOpen(false)}
+						>
+							키오스크 가이드
 						</Link>
 						<div
 							className="flex items-center gap-4 pt-4 border-t"

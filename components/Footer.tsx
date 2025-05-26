@@ -8,13 +8,13 @@ export default function Footer() {
 					<p>© 2024 (주)쿠스. All rights reserved.</p>
 					<div className="flex gap-4">
 						<Link href="/privacy" className="hover:text-primary">
-							Privacy Policy
+							개인정보처리방침
 						</Link>
 						<Link href="/terms" className="hover:text-primary">
-							Terms of Service
+						이용약관
 						</Link>
 						<Link href="/return-policy" className="hover:text-primary">
-							Return Policy
+						반품/교환/환불 정책
 						</Link>
 					</div>
 				</div>

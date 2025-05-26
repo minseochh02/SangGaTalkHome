@@ -129,8 +129,8 @@ export default function KioskTutorialPage() {
           <div className="space-y-8">
             <div>
               <h3 className="text-xl font-medium text-gray-700 mb-3">1. 키오스크 관리 접속</h3>
-              <p className="text-gray-600 mb-3">상가톡 웹사이트에 로그인하세요. 상점 설정으로 이동하여 "키오스크 관리" 섹션을 찾으세요.</p>
-              <p className="text-gray-600 mb-3"><strong>참고:</strong> 상점의 고유 키오스크 QR 코드는 상가톡에서 제공합니다. 인쇄하여 고객에게 보이도록 비치하세요.</p>
+              <p className="text-gray-600 mb-3">웹사이트에 로그인하세요. 상점 설정으로 이동하여 "키오스크 관리" 섹션을 찾으세요.</p>
+              <p className="text-gray-600 mb-3"><strong>참고:</strong> 상점의 고유 키오스크 QR 코드는 사이트에서 제공합니다. 인쇄하여 고객에게 보이도록 비치하세요.</p>
               <img src="/images/kiosk_tutorial/store_owner_step_1_dashboard_access.png" alt="점주 - 1단계 - 판매자 대시보드 키오스크 관리" className="mt-3 w-full max-w-lg mx-auto rounded-lg shadow-md border border-gray-200" />
             </div>
 
