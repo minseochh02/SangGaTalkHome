@@ -495,7 +495,7 @@ export default function KioskPage() {
     }
   }, [cartItemsWithOptions, storeId]);
   
-  // New function to fetch product options
+  // Update the fetchProductOptions function to better handle won prices
   const fetchProductOptions = async (productId: string) => {
     if (productOptions.has(productId)) {
       // Already fetched options for this product
@@ -504,21 +504,29 @@ export default function KioskPage() {
     
     try {
       const fetchedOptions = await fetchProductOptionFees(productId);
+      console.log('[Kiosk] Fetched product options:', fetchedOptions);
       
       // Map the fetched data to our component structure
-      const productOptionGroups: ProductOptionGroup[] = fetchedOptions.map(group => ({
-        id: group.id,
-        name: group.name,
-        icon: group.icon,
-        choices: group.choices.map(choice => ({
-          id: choice.id,
-          name: choice.name,
-          icon: choice.icon,
-          price_impact: choice.price_impact,
-          is_default: choice.is_default,
-          won_price: choice.won_price
-        }))
-      }));
+      const productOptionGroups: ProductOptionGroup[] = fetchedOptions.map(group => {
+        const mappedChoices = group.choices.map(choice => {
+          console.log(`[Kiosk] Mapping choice ${choice.name}: SGT=${choice.price_impact}, Won=${choice.won_price}`);
+          return {
+            id: choice.id,
+            name: choice.name,
+            icon: choice.icon,
+            price_impact: choice.price_impact,
+            is_default: choice.is_default,
+            won_price: choice.won_price
+          };
+        });
+        
+        return {
+          id: group.id,
+          name: group.name,
+          icon: group.icon,
+          choices: mappedChoices
+        };
+      });
       
       // Update state
       setProductOptions(prev => new Map(prev).set(productId, productOptionGroups));
@@ -619,19 +627,36 @@ export default function KioskPage() {
     });
   };
   
+  // Update the handleOptionChange function to log won price information
   const handleOptionChange = (groupId: string, choice: ProductOptionChoice) => {
+    console.log(`[Kiosk] Selected option: ${choice.name}, sgt price: ${choice.price_impact}, won price: ${choice.won_price}`);
+    
     setSelectedOptions(prev => {
       // Remove any existing choice for this group
       const filtered = prev.filter(option => option.groupId !== groupId);
       
       // Add the new choice
-      return [...filtered, {
+      const newOptions = [...filtered, {
         groupId,
         choiceId: choice.id,
         name: `${productOptions.get(selectedProduct?.product_id || '')?.find(g => g.id === groupId)?.name || ''}: ${choice.name}`,
         price_impact: choice.price_impact,
-        won_price: choice.won_price
+        won_price: choice.won_price // Add won_price to selected options
       }];
+      
+      // Log the current total - fix calculation
+      const totalSgt = (selectedProduct?.sgt_price || 0) + newOptions.reduce((sum, opt) => sum + opt.price_impact, 0);
+      const totalWon = (selectedProduct?.won_price || 0) + newOptions.reduce((sum, opt) => {
+        // Use direct won_price if available, otherwise calculate from SGT
+        if (opt.won_price !== undefined && opt.won_price !== null) {
+          return sum + opt.won_price;
+        } else {
+          return sum + (opt.price_impact * 1000);
+        }
+      }, 0);
+      console.log(`[Kiosk] Current options total: ${totalSgt} SGT, ${totalWon} Won`);
+      
+      return newOptions;
     });
   };
   
@@ -1255,7 +1280,7 @@ export default function KioskPage() {
                     <FeeBadge 
                       optionId={option.choiceId}
                       priceImpact={option.price_impact} // Fallback to direct value
-                      wonPrice={option.won_price} // Pass won_price directly
+                      wonPrice={option.won_price} // Pass won_price directly 
                       size="sm" 
                       refreshInterval={60000} 
                     />
@@ -1265,7 +1290,20 @@ export default function KioskPage() {
                 <div className="flex justify-between items-center mt-4 pt-4 border-t font-bold">
                   <span>총 가격</span>
                   <div className="text-right">
-                    <div className="text-lg font-bold">{formatPrice(selectedProduct.won_price)}원</div>
+                    {/* Calculate total won price including options */}
+                    <div className="text-lg font-bold">
+                      {formatPrice(
+                        (selectedProduct.won_price || 0) + 
+                        selectedOptions.reduce((sum, opt) => {
+                          // Use direct won_price when available, otherwise calculate from SGT
+                          if (opt.won_price !== undefined && opt.won_price !== null) {
+                            return sum + opt.won_price;
+                          } else {
+                            return sum + (opt.price_impact * 1000);
+                          }
+                        }, 0)
+                      )}원
+                    </div>
                     <span className="text-sm text-gray-600">{formatPrice(
                       selectedProduct.sgt_price + selectedOptions.reduce((sum, opt) => sum + opt.price_impact, 0)
                     )} SGT</span>
