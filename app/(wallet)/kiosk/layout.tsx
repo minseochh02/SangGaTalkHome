@@ -1,5 +1,6 @@
 import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
+import Footer from "@/components/Footer";
 
 const geistSans = Geist({
   display: "swap",
@@ -19,7 +20,7 @@ export const dynamic = 'force-dynamic';
 
 export default function KioskRootLayout({
   children,
-}: {
+}: { 
   children: React.ReactNode
 }) {
   return (
