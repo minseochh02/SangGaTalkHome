@@ -209,7 +209,7 @@ function PaymentProcessingPageContent() {
 
           <div className="text-center mb-6">
             <h2 className="text-2xl font-semibold text-gray-800 mb-1">{orderName}</h2>
-            <p className="text-gray-600">주문 ID: {kioskOrderId?.substring(0,8)}...</p>
+            <p className="text-gray-600">주문 ID: {kioskOrderId}...</p>
           </div>
           
           <div className="bg-gray-50 p-4 rounded-lg mb-6 shadow-inner">
@@ -295,7 +295,6 @@ function PaymentProcessingPageContent() {
               <p className="mb-2">결제 과정에서 입력하신 개인정보 및 결제정보는 안전하게 보호되며, 상품 미배송 또는 하자 발생 시 관련 법령 및 내부 정책에 따라 신속히 처리해 드립니다.</p>
               <p className="mb-2">결제 및 거래와 관련된 문의사항은 고객센터로 연락해 주시기 바랍니다: 070-4024-5884</p>
               <p> (주)쿠스</p>
-              <p className="mt-1">주문 ID: {kioskOrderId}</p>
             </div>
           </div>
         </div>
