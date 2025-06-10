@@ -292,19 +292,17 @@ function PaymentProcessingPageContent() {
           <div className="mt-8 text-xs text-gray-500 text-center">
             <p>문제가 발생하면 고객센터에 문의해주세요.</p>
             <p className="mt-1">주문 ID: {kioskOrderId}</p>
+            
+            <div className="mt-6 border-t border-gray-200 pt-4 text-xs text-gray-600 leading-relaxed text-left">
+              <p className="mb-2">본 쇼핑몰은 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 결제 및 배송, 환불 등 거래 전 과정에 대한 책임을 집니다.</p>
+              <p className="mb-2">결제 과정에서 입력하신 개인정보 및 결제정보는 안전하게 보호되며, 상품 미배송 또는 하자 발생 시 관련 법령 및 내부 정책에 따라 신속히 처리해 드립니다.</p>
+              <p className="mb-2">결제 및 거래와 관련된 문의사항은 고객센터로 연락해 주시기 바랍니다.</p>
+            </div>
           </div>
         </div>
       </main>
 
-      <div className="bg-gray-50 border-t border-gray-200 py-6 px-4 mt-auto">
-        <div className="container mx-auto max-w-2xl text-xs text-gray-600 leading-relaxed">
-          <p className="mb-2">본 쇼핑몰은 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 결제 및 배송, 환불 등 거래 전 과정에 대한 책임을 집니다.</p>
-          <p className="mb-2">결제 과정에서 입력하신 개인정보 및 결제정보는 안전하게 보호되며, 상품 미배송 또는 하자 발생 시 관련 법령 및 내부 정책에 따라 신속히 처리해 드립니다.</p>
-          <p className="mb-2">결제 및 거래와 관련된 문의사항은 고객센터로 연락해 주시기 바랍니다.</p>
-        </div>
-      </div>
-
-      <footer className="text-center py-4 text-sm text-gray-500 border-t border-gray-200">
+      <footer className="text-center py-4 text-sm text-gray-500 border-t border-gray-200 mt-auto">
         <div className="container mx-auto">
           <Link href="/privacy-policy" className="mx-2 hover:underline">개인정보처리방침</Link> |
           <Link href="/return-policy" className="mx-2 hover:underline">반품 및 환불 정책</Link> |
