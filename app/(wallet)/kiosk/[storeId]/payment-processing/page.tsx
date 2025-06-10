@@ -235,12 +235,17 @@ function PaymentProcessingPageContent() {
              )}
              
              {/* Transaction information moved here */}
-             <div className="mt-4 pt-3 border-t border-gray-300">
+             <div className="mt-4 pt-4 border-t border-gray-200">
                <div className="text-xs text-gray-600">
-                 <h4 className="font-medium text-gray-700 mb-1">거래 정보</h4>
-                 <p className="mb-1">본 쇼핑몰은 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 결제 및 배송, 환불 등 거래 전 과정에 대한 책임을 집니다.</p>
-                 <p className="mb-1">결제 과정에서 입력하신 개인정보 및 결제정보는 안전하게 보호됩니다.</p>
-                 <p>문의사항: <span className="font-medium">070-4024-5884</span> <span className="text-gray-500">((주)쿠스)</span></p>
+                 <h4 className="font-semibold text-sm text-gray-700 mb-2">거래 안내</h4>
+                 <ul className="space-y-1.5 list-disc list-inside text-gray-500">
+                   <li>본 쇼핑몰은 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 결제, 배송, 환불 등 거래 전 과정에 대한 책임을 집니다.</li>
+                   <li>결제 과정에서 입력하신 개인정보 및 결제정보는 안전하게 보호됩니다.</li>
+                 </ul>
+                 <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
+                   <span className="font-medium">고객센터 문의</span>
+                   <span className="font-bold text-gray-700">070-4024-5884 ((주)쿠스)</span>
+                 </div>
                </div>
              </div>
           </div>
