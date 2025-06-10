@@ -233,6 +233,16 @@ function PaymentProcessingPageContent() {
                     </span>
                 </div>
              )}
+             
+             {/* Transaction information moved here */}
+             <div className="mt-4 pt-3 border-t border-gray-300">
+               <div className="text-xs text-gray-600">
+                 <h4 className="font-medium text-gray-700 mb-1">거래 정보</h4>
+                 <p className="mb-1">본 쇼핑몰은 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 결제 및 배송, 환불 등 거래 전 과정에 대한 책임을 집니다.</p>
+                 <p className="mb-1">결제 과정에서 입력하신 개인정보 및 결제정보는 안전하게 보호됩니다.</p>
+                 <p>문의사항: <span className="font-medium">070-4024-5884</span> <span className="text-gray-500">((주)쿠스)</span></p>
+               </div>
+             </div>
           </div>
 
           {(!currentOrderStatus || (currentOrderStatus !== 'completed' && currentOrderStatus !== 'failed')) && !error && (
@@ -290,27 +300,6 @@ function PaymentProcessingPageContent() {
            )}
         </div>
       </main>
-      
-      {/* Footer moved outside of main and positioned at the bottom with fixed width */}
-      <footer className="w-full bg-gray-50 py-6 mt-auto border-t border-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="max-w-lg mx-auto bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="p-5">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">거래 정보</h3>
-              <div className="space-y-2 text-xs leading-relaxed text-gray-600">
-                <p>본 쇼핑몰은 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 결제 및 배송, 환불 등 거래 전 과정에 대한 책임을 집니다.</p>
-                <p>결제 과정에서 입력하신 개인정보 및 결제정보는 안전하게 보호되며, 상품 미배송 또는 하자 발생 시 관련 법령 및 내부 정책에 따라 신속히 처리해 드립니다.</p>
-                <p>결제 및 거래와 관련된 문의사항은 고객센터로 연락해 주시기 바랍니다: <span className="font-semibold">070-4024-5884</span></p>
-              </div>
-              
-              <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
-                <div className="text-xs font-medium text-gray-700">(주)쿠스</div>
-                <div className="text-xs bg-gray-100 px-2 py-1 rounded">주문 ID: <span className="font-mono">{kioskOrderId?.substring(0,8)}...</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
