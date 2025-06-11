@@ -291,9 +291,8 @@ function PaymentProcessingPageContent() {
 
           <div className="mt-8 text-xs text-gray-500 text-center">
             <div className="mt-6 border-t border-gray-200 pt-4 text-xs text-gray-600 leading-relaxed text-left">
-              <p className="mb-2">본 쇼핑몰은 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 결제 및 배송, 환불 등 거래 전 과정에 대한 책임을 집니다.</p>
-              <p className="mb-2">결제 과정에서 입력하신 개인정보 및 결제정보는 안전하게 보호되며, 상품 미배송 또는 하자 발생 시 관련 법령 및 내부 정책에 따라 신속히 처리해 드립니다.</p>
-              <p className="mb-2">결제 및 거래와 관련된 문의사항은 고객센터로 연락해 주시기 바랍니다: 070-4024-5884</p>
+              <p className="mb-2">회사는 모든 거래에 대한 책임과 배송, 교환, 환불 민원등의 처리는 회사 고객센터에서 진행합니다.</p>
+              <p className="mb-2">사세한 문의는 email: quusai.space@gmail.com, 유선 : 070-4024-5884 으로 가능합니다.</p>
               <p> (주)쿠스</p>
             </div>
           </div>

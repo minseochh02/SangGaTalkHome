@@ -1,6 +1,7 @@
 import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
+import Footer from "@/components/Footer";
 
 const geistSans = Geist({
   display: "swap",
@@ -26,6 +27,7 @@ export default function KioskRootLayout({
         <main className="min-h-screen bg-gray-100">
           <div className="flex flex-col w-full">{children}</div>
         </main>
+        <Footer />
         <Toaster position="top-center" />
       </body>
     </html>
