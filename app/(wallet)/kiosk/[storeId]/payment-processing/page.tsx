@@ -73,8 +73,8 @@ function PaymentProcessingPageContent() {
           console.log(`[PaymentProcessingPage] Order status update received: ${updatedOrder.kiosk_order_id}, New Status: ${updatedOrder.status}`);
           setCurrentOrderStatus(updatedOrder.status);
 
-          // If payment is successful (processing) or already marked fully completed, redirect to success page
-          if (updatedOrder.status === 'processing' || updatedOrder.status === 'completed') {
+          // Only redirect when payment is fully completed, not just processing
+          if (updatedOrder.status === 'completed') {
             router.push(
               `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`
             );
@@ -106,8 +106,8 @@ function PaymentProcessingPageContent() {
         console.error('[PaymentProcessingPage] Error fetching initial order status:', fetchError);
       } else if (data) {
         console.log(`[PaymentProcessingPage] Initial status for ${kioskOrderId}: ${data.status}`);
-        // If payment is successful (processing) or already marked fully completed, redirect to success page
-        if (data.status === 'processing' || data.status === 'completed') {
+        // Only redirect when payment is fully completed, not just processing
+        if (data.status === 'completed') {
            router.push(
               `/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`
             );

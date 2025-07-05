@@ -262,43 +262,28 @@ export default function PortOnePayment({
   };
 
   return (
-    <div className="space-y-3">
-      <button
-        type="button"
-        onClick={() => handleSubmit('kakao', process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || "channel-key-01764171-b249-4c16-9d18-e9174fa8e611", 'EASY_PAY')}
-        aria-busy={paymentStatus.status === 'PENDING'}
-        disabled={paymentStatus.status === 'PENDING'}
-        className={buttonClassName || "w-full py-3 bg-yellow-400 text-black font-bold rounded-md hover:bg-yellow-500 text-lg"}
-      >
-        {paymentStatus.status === 'PENDING' ? '처리 중...' : '카카오페이 결제'}
-      </button>
-
-      <button
-        type="button"
-        onClick={() => alert('네이버페이 결제는 현재 지원되지 않습니다.')}
-        className={buttonClassName || "w-full py-3 bg-green-500 text-white font-bold rounded-md hover:bg-green-600 text-lg opacity-50 cursor-not-allowed"}
-      >
-        네이버페이 결제
-      </button>
-
-      <button
-        type="button"
-        onClick={() => handleSubmit('nice_v2', 'channel-key-34a5a8d9-39f7-480c-b338-36a5f7f5b10b', 'CARD')}
-        aria-busy={paymentStatus.status === 'PENDING'}
-        disabled={paymentStatus.status === 'PENDING'}
-        className={buttonClassName || "w-full py-3 bg-blue-500 text-white font-bold rounded-md hover:bg-blue-600 text-lg"}
-      >
-        나이스페이 결제
-      </button>
+    <div className="space-y-3 relative">
+      {/* Loading overlay during payment processing */}
+      {paymentStatus.status === 'PENDING' && (
+        <div className="absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-10 rounded-md">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-600 mb-4"></div>
+          <p className="text-lg font-semibold text-gray-700 mb-2">결제 진행 중입니다</p>
+          <p className="text-sm text-gray-500 text-center px-4">
+            {paymentStatus.message || '잠시만 기다려주세요. 결제가 완료될 때까지 이 창을 닫지 마세요.'}
+          </p>
+        </div>
+      )}
 
       <button
         type="button"
         onClick={() => handleSubmit('inicis_v2', 'channel-key-69356e27-9917-4193-b635-b9a7843043a5', 'CARD')}
         aria-busy={paymentStatus.status === 'PENDING'}
         disabled={paymentStatus.status === 'PENDING'}
-        className={buttonClassName || "w-full py-3 bg-purple-500 text-white font-bold rounded-md hover:bg-purple-600 text-lg"}
+        className={`${buttonClassName || "w-full py-3 bg-purple-500 text-white font-bold rounded-md hover:bg-purple-600 text-lg"} ${
+          paymentStatus.status === 'PENDING' ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        KG이니시스 결제
+        {paymentStatus.status === 'PENDING' ? '결제 진행 중...' : 'KG이니시스 결제'}
       </button>
 
       {showModals && (

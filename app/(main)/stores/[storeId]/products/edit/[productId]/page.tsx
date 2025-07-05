@@ -712,17 +712,6 @@ function EditProductContent({ storeId, productId }: EditProductPageProps) {
 					{product.is_sgt_product && (
 						<>
 							<div className="space-y-2">
-								<Label htmlFor="sgt_price">SGT 가격 (포인트)</Label>
-								<Input
-									id="sgt_price"
-									name="sgt_price"
-									value={displaySgtPrice}
-									onChange={handleSgtPriceChange}
-									placeholder="SGT 가격을 입력하세요 (선택사항)"
-								/>
-							</div>
-
-							<div className="space-y-2">
 								<Label htmlFor="won_delivery_fee">
 									기본 배송비 (원) <span className="text-red-500">*</span>
 								</Label>
