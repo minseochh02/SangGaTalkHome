@@ -21,6 +21,10 @@ interface PortOnePaymentProps {
   buttonText?: string;
   buttonClassName?: string;
   showModals?: boolean;
+  // Add customer information for Inicis requirements
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
 }
 
 export default function PortOnePayment({
@@ -34,9 +38,12 @@ export default function PortOnePayment({
   onPaymentComplete,
   onPaymentFailed,
   onClose,
-  buttonText = '결제하기',
+  buttonText = '카드 결제하기',
   buttonClassName = '',
   showModals = true,
+  customerName,
+  customerEmail,
+  customerPhone,
 }: PortOnePaymentProps) {
   const [paymentStatus, setPaymentStatus] = useState<{
     status: 'IDLE' | 'PENDING' | 'PAID' | 'FAILED';
@@ -151,16 +158,47 @@ export default function PortOnePayment({
       .join('');
   }
 
-  const handleSubmit = async (pgProvider: string, channelKey: string, specificPayMethod?: string) => {
+  const handleCardPayment = async () => {
     setPaymentStatus({ status: 'PENDING' });
     
     const isLoaded = await ensurePortOneLoaded();
     if (!isLoaded) return;
     
+    // Validate environment variables
+    const channelKey = process.env.NEXT_PUBLIC_PORTONE_INICIS_CHANNEL_KEY;
+    if (!channelKey) {
+              console.error("NEXT_PUBLIC_PORTONE_INICIS_CHANNEL_KEY is not defined in environment variables.");
+        setPaymentStatus({ status: 'FAILED', message: '이니시스 채널 키가 설정되지 않았습니다.' });
+        if (onPaymentFailed) onPaymentFailed({ message: '이니시스 채널 키가 설정되지 않았습니다.' });
+      return;
+    }
+    
     try {
       const paymentIdForPortOne = merchantUidFromCaller || randomId();
-      console.log(`[PortOnePayment] Initiating payment (non-redirect flow) with PortOne Payment ID (merchant_uid): ${paymentIdForPortOne}`);
+      console.log(`[PortOnePayment] Initiating card payment with PortOne Payment ID (merchant_uid): ${paymentIdForPortOne}`);
+      console.log(`[PortOnePayment] Using Channel Key: ${channelKey}`);
+      console.log(`[PortOnePayment] Payment Method: CARD`);
+      console.log(`[PortOnePayment] PG Provider: inicis_v2`);
       
+      // Validate required parameters for KG이니시스
+      const validatedCustomerName = customerName || customData?.customerName || "테스트 고객";
+      const validatedCustomerEmail = customerEmail || customData?.customerEmail || "test@example.com";
+      const validatedCustomerPhone = customerPhone || customData?.customerPhone || "01012345678";
+
+      // KG이니시스 requires customer information for PC payments
+      if (!validatedCustomerName || !validatedCustomerEmail || !validatedCustomerPhone) {
+        console.error("[PortOnePayment] Missing required customer information for KG이니시스");
+        setPaymentStatus({
+          status: 'FAILED',
+          message: 'KG이니시스 결제에는 고객 정보(이름, 이메일, 전화번호)가 필요합니다.',
+        });
+        if (onPaymentFailed) onPaymentFailed({ 
+          message: 'KG이니시스 결제에는 고객 정보(이름, 이메일, 전화번호)가 필요합니다.',
+          code: 'MISSING_CUSTOMER_INFO'
+        });
+        return;
+      }
+
       const requestPayload: any = {
         storeId,
         channelKey,
@@ -168,38 +206,52 @@ export default function PortOnePayment({
         orderName,
         totalAmount,
         currency,
-        payMethod: specificPayMethod || 'EASY_PAY',
-        pg: pgProvider,
+        payMethod: 'CARD', // KG이니시스 card payment
         customData,
+        // Required customer information for KG이니시스 (PC payments require these fields)
+        customer: {
+          fullName: validatedCustomerName,
+          email: validatedCustomerEmail,
+          phoneNumber: validatedCustomerPhone
+        }
       };
 
-      // Add customer data, potentially required by some PGs like Inicis
-      if (pgProvider === 'html5_inicis' || pgProvider === 'inicis_v2') {
-        requestPayload.customer = {
-          fullName: customData?.customerName || orderName.split(' - ')[0] || "키오스크 고객", // Try to get a name or default
-          email: customData?.customerEmail || "kiosk-customer@example.com", // Placeholder
-          phoneNumber: customData?.customerPhone || "01000000000" // Placeholder
-        };
-      }
+      // Log the full request payload for debugging
+      console.log(`[PortOnePayment] Full request payload:`, JSON.stringify(requestPayload, null, 2));
 
       if (redirectUrl) {
         requestPayload.redirectUrl = redirectUrl;
       }
       
       const payment = await PortOne.requestPayment(requestPayload);
+      console.log(`[PortOnePayment] PortOne response:`, payment);
       
       if (payment.code !== undefined) {
+        console.error(`[PortOnePayment] Payment failed with code: ${payment.code}, message: ${payment.message}`);
+        
+        // Provide specific guidance for common errors
+        let errorMessage = payment.message;
+        if (payment.code === 'INVALID_REQUEST') {
+          if (payment.message && payment.message.includes('channel')) {
+            errorMessage = `채널 설정 오류: ${payment.message}. 포트원 콘솔에서 KG이니시스 채널이 올바르게 설정되었는지 확인하세요.`;
+          } else if (payment.message && payment.message.includes('payMethod')) {
+            errorMessage = `결제수단 오류: ${payment.message}. 채널이 CARD 결제를 지원하는지 확인하세요.`;
+          } else {
+            errorMessage = `요청 파라미터 오류: ${payment.message}. 필수 정보가 누락되었거나 잘못된 형식입니다.`;
+          }
+        }
+        
         setPaymentStatus({
           status: 'FAILED',
-          message: payment.message,
+          message: errorMessage,
         });
-        if (onPaymentFailed) onPaymentFailed(payment);
+        if (onPaymentFailed) onPaymentFailed({...payment, detailedMessage: errorMessage});
         return;
       }
       
       if (!redirectUrl || (payment && payment.success === true && !payment.code)) {
          setPaymentStatus({ status: 'PENDING', message: '결제 확인 중...' });
-         const requestBody = { paymentId: payment.paymentId, impUid: payment.imp_uid }; // Assuming payment.imp_uid is available
+         const requestBody = { paymentId: payment.paymentId, impUid: payment.imp_uid };
          console.log(`[PortOnePayment] Non-redirect flow. Verifying payment. Sending to /api/payment/complete:`, JSON.stringify(requestBody));
          
          const completeResponse = await fetch('/api/payment/complete', {
@@ -246,6 +298,7 @@ export default function PortOnePayment({
       }
 
     } catch (error: any) {
+      console.error(`[PortOnePayment] Exception during payment:`, error);
       setPaymentStatus({
         status: 'FAILED',
         message: error.message || '결제 중 오류가 발생했습니다.',
@@ -267,7 +320,7 @@ export default function PortOnePayment({
       {paymentStatus.status === 'PENDING' && (
         <div className="absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-10 rounded-md">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-600 mb-4"></div>
-          <p className="text-lg font-semibold text-gray-700 mb-2">결제 진행 중입니다</p>
+          <p className="text-lg font-semibold text-gray-700 mb-2">카드 결제 진행 중입니다</p>
           <p className="text-sm text-gray-500 text-center px-4">
             {paymentStatus.message || '잠시만 기다려주세요. 결제가 완료될 때까지 이 창을 닫지 마세요.'}
           </p>
@@ -276,14 +329,14 @@ export default function PortOnePayment({
 
       <button
         type="button"
-        onClick={() => handleSubmit('inicis_v2', 'channel-key-69356e27-9917-4193-b635-b9a7843043a5', 'CARD')}
+        onClick={handleCardPayment}
         aria-busy={paymentStatus.status === 'PENDING'}
         disabled={paymentStatus.status === 'PENDING'}
         className={`${buttonClassName || "w-full py-3 bg-purple-500 text-white font-bold rounded-md hover:bg-purple-600 text-lg"} ${
           paymentStatus.status === 'PENDING' ? 'opacity-50 cursor-not-allowed' : ''
         }`}
       >
-        {paymentStatus.status === 'PENDING' ? '결제 진행 중...' : 'KG이니시스 결제'}
+        {paymentStatus.status === 'PENDING' ? '카드 결제 진행 중...' : buttonText}
       </button>
 
       {showModals && (
@@ -305,7 +358,7 @@ export default function PortOnePayment({
               <header>
                 <h1>결제 성공</h1>
               </header>
-              <p>결제에 성공했습니다.</p>
+              <p>카드 결제에 성공했습니다.</p>
               <button type="button" onClick={handleClose}>
                 닫기
               </button>

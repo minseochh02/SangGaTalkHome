@@ -254,7 +254,10 @@ function PaymentProcessingPageContent() {
                 onPaymentComplete={handlePaymentSuccessCallback}
                 onPaymentFailed={handlePaymentFailureCallback}
                 onClose={handlePaymentModalClose}
-                showModals={true} 
+                showModals={true}
+                customerName="키오스크 고객"
+                customerEmail="kiosk-customer@example.com"
+                customerPhone="01000000000"
               />
               <div className="mt-4">
                 <hr className="border-gray-300 my-3" />
