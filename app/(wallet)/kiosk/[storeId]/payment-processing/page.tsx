@@ -263,7 +263,7 @@ function PaymentProcessingPageContent() {
                 orderName={orderName}
                 totalAmount={totalAmountKRW}
                 currency="KRW"
-                redirectUrl={paymentPageUrl} // Important: use the cleaned URL
+                // redirectUrl={paymentPageUrl} // Removed to use non-redirect flow for proper callback handling
                 customData={{
                   kioskOrderId: kioskOrderId,
                   orderType: orderType,
