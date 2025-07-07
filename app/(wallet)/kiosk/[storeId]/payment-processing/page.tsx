@@ -133,32 +133,18 @@ function PaymentProcessingPageContent() {
   
   const handlePaymentSuccessCallback = useCallback((paymentResult: any) => {
     console.log('[PaymentProcessingPage] PortOne onPaymentComplete callback triggered:', paymentResult);
-    console.log('[PaymentProcessingPage] Payment result status:', paymentResult.status);
-    console.log('[PaymentProcessingPage] Full payment result:', JSON.stringify(paymentResult, null, 2));
-    
     // The /api/payment/complete route (called by PortOnePayment component) should update the DB.
     // The real-time listener will then pick up the 'completed' status.
-    
-    // Check for successful payment indicators
-    const isSuccessfulPayment = 
-      paymentResult.status === 'PAID' || 
-      paymentResult.status === 'paid' || 
-      paymentResult.status === 'SUCCESS' || 
-      paymentResult.status === 'success' ||
-      (paymentResult.paymentId && paymentResult.txId) || // PortOne V2 success indicators
-      (paymentResult.paymentId && paymentResult.transactionType === 'PAYMENT'); // Alternative success check
-
-    if (isSuccessfulPayment) {
-      console.log('[PaymentProcessingPage] Payment successful, redirecting to success page...');
-      // Direct redirect for successful payment (fallback if real-time listener doesn't work)
-      setTimeout(() => {
-        router.push(`/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`);
-      }, 1000); // Small delay to show success state
-    } else {
-      console.log('[PaymentProcessingPage] Payment status not recognized as success. Status:', paymentResult.status);
-      console.log('[PaymentProcessingPage] No clear success indicators found in payment result');
-      setError(`결제는 완료되었으나, 최종 확인에 실패했습니다: ${paymentResult.message || 'Unknown error'}`);
+    // We might set a local state here, e.g., "verifying payment..."
+    // Backend returns {status: "PAID"} for successful payments after verification
+    if (paymentResult.status !== 'PAID') {
+        setError(`결제는 완료되었으나, 최종 확인에 실패했습니다: ${paymentResult.message || 'Payment verification failed'}`);
     }
+     // If PAID, the listener should handle the redirect.
+     // If for some reason the listener misses it, and we are sure it's PAID from here:
+     // if (paymentResult.status === 'PAID') {
+     //   router.push(`/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`);
+     // }
   }, [kioskOrderId, storeId, orderType, originalSessionId, router]);
 
   const handlePaymentFailureCallback = useCallback((paymentError: any) => {
@@ -263,7 +249,7 @@ function PaymentProcessingPageContent() {
                 orderName={orderName}
                 totalAmount={totalAmountKRW}
                 currency="KRW"
-                // redirectUrl={paymentPageUrl} // Removed to use non-redirect flow for proper callback handling
+                redirectUrl={paymentPageUrl} // Important: use the cleaned URL
                 customData={{
                   kioskOrderId: kioskOrderId,
                   orderType: orderType,
