@@ -139,8 +139,16 @@ function PaymentProcessingPageContent() {
     // The /api/payment/complete route (called by PortOnePayment component) should update the DB.
     // The real-time listener will then pick up the 'completed' status.
     
-    // Check for various possible success status values
-    if (paymentResult.status === 'PAID' || paymentResult.status === 'paid' || paymentResult.status === 'SUCCESS' || paymentResult.status === 'success') {
+    // Check for successful payment indicators
+    const isSuccessfulPayment = 
+      paymentResult.status === 'PAID' || 
+      paymentResult.status === 'paid' || 
+      paymentResult.status === 'SUCCESS' || 
+      paymentResult.status === 'success' ||
+      (paymentResult.paymentId && paymentResult.txId) || // PortOne V2 success indicators
+      (paymentResult.paymentId && paymentResult.transactionType === 'PAYMENT'); // Alternative success check
+
+    if (isSuccessfulPayment) {
       console.log('[PaymentProcessingPage] Payment successful, redirecting to success page...');
       // Direct redirect for successful payment (fallback if real-time listener doesn't work)
       setTimeout(() => {
@@ -148,11 +156,8 @@ function PaymentProcessingPageContent() {
       }, 1000); // Small delay to show success state
     } else {
       console.log('[PaymentProcessingPage] Payment status not recognized as success. Status:', paymentResult.status);
-      // Still redirect if it's the callback (payment completed but verification might have different status)
-      console.log('[PaymentProcessingPage] Redirecting anyway since callback was triggered...');
-      setTimeout(() => {
-        router.push(`/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`);
-      }, 1000);
+      console.log('[PaymentProcessingPage] No clear success indicators found in payment result');
+      setError(`결제는 완료되었으나, 최종 확인에 실패했습니다: ${paymentResult.message || 'Unknown error'}`);
     }
   }, [kioskOrderId, storeId, orderType, originalSessionId, router]);
 
