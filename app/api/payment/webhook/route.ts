@@ -1,8 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Import PortOne Webhook verification - uncomment when implementing actual verification
-// import { Webhook } from '@portone/server-sdk';
+// TODO: Implement webhook verification with proper typing
+// import * as PortOne from '@portone/server-sdk';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,27 +11,11 @@ export async function POST(request: NextRequest) {
     // Get the request headers
     const headers = Object.fromEntries(request.headers);
 
-    // In production, verify the webhook signature
-    // This is a simplified example - you would use the PortOne SDK
-    /*
-    try {
-      const webhook = await Webhook.verify(
-        process.env.PORTONE_WEBHOOK_SECRET!,
-        rawBody,
-        headers
-      );
-      
-      // webhook is now verified and safe to use
-    } catch (e) {
-      console.error('Webhook verification failed:', e);
-      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 });
-    }
-    */
-
-    // Parse the webhook data
+    // Parse the webhook data (TODO: Add signature verification)
     let webhook;
     try {
       webhook = JSON.parse(rawBody);
+      console.log('Webhook received and parsed successfully');
     } catch (e) {
       console.error('Failed to parse webhook payload:', e);
       return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
@@ -40,10 +23,52 @@ export async function POST(request: NextRequest) {
 
     console.log('Received payment webhook:', webhook);
 
-    // PortOne's unique transaction ID is likely in webhook.tx_id or webhook.imp_uid
-    // Your merchant_uid (kiosk_order_id) is in webhook.payment_id
-    const portoneTransactionId = webhook.tx_id; // Use tx_id from your log
-    const merchantOrderId = webhook.payment_id; // This is your kiosk_order_id
+    // Handle webhook based on PortOne SDK structure
+    let portoneTransactionId, merchantOrderId, webhookStatus;
+    
+    // Check if this is a payment-related webhook
+    if ('paymentId' in webhook.data) {
+      // Payment-related webhook
+      merchantOrderId = webhook.data.paymentId;
+      portoneTransactionId = webhook.data.transactionId;
+      
+      console.log(`[Webhook] Payment webhook detected. Type: ${String(webhook.type)}, PaymentId: ${merchantOrderId}, TransactionId: ${portoneTransactionId}`);
+      
+      // Map webhook types to internal status
+      const webhookType = String(webhook.type);
+      switch (webhookType) {
+        case 'Transaction.Ready':
+          webhookStatus = 'ready';
+          break;
+        case 'Transaction.Paid':
+          webhookStatus = 'paid';
+          break;
+        case 'Transaction.VirtualAccountIssued':
+          webhookStatus = 'virtual_account_issued';
+          break;
+        case 'Transaction.PartialCancelled':
+          webhookStatus = 'partial_cancelled';
+          break;
+        case 'Transaction.Cancelled':
+          webhookStatus = 'cancelled';
+          break;
+        case 'Transaction.Failed':
+          webhookStatus = 'failed';
+          break;
+        case 'Transaction.PayPending':
+          webhookStatus = 'pay_pending';
+          break;
+        case 'Transaction.CancelPending':
+          webhookStatus = 'cancel_pending';
+          break;
+        default:
+          console.log(`[Webhook] Unknown webhook type: ${webhookType}`);
+          webhookStatus = webhookType.toLowerCase();
+      }
+    } else {
+      console.log(`[Webhook] Non-payment webhook or unknown format, ignoring`);
+      return NextResponse.json({ status: 'success' });
+    }
 
     if (portoneTransactionId && merchantOrderId) {
       const supabase = await createClient();
@@ -92,15 +117,18 @@ export async function POST(request: NextRequest) {
         
       if (orderData) {
         let newStatus = orderData.status;
-        const webhookStatus = webhook.status; // e.g., 'Paid'
 
-        // Case-insensitive comparison for status
-        if (webhookStatus && webhookStatus.toLowerCase() === 'paid' && orderData.status !== 'completed') {
+        // Handle status transitions based on webhook status
+        if (webhookStatus === 'paid' && orderData.status !== 'completed') {
           newStatus = 'completed';
-        } else if (webhookStatus && webhookStatus.toLowerCase() === 'failed' && orderData.status !== 'failed') {
+        } else if (webhookStatus === 'failed' && orderData.status !== 'failed') {
           newStatus = 'failed';
-        } else if (webhookStatus && webhookStatus.toLowerCase() === 'ready' && orderData.status !== 'completed' && orderData.status !== 'processing') { 
+        } else if (webhookStatus === 'ready' && orderData.status !== 'completed' && orderData.status !== 'processing') { 
           newStatus = 'processing'; 
+        } else if (webhookStatus === 'virtual_account_issued' && orderData.status !== 'completed' && orderData.status !== 'processing') {
+          newStatus = 'processing'; // Virtual account issued, waiting for payment
+        } else if (webhookStatus === 'cancelled' && orderData.status !== 'cancelled') {
+          newStatus = 'cancelled';
         }
 
         if (newStatus !== orderData.status) {
