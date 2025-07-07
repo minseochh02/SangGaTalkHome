@@ -251,7 +251,7 @@ export default function PortOnePayment({
       
       if (!redirectUrl || (payment && payment.success === true && !payment.code)) {
          setPaymentStatus({ status: 'PENDING', message: '결제 확인 중...' });
-         const requestBody = { paymentId: payment.paymentId, impUid: payment.txId };
+         const requestBody = { paymentId: payment.paymentId, impUid: payment.imp_uid };
          console.log(`[PortOnePayment] Non-redirect flow. Verifying payment. Sending to /api/payment/complete:`, JSON.stringify(requestBody));
          
          const completeResponse = await fetch('/api/payment/complete', {
