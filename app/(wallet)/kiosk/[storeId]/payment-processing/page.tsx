@@ -135,15 +135,16 @@ function PaymentProcessingPageContent() {
     console.log('[PaymentProcessingPage] PortOne onPaymentComplete callback triggered:', paymentResult);
     // The /api/payment/complete route (called by PortOnePayment component) should update the DB.
     // The real-time listener will then pick up the 'completed' status.
-    // We might set a local state here, e.g., "verifying payment..."
-    if (paymentResult.status !== 'PAID') {
-        setError(`결제는 완료되었으나, 최종 확인에 실패했습니다: ${paymentResult.message}`);
+    
+    if (paymentResult.status === 'PAID') {
+      console.log('[PaymentProcessingPage] Payment successful, redirecting to success page...');
+      // Direct redirect for successful payment (fallback if real-time listener doesn't work)
+      setTimeout(() => {
+        router.push(`/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`);
+      }, 1000); // Small delay to show success state
+    } else {
+      setError(`결제는 완료되었으나, 최종 확인에 실패했습니다: ${paymentResult.message}`);
     }
-     // If PAID, the listener should handle the redirect.
-     // If for some reason the listener misses it, and we are sure it's PAID from here:
-     // if (paymentResult.status === 'PAID') {
-     //   router.push(`/kiosk/${storeId}/success?orderId=${kioskOrderId}&orderType=${orderType}&sessionId=${originalSessionId}`);
-     // }
   }, [kioskOrderId, storeId, orderType, originalSessionId, router]);
 
   const handlePaymentFailureCallback = useCallback((paymentError: any) => {
