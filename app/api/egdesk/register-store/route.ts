@@ -364,6 +364,7 @@ async function upsertProducts(
       product_name: name,
       description,
       won_price: wonPrice,
+      sgt_price: Number((wonPrice / 1000).toFixed(4)),
       category,
       store_id: storeId,
       status: 1,

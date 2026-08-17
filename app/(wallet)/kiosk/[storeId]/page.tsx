@@ -374,7 +374,13 @@ export default function KioskPage() {
         console.error('Error fetching products:', productError);
         setError('상품 정보를 불러오는데 실패했습니다.');
       } else if (productData) {
-        setProducts(productData);
+        setProducts(
+          productData.map((product) => ({
+            ...product,
+            sgt_price: Number(product.sgt_price ?? 0),
+            won_price: Number(product.won_price ?? 0),
+          })),
+        );
       }
     } catch (err) {
       console.error('Error in fetchStoreData:', err);
@@ -711,8 +717,8 @@ export default function KioskPage() {
   };
   
   // Format price with commas
-  const formatPrice = (price: number): string => {
-    return price.toLocaleString();
+  const formatPrice = (price: number | null | undefined): string => {
+    return Number(price ?? 0).toLocaleString();
   };
   
   // useEffect to compute product to kiosk category mapping
