@@ -37,6 +37,21 @@ function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const e = error as {
+      message?: string;
+      details?: string;
+      hint?: string;
+      code?: string;
+    };
+    const parts = [e.message, e.details, e.hint, e.code].filter(Boolean);
+    if (parts.length) return parts.join(" | ");
+  }
+  return "Registration failed";
+}
+
 function assertEgdeskSecret(request: Request): NextResponse | null {
   const expected = process.env.SGT_EGDESK_SECRET || "";
   const provided = request.headers.get("x-sgt-egdesk-secret") || "";
@@ -100,7 +115,6 @@ async function findStoreBySnapshot(
     .from("stores")
     .select("store_id, store_name, description, website_url, business_number")
     .eq("user_id", ownerUserId)
-    .is("deleted_at", null)
     .limit(500);
   if (error) throw error;
   return (
@@ -236,8 +250,7 @@ export async function GET(request: Request) {
       storeName: store.store_name,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Lookup failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -333,7 +346,6 @@ export async function POST(request: Request) {
       products,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Registration failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
