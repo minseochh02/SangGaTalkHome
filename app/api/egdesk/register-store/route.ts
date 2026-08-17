@@ -2,7 +2,6 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 
-const DEFAULT_OWNER_USER_ID = "51267fb7-57ec-49ad-82f9-b0591f8533a4";
 const DEFAULT_CATEGORY_ID = "2ae5ca75-6f21-41a6-8de1-48564e3f4906";
 const PUBLIC_BASE = "https://sgt-wallet.com";
 
@@ -189,18 +188,103 @@ async function uploadImage(input: {
   return input.admin.storage.from(input.bucket).getPublicUrl(filePath).data.publicUrl;
 }
 
+function escapeIlike(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
+async function findAuthUserByEmail(admin: SupabaseClient, email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return null;
+  const perPage = 200;
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const users = data?.users ?? [];
+    const hit = users.find((user) => (user.email ?? "").toLowerCase() === normalized);
+    if (hit) return hit;
+    if (users.length < perPage) break;
+  }
+  return null;
+}
+
+async function findPublicUserByEmail(admin: SupabaseClient, email: string) {
+  const normalized = email.trim().toLowerCase();
+  const { data, error } = await admin
+    .from("users")
+    .select("user_id, email")
+    .ilike("email", escapeIlike(normalized))
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.user_id) return null;
+  return { userId: data.user_id as string, email: normalized };
+}
+
+async function findOwnerByEmail(admin: SupabaseClient, email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !normalized.includes("@")) return null;
+
+  const profile = await findPublicUserByEmail(admin, normalized);
+  if (profile) return profile;
+
+  const authUser = await findAuthUserByEmail(admin, normalized);
+  if (!authUser?.id) return null;
+  return { userId: authUser.id, email: normalized };
+}
+
+async function ensurePublicUser(
+  admin: SupabaseClient,
+  userId: string,
+  email: string,
+) {
+  const { data: existing } = await admin
+    .from("users")
+    .select("user_id, email")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing?.user_id) return existing.user_id;
+
+  const username = `${email.split("@")[0] || "egdesk"}-${userId.slice(0, 8)}`;
+  const now = new Date().toISOString();
+  const { error } = await admin.from("users").insert({
+    user_id: userId,
+    email,
+    username,
+    role: "store_owner",
+    created_at: now,
+    updated_at: now,
+  });
+  if (error && !String(error.message || "").toLowerCase().includes("duplicate")) {
+    throw error;
+  }
+  return userId;
+}
+
+async function resolveOwnerByEmail(admin: SupabaseClient, email: string) {
+  const owner = await findOwnerByEmail(admin, email);
+  if (!owner) return null;
+  const userId = await ensurePublicUser(admin, owner.userId, owner.email);
+  return { userId, email: owner.email };
+}
+
+function accountUrls() {
+  const base = publicBase();
+  return {
+    loginUrl: `${base}/login`,
+    signupUrl: `${base}/signup`,
+  };
+}
+
 async function findStoreBySnapshot(
   admin: SupabaseClient,
   snapshotId: string,
 ) {
-  const ownerUserId =
-    process.env.EGDESK_SGT_OWNER_USER_ID || DEFAULT_OWNER_USER_ID;
   const marker = biMarker(snapshotId);
   const { data, error } = await admin
     .from("stores")
     .select("store_id, store_name, description, website_url, business_number")
-    .eq("user_id", ownerUserId)
-    .limit(500);
+    .order("created_at", { ascending: false })
+    .limit(1000);
   if (error) throw error;
   return (
     (data || []).find((row) =>
@@ -329,13 +413,28 @@ export async function GET(request: Request) {
   const denied = assertEgdeskSecret(request);
   if (denied) return denied;
 
-  const snapshotId = new URL(request.url).searchParams.get("snapshotId")?.trim();
-  if (!snapshotId) {
-    return NextResponse.json({ error: "snapshotId is required" }, { status: 400 });
+  const url = new URL(request.url);
+  const snapshotId = url.searchParams.get("snapshotId")?.trim() || "";
+  const email = url.searchParams.get("email")?.trim() || "";
+  if (!snapshotId && !email) {
+    return NextResponse.json(
+      { error: "email or snapshotId is required" },
+      { status: 400 },
+    );
   }
 
   try {
     const admin = getAdmin();
+    if (email && !snapshotId) {
+      const owner = await findOwnerByEmail(admin, email);
+      return NextResponse.json({
+        linked: Boolean(owner),
+        email: email.trim().toLowerCase(),
+        userId: owner?.userId || null,
+        ...accountUrls(),
+      });
+    }
+
     const store = await findStoreBySnapshot(admin, snapshotId);
     if (!store) {
       return NextResponse.json({ found: false, snapshotId });
@@ -357,6 +456,7 @@ export async function POST(request: Request) {
 
   let body: {
     snapshotId?: string;
+    email?: string;
     store?: IncomingStore;
     products?: IncomingProduct[];
   } = {};
@@ -368,17 +468,37 @@ export async function POST(request: Request) {
 
   const snapshotId = String(body.snapshotId || "").trim();
   const storeName = String(body.store?.storeName || "").trim();
+  const email = String(body.email || body.store?.email || "")
+    .trim()
+    .toLowerCase();
   if (!snapshotId || !storeName) {
     return NextResponse.json(
       { error: "snapshotId and store.storeName are required" },
       { status: 400 },
     );
   }
+  if (!email || !email.includes("@")) {
+    return NextResponse.json(
+      { error: "email is required so the store can be owned by the SGT account" },
+      { status: 400 },
+    );
+  }
 
   try {
     const admin = getAdmin();
-    const ownerUserId =
-      process.env.EGDESK_SGT_OWNER_USER_ID || DEFAULT_OWNER_USER_ID;
+    const owner = await resolveOwnerByEmail(admin, email);
+    if (!owner) {
+      return NextResponse.json(
+        {
+          code: "NO_SGT_USER",
+          error: `No SGT Wallet account for ${email}. Log in or sign up on sgt-wallet.com with this email, then register again.`,
+          email,
+          ...accountUrls(),
+        },
+        { status: 409 },
+      );
+    }
+    const ownerUserId = owner.userId;
     const categoryId = await resolveCategoryId(
       admin,
       body.store?.brandCategory,
@@ -400,7 +520,7 @@ export async function POST(request: Request) {
       website_url: String(body.store?.websiteUrl || "").trim() || null,
       business_number: String(body.store?.businessNumber || "").trim(),
       owner_name: String(body.store?.ownerName || storeName).trim() || storeName,
-      email: String(body.store?.email || "").trim(),
+      email: owner.email,
       operating_hours: "",
       kiosk_takeout_enabled: true,
       updated_at: now,
@@ -456,6 +576,8 @@ export async function POST(request: Request) {
       ok: true,
       created,
       snapshotId,
+      ownerEmail: owner.email,
+      ownerUserId,
       ...urlsForStore(storeId),
       storeName,
       products,
