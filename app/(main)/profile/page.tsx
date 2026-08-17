@@ -213,9 +213,14 @@ export default function ProfilePage() {
 												등록된 스토어 관리
 											</button>
 										</div>
-										<Button asChild className="w-full sm:w-auto mt-2 sm:mt-0">
-											<Link href="/admin/exchanges">환전 내역 관리</Link>
-										</Button>
+										<div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+											<Button asChild className="w-full sm:w-auto mt-2 sm:mt-0">
+												<Link href="/admin/exchanges">환전 내역 관리</Link>
+											</Button>
+											<Button asChild className="w-full sm:w-auto mt-2 sm:mt-0" variant="outline">
+												<Link href="/admin/settlements">스토어 정산</Link>
+											</Button>
+										</div>
 									</div>
 
 									<div className="bg-white rounded-lg shadow-md p-3 sm:p-6 overflow-x-auto">

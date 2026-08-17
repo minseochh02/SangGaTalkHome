@@ -50,7 +50,10 @@ export interface Store {
 	owner_name: string;
 	email: string;
 	operating_hours: string;
-	store_wallet_address: string; 
+	store_wallet_address: string;
+	bank_name?: string;
+	bank_account_no?: string;
+	bank_holder?: string;
 	kiosk_key?: string; // Encrypted hash key for kiosk access
 	kiosk_dine_in_enabled?: boolean; // Whether dine-in option is enabled in kiosk
 	kiosk_takeout_enabled?: boolean; // Whether takeout option is enabled in kiosk
@@ -66,6 +69,30 @@ export interface Store {
 	categories?: {
 		category_id: string;
 		category_name: string;
+	};
+}
+
+export interface StoreSettlement {
+	settlement_id: string;
+	store_id: string;
+	kiosk_order_id: string;
+	portone_imp_uid?: string | null;
+	gross_amount_krw: number;
+	fee_amount_krw: number;
+	net_amount_krw: number;
+	fee_bps: number;
+	status: "pending" | "paid" | "cancelled";
+	due_at: string;
+	paid_at?: string | null;
+	paid_by?: string | null;
+	notes?: string | null;
+	created_at: string;
+	stores?: {
+		store_name: string;
+		owner_name: string;
+		bank_name?: string | null;
+		bank_account_no?: string | null;
+		bank_holder?: string | null;
 	};
 }
 

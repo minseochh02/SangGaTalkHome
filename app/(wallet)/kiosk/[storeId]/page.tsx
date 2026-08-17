@@ -718,7 +718,7 @@ export default function KioskPage() {
   
   // Format price with commas
   const formatPrice = (price: number | null | undefined): string => {
-    return Number(price ?? 0).toLocaleString();
+    return Number(price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 });
   };
   
   // useEffect to compute product to kiosk category mapping

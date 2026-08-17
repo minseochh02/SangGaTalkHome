@@ -967,16 +967,24 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 					</h2>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<div>
-							<h3 className="text-xl font-semibold text-gray-700 mb-3 flex justify-between items-center">
+							<h3 className="text-xl font-semibold text-gray-700 mb-3 flex justify-between items-center gap-2">
 								<span>키오스크 QR 코드</span>
+								<span className="flex flex-wrap gap-2">
 								{store?.kiosk_key && (
 									<Link
 										href={`/stores/${storeId}/kiosk-edit`}
-										className="ml-4 px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
+										className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
 									>
 										키오스크 관리
 									</Link>
 								)}
+								<Link
+									href={`/stores/${storeId}/settlements`}
+									className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors"
+								>
+									정산
+								</Link>
+								</span>
 							</h3>
 							<div className="bg-white p-4 rounded-lg shadow flex flex-col items-center">
 								<QRCodeSVG value={`https://sgt-wallet.com/kiosk/${storeId}`} size={180} />

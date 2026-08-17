@@ -1470,8 +1470,14 @@ function KioskEditContent({ storeId }: { storeId: string }) {
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          주문 관리
-        </button>
+            주문 관리
+          </button>
+          <Link
+            href={`/stores/${storeId}/settlements`}
+            className="px-6 py-3 text-lg font-medium text-gray-500 hover:text-gray-700"
+          >
+            정산
+          </Link>
       </div>
       
       {/* Dynamic section content */}

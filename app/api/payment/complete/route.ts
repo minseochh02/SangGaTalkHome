@@ -51,8 +51,8 @@ export async function POST(request: Request) {
 
     const { data: kioskOrder, error: orderError } = await supabase
       .from('kiosk_orders')
-      .select('kiosk_order_id, total_amount_krw, status') // Selected kiosk_order_id for clarity, though id was okay here if it worked
-      .eq('kiosk_order_id', kioskOrderId) // Corrected to use kiosk_order_id
+      .select('kiosk_order_id, store_id, total_amount_krw, status')
+      .eq('kiosk_order_id', kioskOrderId)
       .single();
 
     if (orderError || !kioskOrder) {
@@ -103,6 +103,21 @@ export async function POST(request: Request) {
         );
       }
       console.log(`[Payment Complete API] Order ${kioskOrderId} updated to completed, returning PAID status`);
+      try {
+        const { recordSettlementForPaidOrder } = await import('@/utils/settlement');
+        await recordSettlementForPaidOrder({
+          kioskOrderId,
+          storeId: kioskOrder.store_id,
+          grossAmountKrw: amountToBePaid,
+          portoneImpUid: impUid,
+          paidAt: new Date().toISOString(),
+        });
+      } catch (settlementError) {
+        console.error(
+          `[Payment Complete API] Paid order ${kioskOrderId} but settlement insert failed:`,
+          settlementError,
+        );
+      }
       return NextResponse.json(
         { status: 'PAID', message: '결제가 성공적으로 완료되었습니다.', orderId: kioskOrderId },
         { status: 200 }

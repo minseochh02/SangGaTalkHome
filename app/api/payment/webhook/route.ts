@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       // Option 1: Find order by PortOne Transaction ID (if you are reliably storing it from /api/payment/complete)
       let { data: orderData, error: orderError } = await supabase
         .from('kiosk_orders')
-        .select('kiosk_order_id, status, portone_imp_uid')
+        .select('kiosk_order_id, store_id, status, portone_imp_uid, total_amount_krw, paid_at')
         .eq('portone_imp_uid', portoneTransactionId)
         .maybeSingle();
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         console.log(`[Webhook] Order not found by portone_imp_uid ${portoneTransactionId}. Trying by merchant_order_id (kiosk_order_id): ${merchantOrderId}`);
         const { data: orderDataByMerchantId, error: orderErrorByMerchantId } = await supabase
           .from('kiosk_orders')
-          .select('kiosk_order_id, status, portone_imp_uid')
+          .select('kiosk_order_id, store_id, status, portone_imp_uid, total_amount_krw, paid_at')
           .eq('kiosk_order_id', merchantOrderId)
           .maybeSingle();
         
@@ -145,6 +145,26 @@ export async function POST(request: NextRequest) {
             console.error(`[Webhook] Error updating order ${orderData.kiosk_order_id} status to ${newStatus}:`, updateError.message);
           } else {
             console.log(`[Webhook] Updated order ${orderData.kiosk_order_id} status from ${orderData.status} to ${newStatus} based on webhook.`);
+            try {
+              if (newStatus === 'completed') {
+                const { recordSettlementForPaidOrder } = await import('@/utils/settlement');
+                await recordSettlementForPaidOrder({
+                  kioskOrderId: orderData.kiosk_order_id,
+                  storeId: orderData.store_id,
+                  grossAmountKrw: orderData.total_amount_krw,
+                  portoneImpUid: portoneTransactionId,
+                  paidAt: new Date().toISOString(),
+                });
+              } else if (newStatus === 'cancelled' || newStatus === 'failed') {
+                const { cancelSettlementForOrder } = await import('@/utils/settlement');
+                await cancelSettlementForOrder(orderData.kiosk_order_id);
+              }
+            } catch (settlementError) {
+              console.error(
+                `[Webhook] Settlement update failed for ${orderData.kiosk_order_id}:`,
+                settlementError,
+              );
+            }
           }
         } else {
           console.log(`[Webhook] Order ${orderData.kiosk_order_id} status (${orderData.status}) already matches webhook implication or no change needed for webhook status: ${webhookStatus}.`);

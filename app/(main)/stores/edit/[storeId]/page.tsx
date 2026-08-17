@@ -49,7 +49,10 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 		image_url: "",
 		business_number: "",
 		email: "",
-		owner_name: ""
+		owner_name: "",
+		bank_name: "",
+		bank_account_no: "",
+		bank_holder: "",
 	});
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -109,7 +112,10 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
             operating_hours,
             business_number,
             email,
-            owner_name
+            owner_name,
+            bank_name,
+            bank_account_no,
+            bank_holder
           `
 					)
 					.eq("store_id", storeId)
@@ -145,6 +151,9 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 					business_number: typedStoreData.business_number || "",
 					email: typedStoreData.email || "",
 					owner_name: typedStoreData.owner_name || "",
+					bank_name: typedStoreData.bank_name || "",
+					bank_account_no: typedStoreData.bank_account_no || "",
+					bank_holder: typedStoreData.bank_holder || "",
 				});
 
 				if (typedStoreData.image_url) {
@@ -269,6 +278,9 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 				business_number: formData.business_number,
 				email: formData.email,
 				owner_name: formData.owner_name,
+				bank_name: formData.bank_name,
+				bank_account_no: formData.bank_account_no,
+				bank_holder: formData.bank_holder,
 				location: location,
 				...(updatedImageUrl && { image_url: updatedImageUrl }),
 			};
@@ -465,6 +477,37 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 							value={formData.business_number}
 							onChange={handleChange}
 							placeholder="000-00-00000"
+						/>
+					</div>
+
+					<div className="space-y-2">
+						<Label htmlFor="bank_holder">정산 예금주</Label>
+						<Input
+							id="bank_holder"
+							name="bank_holder"
+							value={formData.bank_holder}
+							onChange={handleChange}
+							placeholder="예금주명"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="bank_name">정산 은행</Label>
+						<Input
+							id="bank_name"
+							name="bank_name"
+							value={formData.bank_name}
+							onChange={handleChange}
+							placeholder="국민은행"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="bank_account_no">정산 계좌번호</Label>
+						<Input
+							id="bank_account_no"
+							name="bank_account_no"
+							value={formData.bank_account_no}
+							onChange={handleChange}
+							placeholder="계좌번호"
 						/>
 					</div>
 
