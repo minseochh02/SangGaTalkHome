@@ -1,10 +1,15 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { timingSafeEqual } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 
 const DEFAULT_OWNER_USER_ID = "51267fb7-57ec-49ad-82f9-b0591f8533a4";
 const DEFAULT_CATEGORY_ID = "2ae5ca75-6f21-41a6-8de1-48564e3f4906";
 const PUBLIC_BASE = "https://sgt-wallet.com";
+
+type IncomingImage = {
+  base64?: string;
+  mimeType?: string;
+};
 
 type IncomingProduct = {
   catalogId?: string;
@@ -12,6 +17,7 @@ type IncomingProduct = {
   description?: string;
   wonPrice?: number;
   category?: string;
+  image?: IncomingImage;
 };
 
 type IncomingStore = {
@@ -24,6 +30,7 @@ type IncomingStore = {
   phoneNumber?: string;
   address?: string;
   businessNumber?: string;
+  image?: IncomingImage;
 };
 
 function secretsEqual(a: string, b: string): boolean {
@@ -149,6 +156,39 @@ function urlsForStore(storeId: string) {
   };
 }
 
+function extForMime(mimeType: string): string {
+  const mime = mimeType.toLowerCase();
+  if (mime.includes("png")) return "png";
+  if (mime.includes("webp")) return "webp";
+  if (mime.includes("gif")) return "gif";
+  return "jpg";
+}
+
+async function uploadImage(input: {
+  admin: SupabaseClient;
+  bucket: "product-images" | "store-thumbnail";
+  folder: string;
+  image?: IncomingImage;
+}): Promise<string | null> {
+  const raw = String(input.image?.base64 || "")
+    .replace(/^data:[^;]+;base64,/, "")
+    .trim();
+  if (!raw) return null;
+  const buffer = Buffer.from(raw, "base64");
+  if (!buffer.length || buffer.length > 2_000_000) return null;
+  const mime = String(input.image?.mimeType || "image/jpeg")
+    .split(";")[0]
+    .trim();
+  const contentType = mime.startsWith("image/") ? mime : "image/jpeg";
+  const filePath = `${input.folder}/${Date.now()}-${randomUUID()}.${extForMime(contentType)}`;
+  const { error } = await input.admin.storage.from(input.bucket).upload(filePath, buffer, {
+    contentType,
+    upsert: true,
+  });
+  if (error) throw error;
+  return input.admin.storage.from(input.bucket).getPublicUrl(filePath).data.publicUrl;
+}
+
 async function findStoreBySnapshot(
   admin: SupabaseClient,
   snapshotId: string,
@@ -191,6 +231,7 @@ async function resolveCategoryId(
 async function upsertProducts(
   admin: SupabaseClient,
   storeId: string,
+  ownerUserId: string,
   products: IncomingProduct[],
 ) {
   const synced: Array<{
@@ -198,6 +239,7 @@ async function upsertProducts(
     productId: string;
     name: string;
     created: boolean;
+    imageUrl?: string | null;
   }> = [];
 
   for (const product of products) {
@@ -215,7 +257,7 @@ async function upsertProducts(
 
     const { data: existingRows, error: listError } = await admin
       .from("products")
-      .select("product_id, product_name, description")
+      .select("product_id, product_name, description, image_url")
       .eq("store_id", storeId)
       .limit(500);
     if (listError) throw listError;
@@ -227,7 +269,14 @@ async function upsertProducts(
       (existingRows || []).find((row) => row.product_name === name) ||
       null;
 
-    const payload = {
+    const imageUrl = await uploadImage({
+      admin,
+      bucket: "product-images",
+      folder: ownerUserId,
+      image: product.image,
+    });
+
+    const payload: Record<string, unknown> = {
       product_name: name,
       description,
       won_price: wonPrice,
@@ -240,6 +289,7 @@ async function upsertProducts(
       won_delivery_fee: 0,
       updated_at: now,
     };
+    if (imageUrl) payload.image_url = imageUrl;
 
     if (existing?.product_id) {
       const { error } = await admin
@@ -252,6 +302,7 @@ async function upsertProducts(
         productId: existing.product_id,
         name,
         created: false,
+        imageUrl: imageUrl || existing.image_url || null,
       });
       continue;
     }
@@ -267,6 +318,7 @@ async function upsertProducts(
       productId: inserted.product_id,
       name,
       created: true,
+      imageUrl: imageUrl || null,
     });
   }
 
@@ -337,7 +389,7 @@ export async function POST(request: Request) {
       String(body.store?.description || storeName),
     );
     const now = new Date().toISOString();
-    const storePayload = {
+    const storePayload: Record<string, unknown> = {
       user_id: ownerUserId,
       store_name: storeName,
       store_type: 2,
@@ -359,11 +411,6 @@ export async function POST(request: Request) {
     let created = false;
 
     if (existing?.store_id) {
-      const { error } = await admin
-        .from("stores")
-        .update(storePayload)
-        .eq("store_id", existing.store_id);
-      if (error) throw error;
       storeId = existing.store_id;
     } else {
       const { data: inserted, error } = await admin
@@ -376,9 +423,32 @@ export async function POST(request: Request) {
       created = true;
     }
 
+    const storeImageUrl = await uploadImage({
+      admin,
+      bucket: "store-thumbnail",
+      folder: ownerUserId,
+      image: body.store?.image,
+    });
+    if (storeImageUrl) storePayload.image_url = storeImageUrl;
+
+    if (!created) {
+      const { error } = await admin
+        .from("stores")
+        .update(storePayload)
+        .eq("store_id", storeId);
+      if (error) throw error;
+    } else if (storeImageUrl) {
+      const { error } = await admin
+        .from("stores")
+        .update({ image_url: storeImageUrl, updated_at: now })
+        .eq("store_id", storeId);
+      if (error) throw error;
+    }
+
     const products = await upsertProducts(
       admin,
       storeId,
+      ownerUserId,
       Array.isArray(body.products) ? body.products : [],
     );
 
