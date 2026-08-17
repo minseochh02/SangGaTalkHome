@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
+import { syncPendingSettlementAccounts } from "@/utils/settlement";
 
 const DEFAULT_CATEGORY_ID = "2ae5ca75-6f21-41a6-8de1-48564e3f4906";
 const PUBLIC_BASE = "https://sgt-wallet.com";
@@ -30,6 +31,9 @@ type IncomingStore = {
   phoneNumber?: string;
   address?: string;
   businessNumber?: string;
+  bankName?: string;
+  bankAccountNo?: string;
+  bankHolder?: string;
   image?: IncomingImage;
 };
 
@@ -283,7 +287,9 @@ async function findStoreBySnapshot(
   const marker = biMarker(snapshotId);
   const { data, error } = await admin
     .from("stores")
-    .select("store_id, store_name, description, website_url, business_number")
+    .select(
+      "store_id, store_name, description, website_url, business_number, bank_name, bank_account_no, bank_holder",
+    )
     .order("created_at", { ascending: false })
     .limit(1000);
   if (error) throw error;
@@ -449,6 +455,9 @@ export async function GET(request: Request) {
       snapshotId,
       ...urlsForStore(store.store_id),
       storeName: store.store_name,
+      bankName: store.bank_name || null,
+      bankAccountNo: store.bank_account_no || null,
+      bankHolder: store.bank_holder || null,
     });
   } catch (error) {
     return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
@@ -514,6 +523,13 @@ export async function POST(request: Request) {
       String(body.store?.description || storeName),
     );
     const now = new Date().toISOString();
+    const bankName = String(body.store?.bankName || "").trim();
+    const bankAccountNo = String(body.store?.bankAccountNo || "").replace(
+      /[\s-]/g,
+      "",
+    );
+    const bankHolder = String(body.store?.bankHolder || "").trim();
+    const hasBank = Boolean(bankName && bankAccountNo && bankHolder);
     const storePayload: Record<string, unknown> = {
       user_id: ownerUserId,
       store_name: storeName,
@@ -530,6 +546,11 @@ export async function POST(request: Request) {
       kiosk_takeout_enabled: true,
       updated_at: now,
     };
+    if (hasBank) {
+      storePayload.bank_name = bankName;
+      storePayload.bank_account_no = bankAccountNo;
+      storePayload.bank_holder = bankHolder;
+    }
 
     const existing = await findStoreBySnapshot(admin, snapshotId);
     let storeId: string;
@@ -577,6 +598,14 @@ export async function POST(request: Request) {
       Array.isArray(body.products) ? body.products : [],
     );
 
+    if (hasBank) {
+      try {
+        await syncPendingSettlementAccounts(storeId);
+      } catch (syncError) {
+        console.error("Failed to sync pending settlement accounts:", syncError);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       created,
@@ -585,6 +614,9 @@ export async function POST(request: Request) {
       ownerUserId,
       ...urlsForStore(storeId),
       storeName,
+      bankName: hasBank ? bankName : existing?.bank_name || null,
+      bankAccountNo: hasBank ? bankAccountNo : existing?.bank_account_no || null,
+      bankHolder: hasBank ? bankHolder : existing?.bank_holder || null,
       products,
     });
   } catch (error) {
