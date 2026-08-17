@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Script from "next/script";
 import { EGDESK_FUNCTIONS_URL } from "@/lib/egdesk-pro";
 
 type CheckoutConfig = {
@@ -17,39 +16,25 @@ type CheckoutConfig = {
   completeUrl: string;
 };
 
-declare global {
-  interface Window {
-    PortOne?: {
-      requestPayment: (args: Record<string, unknown>) => Promise<{
-        code?: string;
-        message?: string;
-        pgCode?: string;
-        pgMessage?: string;
-        paymentId?: string;
-      }>;
-    };
-  }
-}
+type PortOnePaymentResult = {
+  code?: string;
+  message?: string;
+  pgCode?: string;
+  pgMessage?: string;
+  paymentId?: string;
+};
 
-function waitForPortOne(
-  timeoutMs: number,
-): Promise<NonNullable<Window["PortOne"]>> {
-  return new Promise((resolve, reject) => {
-    const started = Date.now();
-    (function tick() {
-      if (window.PortOne && typeof window.PortOne.requestPayment === "function") {
-        resolve(window.PortOne);
-        return;
-      }
-      if (Date.now() - started > timeoutMs) {
-        reject(
-          new Error("PortOne SDK 로드 시간 초과. 네트워크를 확인하세요."),
-        );
-        return;
-      }
-      setTimeout(tick, 100);
-    })();
-  });
+async function loadPortOne() {
+  const PortOneModule = await import("@portone/browser-sdk/v2");
+  const PortOne = PortOneModule.default as {
+    requestPayment: (
+      args: Record<string, unknown>,
+    ) => Promise<PortOnePaymentResult | undefined>;
+  };
+  if (!PortOne || typeof PortOne.requestPayment !== "function") {
+    throw new Error("결제 모듈을 불러오는데 실패했습니다.");
+  }
+  return PortOne;
 }
 
 export function EgdeskProCheckoutClient() {
@@ -106,7 +91,7 @@ export function EgdeskProCheckoutClient() {
     setStatus("paying");
     setMessage("결제창을 여는 중…");
     try {
-      const PortOne = await waitForPortOne(15000);
+      const PortOne = await loadPortOne();
       const payment = await PortOne.requestPayment({
         storeId: cfg.storeId,
         channelKey: cfg.channelKey,
@@ -175,10 +160,6 @@ export function EgdeskProCheckoutClient() {
 
   return (
     <div className="min-h-[70vh] bg-[#f5f6f8] text-gray-900 w-full">
-      <Script
-        src="https://cdn.portone.io/v2/browser-sdk.js"
-        strategy="afterInteractive"
-      />
       <div className="max-w-[420px] mx-auto my-12 p-6 bg-white rounded-xl shadow-lg">
         <h1 className="text-xl font-bold mb-2">EGDesk Pro</h1>
         <p className="mb-4 leading-relaxed text-gray-600">
