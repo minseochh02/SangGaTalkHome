@@ -113,11 +113,16 @@ function decodeJwtClaims(token: string): { ref?: string; role?: string } | null 
 }
 
 function publicBase(): string {
-  return (
+  const configured = (
+    process.env.SGT_PUBLIC_BASE_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_SERVER_URL ||
     PUBLIC_BASE
   ).replace(/\/$/, "");
+  // NEXT_PUBLIC_SERVER_URL is the Hugging Face FastAPI backend, not the storefront.
+  if (/hf\.space|localhost|127\.0\.0\.1/i.test(configured)) {
+    return PUBLIC_BASE;
+  }
+  return configured;
 }
 
 function biMarker(snapshotId: string): string {
