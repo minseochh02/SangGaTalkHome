@@ -7,6 +7,8 @@ import { createClient } from "@/utils/supabase/client";
 import { Store, Product } from "@/utils/type";
 import HtmlContent from "@/components/HtmlContent";
 import { formatSGTPrice } from "@/utils/formatters";
+import { EgdeskProBuyButton } from "@/components/egdesk/EgdeskProBuyButton";
+import { isEgdeskProProduct } from "@/lib/egdesk-pro";
 
 interface ProductDetailsPageProps {
 	storeId: string;
@@ -540,6 +542,15 @@ function ProductDetailsContent({
 
 					{/* Customer Actions */}
 					<div className="space-y-3">
+						{isEgdeskProProduct(productId) && (
+							<div className="bg-white rounded-xl shadow-md p-6">
+								<h2 className="text-xl font-bold mb-2">EGDesk Pro 연간 이용권</h2>
+								<p className="text-sm text-gray-600 mb-4">
+									결제 완료 시 같은 이메일의 EGDesk 계정이 Pro로 활성화됩니다.
+								</p>
+								<EgdeskProBuyButton />
+							</div>
+						)}
 
 						<button className="w-full px-4 py-3 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200 text-base font-medium flex items-center justify-center gap-2">
 							<svg
