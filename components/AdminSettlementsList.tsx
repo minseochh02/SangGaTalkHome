@@ -119,9 +119,11 @@ export default function AdminSettlementsList() {
               {rows.map((row) => {
                 const store = row.stores;
                 const account =
-                  store?.bank_name && store?.bank_account_no
-                    ? `${store.bank_holder || store.owner_name} · ${store.bank_name} ${store.bank_account_no}`
-                    : "계좌 없음";
+                  row.payout_bank_name && row.payout_bank_account_no
+                    ? `${row.payout_bank_holder || store?.owner_name} · ${row.payout_bank_name} ${row.payout_bank_account_no}`
+                    : store?.bank_name && store?.bank_account_no
+                      ? `${store.bank_holder || store.owner_name} · ${store.bank_name} ${store.bank_account_no}`
+                      : "계좌 없음";
                 return (
                   <tr key={row.settlement_id} className="border-t">
                     <td className="px-4 py-3">

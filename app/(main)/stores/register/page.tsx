@@ -23,6 +23,9 @@ interface FormData {
 	operating_hours: string;
 	website?: string;
 	referrer_phone_number?: string;
+	bank_name: string;
+	bank_account_no: string;
+	bank_holder: string;
 }
 
 export default function StoreRegistration() {
@@ -69,6 +72,9 @@ export default function StoreRegistration() {
 		operating_hours: "",
 		website: "",
 		referrer_phone_number: "",
+		bank_name: "",
+		bank_account_no: "",
+		bank_holder: "",
 	});
 
 	// Clean up the preview URL when component unmounts or when a new image is selected
@@ -222,6 +228,9 @@ export default function StoreRegistration() {
 						operating_hours: formData.operating_hours,
 						website: formData.website,
 						referrer_phone_number: formData.referrer_phone_number,
+						bank_name: formData.bank_name,
+						bank_account_no: formData.bank_account_no.replace(/\s+/g, ""),
+						bank_holder: formData.bank_holder,
 						image_url: imageUrl,
 						location: location,
 						status: 0, // Pending status
@@ -333,6 +342,59 @@ export default function StoreRegistration() {
 										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
 									/>
 								</div>
+							</div>
+						</div>
+
+						<div className="space-y-6 pt-6 border-t">
+							<h2 className="text-xl md:text-2xl font-semibold text-[#6A9C89] mb-4">
+								정산 계좌
+							</h2>
+							<p className="text-sm text-gray-600 -mt-2">
+								카드 매출은 QUUS로 입금된 뒤 이 계좌로 재정산됩니다. 예금주는
+								사업자와 같아야 합니다.
+							</p>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-2">
+										예금주 <span className="text-red-500">*</span>
+									</label>
+									<input
+										type="text"
+										name="bank_holder"
+										required
+										value={formData.bank_holder}
+										onChange={handleChange}
+										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-2">
+										은행 <span className="text-red-500">*</span>
+									</label>
+									<input
+										type="text"
+										name="bank_name"
+										required
+										placeholder="국민은행"
+										value={formData.bank_name}
+										onChange={handleChange}
+										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
+									/>
+								</div>
+							</div>
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-2">
+									계좌번호 <span className="text-red-500">*</span>
+								</label>
+								<input
+									type="text"
+									name="bank_account_no"
+									required
+									placeholder="숫자만 입력"
+									value={formData.bank_account_no}
+									onChange={handleChange}
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFA725] focus:border-transparent"
+								/>
 							</div>
 						</div>
 

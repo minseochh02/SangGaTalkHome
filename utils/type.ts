@@ -27,6 +27,9 @@ export interface StoreApplication {
 	updated_at: string;
 	referrer_phone_number: string;
 	image_url?: string;
+	bank_name?: string;
+	bank_account_no?: string;
+	bank_holder?: string;
 	location: string; // geography(Point,4326) format
 	latitude: number;
 	longitude: number;
@@ -87,6 +90,9 @@ export interface StoreSettlement {
 	paid_by?: string | null;
 	notes?: string | null;
 	created_at: string;
+	payout_bank_name?: string | null;
+	payout_bank_account_no?: string | null;
+	payout_bank_holder?: string | null;
 	stores?: {
 		store_name: string;
 		owner_name: string;

@@ -63,6 +63,12 @@ export async function recordSettlementForPaidOrder(input: {
 
   if (!storeId || !gross) return;
 
+  const { data: store } = await admin
+    .from("stores")
+    .select("bank_name, bank_account_no, bank_holder")
+    .eq("store_id", storeId)
+    .maybeSingle();
+
   const bps = feeBps();
   const fee = Math.round((gross * bps) / 10_000);
   const net = Math.max(0, gross - fee);
@@ -80,6 +86,9 @@ export async function recordSettlementForPaidOrder(input: {
       fee_bps: bps,
       status: "pending",
       due_at: dueAt,
+      payout_bank_name: store?.bank_name || null,
+      payout_bank_account_no: store?.bank_account_no || null,
+      payout_bank_holder: store?.bank_holder || null,
       updated_at: now,
     },
     { onConflict: "kiosk_order_id", ignoreDuplicates: true },
@@ -102,3 +111,29 @@ export async function cancelSettlementForOrder(kioskOrderId: string): Promise<vo
     .eq("status", "pending");
   if (error) throw error;
 }
+
+export async function syncPendingSettlementAccounts(storeId: string): Promise<void> {
+  const id = String(storeId || "").trim();
+  if (!id) return;
+  const admin = createServiceRoleClient();
+  const { data: store, error: storeError } = await admin
+    .from("stores")
+    .select("bank_name, bank_account_no, bank_holder")
+    .eq("store_id", id)
+    .maybeSingle();
+  if (storeError) throw storeError;
+  if (!store) return;
+
+  const { error } = await admin
+    .from("store_settlements")
+    .update({
+      payout_bank_name: store.bank_name || null,
+      payout_bank_account_no: store.bank_account_no || null,
+      payout_bank_holder: store.bank_holder || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("store_id", id)
+    .eq("status", "pending");
+  if (error) throw error;
+}
+

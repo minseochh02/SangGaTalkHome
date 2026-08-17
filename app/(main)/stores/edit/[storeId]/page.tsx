@@ -295,6 +295,16 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 				throw updateError;
 			}
 
+			await fetch(`/api/stores/${storeId}/settlement-account`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					bankName: formData.bank_name,
+					bankAccountNo: formData.bank_account_no,
+					bankHolder: formData.bank_holder,
+				}),
+			});
+
 			toast({
 				title: "Success",
 				description: "Store updated successfully",
@@ -480,35 +490,44 @@ function EditStoreForm({ storeId }: EditStoreFormProps) {
 						/>
 					</div>
 
-					<div className="space-y-2">
-						<Label htmlFor="bank_holder">정산 예금주</Label>
+					<div className="space-y-3 pt-4 border-t">
+						<h2 className="text-lg font-semibold">정산 계좌</h2>
+						<p className="text-sm text-gray-600">
+							카드 키오스크 매출을 재정산할 계좌입니다. 예금주는 사업자와 같아야 합니다.
+						</p>
+						<div className="space-y-2">
+						<Label htmlFor="bank_holder">예금주</Label>
 						<Input
 							id="bank_holder"
 							name="bank_holder"
 							value={formData.bank_holder}
 							onChange={handleChange}
 							placeholder="예금주명"
+							required
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="bank_name">정산 은행</Label>
+						<Label htmlFor="bank_name">은행</Label>
 						<Input
 							id="bank_name"
 							name="bank_name"
 							value={formData.bank_name}
 							onChange={handleChange}
 							placeholder="국민은행"
+							required
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="bank_account_no">정산 계좌번호</Label>
+						<Label htmlFor="bank_account_no">계좌번호</Label>
 						<Input
 							id="bank_account_no"
 							name="bank_account_no"
 							value={formData.bank_account_no}
 							onChange={handleChange}
-							placeholder="계좌번호"
+							placeholder="숫자만 입력"
+							required
 						/>
+					</div>
 					</div>
 
 					{/* Email */}

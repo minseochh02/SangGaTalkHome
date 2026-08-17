@@ -63,15 +63,36 @@ export async function PATCH(request: Request) {
 
   try {
     const admin = createServiceRoleClient();
+    const { data: row, error: fetchError } = await admin
+      .from("store_settlements")
+      .select("settlement_id, store_id, payout_bank_account_no, stores(bank_name, bank_account_no, bank_holder)")
+      .eq("settlement_id", settlementId)
+      .eq("status", "pending")
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!row) {
+      return NextResponse.json({ error: "Settlement not found" }, { status: 404 });
+    }
+    const store = (Array.isArray(row.stores) ? row.stores[0] : row.stores) as {
+      bank_name?: string | null;
+      bank_account_no?: string | null;
+      bank_holder?: string | null;
+    } | null;
+    const payload: Record<string, unknown> = {
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      paid_by: profile.user_id,
+      notes: body.notes || "관리자가 계좌이체 후 정산 완료 처리",
+      updated_at: new Date().toISOString(),
+    };
+    if (!row.payout_bank_account_no) {
+      payload.payout_bank_name = store?.bank_name || null;
+      payload.payout_bank_account_no = store?.bank_account_no || null;
+      payload.payout_bank_holder = store?.bank_holder || null;
+    }
     const { error } = await admin
       .from("store_settlements")
-      .update({
-        status: "paid",
-        paid_at: new Date().toISOString(),
-        paid_by: profile.user_id,
-        notes: body.notes || "관리자가 계좌이체 후 정산 완료 처리",
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq("settlement_id", settlementId)
       .eq("status", "pending");
     if (error) throw error;

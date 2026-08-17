@@ -93,7 +93,10 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
             markdown_content,
             categories:category_id(category_id, category_name),
             store_wallet_address,
-            kiosk_key
+            kiosk_key,
+            bank_name,
+            bank_account_no,
+            bank_holder
           `
 					)
 					.eq("store_id", storeId)
@@ -993,31 +996,27 @@ export default function StoreDetailsContent({ storeId }: { storeId: string }) {
 								</p>
 							</div>
 						</div>
-						{/* <div>
-							<h3 className="text-xl font-semibold text-gray-700 mb-3">
-								스토어 지갑 주소
-							</h3>
-							{store?.store_wallet_address ? (
-								<div className="bg-white p-4 rounded-lg shadow">
-									<p className="text-sm text-gray-800 break-all">
-										{store.store_wallet_address}
+						<div>
+							<h3 className="text-xl font-semibold text-gray-700 mb-3">정산 계좌</h3>
+							<div className="bg-white p-4 rounded-lg shadow">
+								{store?.bank_name && store?.bank_account_no ? (
+									<p className="text-sm text-gray-800">
+										{store.bank_holder || store.owner_name} · {store.bank_name}{" "}
+										{store.bank_account_no}
 									</p>
-									<button
-										onClick={() => {
-											navigator.clipboard.writeText(
-												store.store_wallet_address || ""
-											);
-											alert("지갑 주소가 복사되었습니다!");
-										}}
-										className="mt-3 px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
-									>
-										주소 복사
-									</button>
-								</div>
-							) : (
-								<p className="text-gray-600">지갑 주소가 없습니다.</p>
-							)}
-						</div> */}
+								) : (
+									<p className="text-sm text-amber-700">
+										정산 계좌가 없습니다. 정산 페이지에서 등록하세요.
+									</p>
+								)}
+								<Link
+									href={`/stores/${storeId}/settlements`}
+									className="inline-block mt-3 px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700"
+								>
+									정산 / 계좌 관리
+								</Link>
+							</div>
+						</div>
 					</div>
 				</div>
 			)}

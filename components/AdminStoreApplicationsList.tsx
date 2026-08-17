@@ -93,6 +93,9 @@ export default function AdminStoreApplicationsList() {
 					owner_name: application.owner_name,
 					email: application.email,
 					operating_hours: application.operating_hours,
+					bank_name: application.bank_name || null,
+					bank_account_no: application.bank_account_no || null,
+					bank_holder: application.bank_holder || null,
 					referrer_phone_number: application.referrer_phone_number || null,
 					created_at: new Date().toISOString(),
 					updated_at: new Date().toISOString(),
@@ -350,6 +353,14 @@ export default function AdminStoreApplicationsList() {
 															사업자 등록번호:
 														</span>
 														<span>{app.business_number}</span>
+													</div>
+													<div className="flex">
+														<span className="text-gray-500 w-32">정산 계좌:</span>
+														<span>
+															{app.bank_name && app.bank_account_no
+																? `${app.bank_holder || app.owner_name} · ${app.bank_name} ${app.bank_account_no}`
+																: "미등록"}
+														</span>
 													</div>
 													<div className="flex">
 														<span className="text-gray-500 w-32">

@@ -29,6 +29,12 @@ export default function StoreSettlementsContent({ storeId }: { storeId: string }
   const [rows, setRows] = useState<StoreSettlement[]>([]);
   const [storeName, setStoreName] = useState("");
   const [bankLabel, setBankLabel] = useState("");
+  const [bankForm, setBankForm] = useState({
+    bankHolder: "",
+    bankName: "",
+    bankAccountNo: "",
+  });
+  const [savingBank, setSavingBank] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +64,11 @@ export default function StoreSettlementsContent({ storeId }: { storeId: string }
         }
 
         setStoreName(store.store_name);
+        setBankForm({
+          bankHolder: store.bank_holder || "",
+          bankName: store.bank_name || "",
+          bankAccountNo: store.bank_account_no || "",
+        });
         setBankLabel(
           store.bank_name && store.bank_account_no
             ? `${store.bank_holder || store.store_name} · ${store.bank_name} ${store.bank_account_no}`
@@ -93,6 +104,27 @@ export default function StoreSettlementsContent({ storeId }: { storeId: string }
     };
   }, [rows]);
 
+  const saveBank = async () => {
+    setSavingBank(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/stores/${storeId}/settlement-account`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bankForm),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "계좌 저장에 실패했습니다.");
+      setBankLabel(
+        `${payload.bank_holder} · ${payload.bank_name} ${payload.bank_account_no}`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "계좌 저장에 실패했습니다.");
+    } finally {
+      setSavingBank(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-gray-500">정산 내역을 불러오는 중…</div>;
   }
@@ -110,9 +142,6 @@ export default function StoreSettlementsContent({ storeId }: { storeId: string }
           <Button asChild variant="outline">
             <Link href={`/stores/${storeId}/kiosk-edit`}>키오스크 관리</Link>
           </Button>
-          <Button asChild variant="outline">
-            <Link href={`/stores/edit/${storeId}`}>정산 계좌 수정</Link>
-          </Button>
         </div>
       </div>
 
@@ -122,14 +151,42 @@ export default function StoreSettlementsContent({ storeId }: { storeId: string }
         </div>
       )}
 
-      {!bankLabel && !error && (
-        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          정산 받을 계좌가 없습니다. 스토어 수정에서 은행, 계좌번호, 예금주를 저장하세요.
+      <div className="mb-6 rounded-lg border bg-white p-4">
+        <h2 className="text-lg font-semibold">정산 계좌</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          이 스토어의 카드 매출을 입금받을 계좌입니다. 저장하면 미지급 정산 건에도 반영됩니다.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <input
+            className="rounded-md border px-3 py-2 text-sm"
+            placeholder="예금주"
+            value={bankForm.bankHolder}
+            onChange={(e) => setBankForm((prev) => ({ ...prev, bankHolder: e.target.value }))}
+          />
+          <input
+            className="rounded-md border px-3 py-2 text-sm"
+            placeholder="은행"
+            value={bankForm.bankName}
+            onChange={(e) => setBankForm((prev) => ({ ...prev, bankName: e.target.value }))}
+          />
+          <input
+            className="rounded-md border px-3 py-2 text-sm"
+            placeholder="계좌번호"
+            value={bankForm.bankAccountNo}
+            onChange={(e) => setBankForm((prev) => ({ ...prev, bankAccountNo: e.target.value }))}
+          />
         </div>
-      )}
-      {bankLabel && (
-        <p className="mb-4 text-sm text-gray-600">입금 계좌: {bankLabel}</p>
-      )}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button type="button" disabled={savingBank} onClick={() => void saveBank()}>
+            {savingBank ? "저장 중…" : "계좌 저장"}
+          </Button>
+          {bankLabel ? (
+            <span className="text-sm text-gray-600">현재: {bankLabel}</span>
+          ) : (
+            <span className="text-sm text-amber-700">아직 등록된 정산 계좌가 없습니다.</span>
+          )}
+        </div>
+      </div>
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-lg border bg-white p-4">
