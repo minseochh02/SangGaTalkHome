@@ -15,6 +15,7 @@ type IncomingProduct = {
   name?: string;
   description?: string;
   wonPrice?: number;
+  sgtPrice?: number;
   category?: string;
   image?: IncomingImage;
 };
@@ -336,6 +337,9 @@ async function upsertProducts(
     const wonPrice = Number.isFinite(Number(product.wonPrice))
       ? Math.max(0, Math.round(Number(product.wonPrice)))
       : 0;
+    const sgtPrice = Number.isFinite(Number(product.sgtPrice))
+      ? Math.max(0, Number(product.sgtPrice))
+      : 0;
     const category = String(product.category || "").trim() || null;
     const now = new Date().toISOString();
 
@@ -364,7 +368,7 @@ async function upsertProducts(
       product_name: name,
       description,
       won_price: wonPrice,
-      sgt_price: Number((wonPrice / 1000).toFixed(4)),
+      sgt_price: sgtPrice,
       category,
       store_id: storeId,
       status: 1,
