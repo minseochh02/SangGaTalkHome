@@ -79,21 +79,21 @@ export function EgdeskProCheckoutClient() {
     setMessage("결제창을 여는 중…");
     try {
       const PortOne = await loadPortOne();
-      const requestPayload = {
+      const requestPayload: any = {
         storeId: cfg.storeId,
         channelKey: cfg.channelKey,
         paymentId: cfg.paymentId,
         orderName: cfg.orderName,
         totalAmount: cfg.totalAmount,
-        currency: "KRW" as const,
-        payMethod: "CARD" as const,
+        currency: "CURRENCY_KRW",
+        payMethod: "CARD",
         customer: {
           fullName: cfg.customer.fullName,
           email: cfg.customer.email,
           phoneNumber: cfg.customer.phoneNumber,
         },
         ...(cfg.customData ? { customData: cfg.customData } : {}),
-      } as Parameters<typeof PortOne.requestPayment>[0];
+      };
       const payment = await PortOne.requestPayment(requestPayload);
 
       if (payment && "code" in payment && payment.code !== undefined) {
