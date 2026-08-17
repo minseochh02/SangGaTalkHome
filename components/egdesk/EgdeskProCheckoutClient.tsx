@@ -12,29 +12,16 @@ type CheckoutConfig = {
   totalAmount: number;
   currency: string;
   customer: { fullName: string; email: string; phoneNumber: string };
-  customData?: Record<string, unknown>;
+  customData?: Record<string, string>;
   completeUrl: string;
-};
-
-type PortOnePaymentResult = {
-  code?: string;
-  message?: string;
-  pgCode?: string;
-  pgMessage?: string;
-  paymentId?: string;
 };
 
 async function loadPortOne() {
   const PortOneModule = await import("@portone/browser-sdk/v2");
-  const PortOne = PortOneModule.default as {
-    requestPayment: (
-      args: Record<string, unknown>,
-    ) => Promise<PortOnePaymentResult | undefined>;
-  };
-  if (!PortOne || typeof PortOne.requestPayment !== "function") {
+  if (!PortOneModule.default?.requestPayment) {
     throw new Error("결제 모듈을 불러오는데 실패했습니다.");
   }
-  return PortOne;
+  return PortOneModule.default;
 }
 
 export function EgdeskProCheckoutClient() {
@@ -92,25 +79,36 @@ export function EgdeskProCheckoutClient() {
     setMessage("결제창을 여는 중…");
     try {
       const PortOne = await loadPortOne();
-      const payment = await PortOne.requestPayment({
+      const requestPayload = {
         storeId: cfg.storeId,
         channelKey: cfg.channelKey,
         paymentId: cfg.paymentId,
         orderName: cfg.orderName,
         totalAmount: cfg.totalAmount,
-        currency: cfg.currency || "KRW",
-        payMethod: "CARD",
-        customer: cfg.customer,
+        currency: "KRW" as const,
+        payMethod: "CARD" as const,
+        customer: {
+          fullName: cfg.customer.fullName,
+          email: cfg.customer.email,
+          phoneNumber: cfg.customer.phoneNumber,
+        },
         ...(cfg.customData ? { customData: cfg.customData } : {}),
-      });
+      } as Parameters<typeof PortOne.requestPayment>[0];
+      const payment = await PortOne.requestPayment(requestPayload);
 
-      if (payment && payment.code !== undefined) {
+      if (payment && "code" in payment && payment.code !== undefined) {
+        const failed = payment as {
+          code?: string;
+          message?: string;
+          pgCode?: string;
+          pgMessage?: string;
+        };
         const detail: string[] = [];
-        if (payment.pgCode) detail.push(`pgCode=${payment.pgCode}`);
-        if (payment.pgMessage) detail.push(`pgMessage=${payment.pgMessage}`);
-        const fullMsg = `${payment.message || `결제 실패: ${payment.code}`}${
+        if (failed.pgCode) detail.push(`pgCode=${failed.pgCode}`);
+        if (failed.pgMessage) detail.push(`pgMessage=${failed.pgMessage}`);
+        const fullMsg = `${failed.message || `결제 실패: ${failed.code}`}${
           detail.length ? `\n[${detail.join(", ")}]` : ""
-        }\n(code: ${payment.code})`;
+        }\n(code: ${failed.code})`;
         throw new Error(fullMsg);
       }
 
