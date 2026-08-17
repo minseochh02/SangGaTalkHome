@@ -33,6 +33,12 @@ function secretsEqual(a: string, b: string): boolean {
   return timingSafeEqual(left, right);
 }
 
+function normalizeSecret(value: string | undefined): string {
+  return String(value || "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
+}
+
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
@@ -53,9 +59,17 @@ function errorMessage(error: unknown): string {
 }
 
 function assertEgdeskSecret(request: Request): NextResponse | null {
-  const expected = process.env.SGT_EGDESK_SECRET || "";
-  const provided = request.headers.get("x-sgt-egdesk-secret") || "";
-  if (!expected || !provided || !secretsEqual(expected, provided)) {
+  const expected = normalizeSecret(process.env["SGT_EGDESK_SECRET"]);
+  const provided = normalizeSecret(
+    request.headers.get("x-sgt-egdesk-secret") || "",
+  );
+  if (!expected) {
+    return NextResponse.json(
+      { error: "SGT_EGDESK_SECRET is not configured on sgt-wallet.com" },
+      { status: 500 },
+    );
+  }
+  if (!provided || !secretsEqual(expected, provided)) {
     return unauthorized();
   }
   return null;
