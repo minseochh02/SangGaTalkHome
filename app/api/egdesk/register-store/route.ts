@@ -144,6 +144,13 @@ function productMarker(catalogId: string): string {
   return `egdesk-product:${catalogId}`;
 }
 
+function catalogIdFromDescription(
+  description: string | null | undefined,
+): string | null {
+  const match = String(description || "").match(/^egdesk-product:([^\s\n]+)/i);
+  return match?.[1]?.trim() || null;
+}
+
 function withMarker(marker: string, text: string): string {
   const stripped = String(text || "")
     .replace(/^egdesk-(?:bi|product):[^\n]*\n*/i, "")
@@ -319,6 +326,116 @@ async function resolveCategoryId(
   return data?.category_id || fallback;
 }
 
+async function referencedProductIds(
+  admin: SupabaseClient,
+  productIds: string[],
+): Promise<Set<string>> {
+  const referenced = new Set<string>();
+  if (!productIds.length) return referenced;
+
+  const { data: kioskItems } = await admin
+    .from("kiosk_order_items")
+    .select("product_id")
+    .in("product_id", productIds);
+  for (const item of kioskItems || []) {
+    if (item.product_id) referenced.add(String(item.product_id));
+  }
+
+  const { data: orderItems } = await admin
+    .from("order_items")
+    .select("product_id")
+    .in("product_id", productIds);
+  for (const item of orderItems || []) {
+    if (item.product_id) referenced.add(String(item.product_id));
+  }
+
+  return referenced;
+}
+
+async function hideProducts(admin: SupabaseClient, productIds: string[]) {
+  if (!productIds.length) return;
+  const { error } = await admin
+    .from("products")
+    .update({
+      status: 0,
+      is_kiosk_enabled: false,
+      updated_at: new Date().toISOString(),
+    })
+    .in("product_id", productIds);
+  if (error) throw error;
+}
+
+async function deleteUnreferencedProducts(
+  admin: SupabaseClient,
+  productIds: string[],
+): Promise<string[]> {
+  if (!productIds.length) return [];
+
+  const { data: groups } = await admin
+    .from("product_option_groups")
+    .select("option_group_id")
+    .in("product_id", productIds);
+  const groupIds = (groups || [])
+    .map((row) => String(row.option_group_id || ""))
+    .filter(Boolean);
+  if (groupIds.length) {
+    await admin
+      .from("product_option_choices")
+      .delete()
+      .in("option_group_id", groupIds);
+    await admin
+      .from("product_option_groups")
+      .delete()
+      .in("product_id", productIds);
+  }
+
+  const { error } = await admin
+    .from("products")
+    .delete()
+    .in("product_id", productIds);
+  if (error) {
+    await hideProducts(admin, productIds);
+    return [];
+  }
+  return productIds;
+}
+
+async function removeDroppedEgdeskProducts(
+  admin: SupabaseClient,
+  storeId: string,
+  keepCatalogIds: Set<string>,
+) {
+  const { data: rows, error } = await admin
+    .from("products")
+    .select("product_id, description")
+    .eq("store_id", storeId)
+    .limit(1000);
+  if (error) throw error;
+
+  const dropped = (rows || []).filter((row) => {
+    const catalogId = catalogIdFromDescription(row.description);
+    return Boolean(catalogId) && !keepCatalogIds.has(catalogId as string);
+  });
+  if (!dropped.length) return [];
+
+  const ids = dropped.map((row) => String(row.product_id));
+  const referenced = await referencedProductIds(admin, ids);
+  const hideIds = ids.filter((id) => referenced.has(id));
+  const deleteIds = ids.filter((id) => !referenced.has(id));
+
+  await hideProducts(admin, hideIds);
+  const deletedIds = new Set(await deleteUnreferencedProducts(admin, deleteIds));
+
+  return dropped.map((row) => {
+    const productId = String(row.product_id);
+    return {
+      catalogId: catalogIdFromDescription(row.description),
+      productId,
+      deleted: deletedIds.has(productId),
+    };
+  });
+}
+
 async function upsertProducts(
   admin: SupabaseClient,
   storeId: string,
@@ -332,12 +449,22 @@ async function upsertProducts(
     created: boolean;
     imageUrl?: string | null;
   }> = [];
+  const keepCatalogIds = new Set<string>();
+
+  const { data: existingRows, error: listError } = await admin
+    .from("products")
+    .select("product_id, product_name, description, image_url")
+    .eq("store_id", storeId)
+    .limit(1000);
+  if (listError) throw listError;
+  const rows = existingRows || [];
 
   for (const product of products) {
     const name = String(product.name || "").trim();
     if (!name) continue;
 
     const catalogId = String(product.catalogId || name).trim();
+    keepCatalogIds.add(catalogId);
     const marker = productMarker(catalogId);
     const description = withMarker(marker, String(product.description || ""));
     const wonPrice = Number.isFinite(Number(product.wonPrice))
@@ -349,18 +476,9 @@ async function upsertProducts(
     const category = String(product.category || "").trim() || null;
     const now = new Date().toISOString();
 
-    const { data: existingRows, error: listError } = await admin
-      .from("products")
-      .select("product_id, product_name, description, image_url")
-      .eq("store_id", storeId)
-      .limit(500);
-    if (listError) throw listError;
-
     const existing =
-      (existingRows || []).find((row) =>
-        String(row.description || "").includes(marker),
-      ) ||
-      (existingRows || []).find((row) => row.product_name === name) ||
+      rows.find((row) => String(row.description || "").includes(marker)) ||
+      rows.find((row) => row.product_name === name) ||
       null;
 
     const imageUrl = await uploadImage({
@@ -392,6 +510,9 @@ async function upsertProducts(
         .update(payload)
         .eq("product_id", existing.product_id);
       if (error) throw error;
+      existing.description = description;
+      existing.product_name = name;
+      if (imageUrl) existing.image_url = imageUrl;
       synced.push({
         catalogId,
         productId: existing.product_id,
@@ -408,6 +529,12 @@ async function upsertProducts(
       .select("product_id")
       .single();
     if (error) throw error;
+    rows.push({
+      product_id: inserted.product_id,
+      product_name: name,
+      description,
+      image_url: imageUrl || null,
+    });
     synced.push({
       catalogId,
       productId: inserted.product_id,
@@ -417,7 +544,12 @@ async function upsertProducts(
     });
   }
 
-  return synced;
+  const removed = await removeDroppedEgdeskProducts(
+    admin,
+    storeId,
+    keepCatalogIds,
+  );
+  return { synced, removed };
 }
 
 export async function GET(request: Request) {
@@ -591,11 +723,12 @@ export async function POST(request: Request) {
       if (error) throw error;
     }
 
-    const products = await upsertProducts(
+    const incomingProducts = Array.isArray(body.products) ? body.products : [];
+    const { synced: products, removed: removedProducts } = await upsertProducts(
       admin,
       storeId,
       ownerUserId,
-      Array.isArray(body.products) ? body.products : [],
+      incomingProducts,
     );
 
     if (hasBank) {
@@ -618,6 +751,7 @@ export async function POST(request: Request) {
       bankAccountNo: hasBank ? bankAccountNo : existing?.bank_account_no || null,
       bankHolder: hasBank ? bankHolder : existing?.bank_holder || null,
       products,
+      removedProducts,
     });
   } catch (error) {
     return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
