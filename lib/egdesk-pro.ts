@@ -6,6 +6,29 @@ export const EGDESK_FUNCTIONS_URL =
   process.env.NEXT_PUBLIC_EGDESK_FUNCTIONS_URL ||
   "https://cbptgzaubhcclkmvkiua.functions.supabase.co";
 
+export const EGDESK_PRO_LIST_MONTHLY_KRW = "₩23,000";
+export const EGDESK_PRO_LIST_YEARLY_KRW = "₩276,000";
+
+export type EgdeskProPurchase = {
+  userId: string;
+  email: string | null;
+  name: string | null;
+  provider: string;
+  source: string;
+  status: string;
+  active: boolean;
+  amount: number | null;
+  currency: string | null;
+  priceLabel: string;
+  periodEnd: string | null;
+  remainingMs: number | null;
+  remainingDays: number | null;
+  remainingLabel: string;
+  paidAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
 export function isEgdeskProProduct(productId: string): boolean {
   return productId === EGDESK_PRO_PRODUCT_ID;
 }

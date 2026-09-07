@@ -220,6 +220,9 @@ export default function ProfilePage() {
 											<Button asChild className="w-full sm:w-auto mt-2 sm:mt-0" variant="outline">
 												<Link href="/admin/settlements">스토어 정산</Link>
 											</Button>
+											<Button asChild className="w-full sm:w-auto mt-2 sm:mt-0" variant="outline">
+												<Link href="/admin/egdesk-pro">EGDesk Pro 구매</Link>
+											</Button>
 										</div>
 									</div>
 
