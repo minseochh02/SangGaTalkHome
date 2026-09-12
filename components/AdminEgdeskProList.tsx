@@ -28,11 +28,12 @@ function sourceLabel(source: string): string {
   return "EGDesk 앱";
 }
 
-type CompDuration = "6" | "12" | "unlimited";
+const COMP_MONTHS_MIN = 1;
+const COMP_MONTHS_MAX = 240;
 
-function durationLabel(duration: CompDuration): string {
-  if (duration === "unlimited") return "무기한";
-  return `${duration}개월`;
+function durationLabel(months: number, unlimited: boolean): string {
+  if (unlimited) return "무기한";
+  return `${months}개월`;
 }
 
 function statusLabel(row: EgdeskProPurchase): string {
@@ -50,7 +51,8 @@ export default function AdminEgdeskProList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [compEmail, setCompEmail] = useState("");
-  const [compDuration, setCompDuration] = useState<CompDuration>("6");
+  const [compMonths, setCompMonths] = useState("6");
+  const [compUnlimited, setCompUnlimited] = useState(false);
   const [compSubmitting, setCompSubmitting] = useState(false);
   const [compMessage, setCompMessage] = useState<string | null>(null);
   const [compError, setCompError] = useState<string | null>(null);
@@ -87,9 +89,19 @@ export default function AdminEgdeskProList() {
       setCompMessage(null);
       return;
     }
+    const months = Number(compMonths);
+    if (
+      !compUnlimited &&
+      (!Number.isInteger(months) || months < COMP_MONTHS_MIN || months > COMP_MONTHS_MAX)
+    ) {
+      setCompError(`기간은 ${COMP_MONTHS_MIN}~${COMP_MONTHS_MAX}개월 사이 숫자로 입력해주세요.`);
+      setCompMessage(null);
+      return;
+    }
+    const label = durationLabel(months, compUnlimited);
     if (
       !window.confirm(
-        `${email} 에게 EGDesk Pro를 ${durationLabel(compDuration)} 내부 제공하시겠습니까?`,
+        `${email} 에게 EGDesk Pro를 ${label} 내부 제공하시겠습니까?`,
       )
     ) {
       return;
@@ -104,8 +116,8 @@ export default function AdminEgdeskProList() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          months: compDuration === "unlimited" ? undefined : Number(compDuration),
-          unlimited: compDuration === "unlimited",
+          months: compUnlimited ? undefined : months,
+          unlimited: compUnlimited,
         }),
       });
       const payload = await response.json();
@@ -119,8 +131,8 @@ export default function AdminEgdeskProList() {
       }
       setCompMessage(
         payload.alreadyActive
-          ? `${email} 기존 이용권을 ${durationLabel(compDuration)} 내부 제공으로 전환/연장했습니다.`
-          : `${email} 에게 ${durationLabel(compDuration)} 내부 제공을 부여했습니다.`,
+          ? `${email} 기존 이용권을 ${label} 내부 제공으로 전환/연장했습니다.`
+          : `${email} 에게 ${label} 내부 제공을 부여했습니다.`,
       );
       setCompEmail("");
       await load();
@@ -161,8 +173,9 @@ export default function AdminEgdeskProList() {
         <div className="mb-3">
           <h2 className="text-base font-semibold">사용자 Comp</h2>
           <p className="mt-1 text-sm text-gray-600">
-            EGDesk에 가입된 이메일로 Pro를 내부 제공(무료)합니다. 이용 중인 기간이
-            있으면 그 만료일부터 연장됩니다.
+            EGDesk에 가입된 이메일로 Pro를 내부 제공(무료)합니다. 개월 수를 직접
+            입력하거나 무기한을 선택하세요. 이용 중인 기간이 있으면 그 만료일부터
+            연장됩니다.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
@@ -178,18 +191,26 @@ export default function AdminEgdeskProList() {
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-gray-600">기간</span>
-            <select
-              value={compDuration}
-              onChange={(event) =>
-                setCompDuration(event.target.value as CompDuration)
-              }
-              className="rounded-lg border px-3 py-2 text-sm"
-            >
-              <option value="6">6개월</option>
-              <option value="12">12개월</option>
-              <option value="unlimited">무기한</option>
-            </select>
+            <span className="mb-1 block text-gray-600">기간 (개월)</span>
+            <input
+              type="number"
+              min={COMP_MONTHS_MIN}
+              max={COMP_MONTHS_MAX}
+              step={1}
+              value={compMonths}
+              onChange={(event) => setCompMonths(event.target.value)}
+              disabled={compUnlimited}
+              className="w-24 rounded-lg border px-3 py-2 text-sm disabled:bg-gray-100"
+              required={!compUnlimited}
+            />
+          </label>
+          <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={compUnlimited}
+              onChange={(event) => setCompUnlimited(event.target.checked)}
+            />
+            무기한
           </label>
           <button
             type="submit"
