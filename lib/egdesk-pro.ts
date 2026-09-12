@@ -6,8 +6,8 @@ export const EGDESK_FUNCTIONS_URL =
   process.env.NEXT_PUBLIC_EGDESK_FUNCTIONS_URL ||
   "https://cbptgzaubhcclkmvkiua.functions.supabase.co";
 
-export const EGDESK_PRO_LIST_MONTHLY_KRW = "₩23,000";
-export const EGDESK_PRO_LIST_YEARLY_KRW = "₩276,000";
+export const EGDESK_PRO_LIST_PRICE_KRW = "₩138,000";
+export const EGDESK_PRO_LIST_TERM = "6개월";
 
 export type EgdeskProPurchase = {
   userId: string;

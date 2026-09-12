@@ -22,10 +22,10 @@ async function requireAdmin() {
   return { profile };
 }
 
-export async function GET() {
-  const auth = await requireAdmin();
-  if ("error" in auth && auth.error) return auth.error;
-
+async function proxyEgdesk(
+  path: string,
+  init: { method: string; body?: string; cache?: RequestCache },
+) {
   const secret = process.env.SGT_EGDESK_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -36,14 +36,15 @@ export async function GET() {
 
   try {
     const response = await fetch(
-      `${EGDESK_FUNCTIONS_URL.replace(/\/$/, "")}/list-egdesk-pro-purchases`,
+      `${EGDESK_FUNCTIONS_URL.replace(/\/$/, "")}${path}`,
       {
-        method: "GET",
+        method: init.method,
         headers: {
           "Content-Type": "application/json",
           "x-sgt-egdesk-secret": secret,
         },
-        cache: "no-store",
+        body: init.body,
+        cache: init.cache,
       },
     );
     const text = await response.text();
@@ -56,7 +57,46 @@ export async function GET() {
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to list EGDesk Pro purchases";
+      error instanceof Error ? error.message : "Failed to call EGDesk";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+export async function GET() {
+  const auth = await requireAdmin();
+  if ("error" in auth && auth.error) return auth.error;
+
+  return proxyEgdesk("/list-egdesk-pro-purchases", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export async function POST(request: Request) {
+  const auth = await requireAdmin();
+  if ("error" in auth && auth.error) return auth.error;
+
+  let body: { email?: string; months?: number; unlimited?: boolean } = {};
+  try {
+    body = await request.json();
+  } catch {
+    // empty
+  }
+
+  const email = (body.email || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    return NextResponse.json(
+      { error: "EGDesk에 가입한 이메일을 입력해주세요." },
+      { status: 400 },
+    );
+  }
+
+  return proxyEgdesk("/comp-egdesk-pro", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      months: body.months,
+      unlimited: body.unlimited === true,
+    }),
+  });
 }

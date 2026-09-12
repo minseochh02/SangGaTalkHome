@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  EGDESK_PRO_LIST_MONTHLY_KRW,
-  EGDESK_PRO_LIST_YEARLY_KRW,
+  EGDESK_PRO_LIST_PRICE_KRW,
+  EGDESK_PRO_LIST_TERM,
   type EgdeskProPurchase,
 } from "@/lib/egdesk-pro";
 
@@ -23,8 +23,16 @@ function providerLabel(provider: string): string {
 
 function sourceLabel(source: string): string {
   if (source === "sgt") return "SGT";
+  if (source === "sgt-admin") return "관리자 Comp";
   if (source === "paypal") return "PayPal";
   return "EGDesk 앱";
+}
+
+type CompDuration = "6" | "12" | "unlimited";
+
+function durationLabel(duration: CompDuration): string {
+  if (duration === "unlimited") return "무기한";
+  return `${duration}개월`;
 }
 
 function statusLabel(row: EgdeskProPurchase): string {
@@ -41,6 +49,11 @@ export default function AdminEgdeskProList() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [compEmail, setCompEmail] = useState("");
+  const [compDuration, setCompDuration] = useState<CompDuration>("6");
+  const [compSubmitting, setCompSubmitting] = useState(false);
+  const [compMessage, setCompMessage] = useState<string | null>(null);
+  const [compError, setCompError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -66,6 +79,58 @@ export default function AdminEgdeskProList() {
     void load();
   }, []);
 
+  const compUser = async (event: FormEvent) => {
+    event.preventDefault();
+    const email = compEmail.trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      setCompError("EGDesk에 가입한 이메일을 입력해주세요.");
+      setCompMessage(null);
+      return;
+    }
+    if (
+      !window.confirm(
+        `${email} 에게 EGDesk Pro를 ${durationLabel(compDuration)} 내부 제공하시겠습니까?`,
+      )
+    ) {
+      return;
+    }
+
+    setCompSubmitting(true);
+    setCompError(null);
+    setCompMessage(null);
+    try {
+      const response = await fetch("/api/admin/egdesk-pro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          months: compDuration === "unlimited" ? undefined : Number(compDuration),
+          unlimited: compDuration === "unlimited",
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        if (payload.code === "NO_EGDESK_USER") {
+          throw new Error(
+            "이 이메일로 된 EGDesk 계정이 없습니다. 앱에서 같은 계정으로 먼저 로그인했는지 확인하세요.",
+          );
+        }
+        throw new Error(payload.error || "내부 제공에 실패했습니다.");
+      }
+      setCompMessage(
+        payload.alreadyActive
+          ? `${email} 기존 이용권을 ${durationLabel(compDuration)} 내부 제공으로 전환/연장했습니다.`
+          : `${email} 에게 ${durationLabel(compDuration)} 내부 제공을 부여했습니다.`,
+      );
+      setCompEmail("");
+      await load();
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "내부 제공에 실패했습니다.");
+    } finally {
+      setCompSubmitting(false);
+    }
+  };
+
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return rows.filter((row) => {
@@ -84,10 +149,63 @@ export default function AdminEgdeskProList() {
       <div className="mb-4 rounded-lg border bg-gray-50 px-4 py-3 text-sm text-gray-700">
         현재 표시가:{" "}
         <strong>
-          {EGDESK_PRO_LIST_MONTHLY_KRW}/월 · {EGDESK_PRO_LIST_YEARLY_KRW}/년
+          {EGDESK_PRO_LIST_PRICE_KRW} / {EGDESK_PRO_LIST_TERM}
         </strong>
-        <span className="text-gray-500"> (실제 카드 청구는 연 ₩276,000)</span>
+        <span className="text-gray-500"> (연간 결제 없음 · 6개월 이용권)</span>
       </div>
+
+      <form
+        onSubmit={(event) => void compUser(event)}
+        className="mb-6 rounded-lg border bg-white px-4 py-4"
+      >
+        <div className="mb-3">
+          <h2 className="text-base font-semibold">사용자 Comp</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            EGDesk에 가입된 이메일로 Pro를 내부 제공(무료)합니다. 이용 중인 기간이
+            있으면 그 만료일부터 연장됩니다.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="min-w-[240px] flex-1 text-sm">
+            <span className="mb-1 block text-gray-600">EGDesk 가입 이메일</span>
+            <input
+              type="email"
+              value={compEmail}
+              onChange={(event) => setCompEmail(event.target.value)}
+              placeholder="user@example.com"
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+              required
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-gray-600">기간</span>
+            <select
+              value={compDuration}
+              onChange={(event) =>
+                setCompDuration(event.target.value as CompDuration)
+              }
+              className="rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="6">6개월</option>
+              <option value="12">12개월</option>
+              <option value="unlimited">무기한</option>
+            </select>
+          </label>
+          <button
+            type="submit"
+            disabled={compSubmitting}
+            className="rounded-lg bg-primary px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {compSubmitting ? "처리 중…" : "Comp 부여"}
+          </button>
+        </div>
+        {compError && (
+          <p className="mt-3 text-sm text-red-700">{compError}</p>
+        )}
+        {compMessage && (
+          <p className="mt-3 text-sm text-green-700">{compMessage}</p>
+        )}
+      </form>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {(

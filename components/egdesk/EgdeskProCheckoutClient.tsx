@@ -161,7 +161,7 @@ export function EgdeskProCheckoutClient() {
       <div className="max-w-[420px] mx-auto my-12 p-6 bg-white rounded-xl shadow-lg">
         <h1 className="text-xl font-bold mb-2">EGDesk Pro</h1>
         <p className="mb-4 leading-relaxed text-gray-600">
-          카드로 연간 이용권을 결제합니다. (자동갱신 없음)
+          카드로 6개월 이용권을 결제합니다. (자동갱신 없음)
         </p>
         <div className="text-3xl font-bold mb-5">
           {amountLabel || "불러오는 중…"}

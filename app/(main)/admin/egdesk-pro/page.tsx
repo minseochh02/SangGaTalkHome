@@ -46,7 +46,8 @@ export default function AdminEgdeskProPage() {
         <div>
           <h1 className="text-2xl font-bold">EGDesk Pro 구매</h1>
           <p className="mt-1 text-sm text-gray-600">
-            누가 얼마에 결제했는지, 이용 기간이 얼마나 남았는지 확인합니다.
+            누가 얼마에 결제했는지, 이용 기간이 얼마나 남았는지 확인하고, 필요하면
+            사용자를 Comp합니다.
           </p>
         </div>
         <Button asChild variant="outline">
