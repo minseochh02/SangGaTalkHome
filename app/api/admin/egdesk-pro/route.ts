@@ -66,10 +66,60 @@ export async function GET() {
   const auth = await requireAdmin();
   if ("error" in auth && auth.error) return auth.error;
 
-  return proxyEgdesk("/list-egdesk-pro-purchases", {
-    method: "GET",
-    cache: "no-store",
-  });
+  const secret = process.env.SGT_EGDESK_SECRET;
+  if (!secret) {
+    return NextResponse.json(
+      { error: "SGT_EGDESK_SECRET is not configured" },
+      { status: 500 },
+    );
+  }
+
+  const base = EGDESK_FUNCTIONS_URL.replace(/\/$/, "");
+  const headers = {
+    "Content-Type": "application/json",
+    "x-sgt-egdesk-secret": secret,
+  };
+
+  try {
+    const [purchasesRes, usersRes] = await Promise.all([
+      fetch(`${base}/list-egdesk-pro-purchases`, {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      }),
+      fetch(`${base}/list-egdesk-users`, {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      }),
+    ]);
+
+    const purchasesPayload = (await purchasesRes.json().catch(() => ({}))) as {
+      error?: string;
+      purchases?: unknown[];
+    };
+    const usersPayload = (await usersRes.json().catch(() => ({}))) as {
+      error?: string;
+      users?: unknown[];
+    };
+
+    if (!purchasesRes.ok) {
+      return NextResponse.json(
+        { error: purchasesPayload.error || "Failed to list EGDesk Pro purchases" },
+        { status: purchasesRes.status },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      purchases: purchasesPayload.purchases || [],
+      users: usersRes.ok ? usersPayload.users || [] : [],
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to call EGDesk";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {

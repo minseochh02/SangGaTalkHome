@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   EGDESK_PRO_LIST_PRICE_KRW,
   EGDESK_PRO_LIST_TERM,
   type EgdeskProPurchase,
+  type EgdeskUser,
 } from "@/lib/egdesk-pro";
 
 type Filter = "active" | "pending" | "expired" | "all";
@@ -46,6 +47,7 @@ function statusLabel(row: EgdeskProPurchase): string {
 
 export default function AdminEgdeskProList() {
   const [rows, setRows] = useState<EgdeskProPurchase[]>([]);
+  const [users, setUsers] = useState<EgdeskUser[]>([]);
   const [filter, setFilter] = useState<Filter>("active");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,8 @@ export default function AdminEgdeskProList() {
   const [compSubmitting, setCompSubmitting] = useState(false);
   const [compMessage, setCompMessage] = useState<string | null>(null);
   const [compError, setCompError] = useState<string | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const emailBoxRef = useRef<HTMLLabelElement>(null);
 
   const load = async () => {
     setLoading(true);
@@ -67,11 +71,13 @@ export default function AdminEgdeskProList() {
         throw new Error(payload.error || "EGDesk Pro 구매 목록을 불러오지 못했습니다.");
       }
       setRows((payload.purchases || []) as EgdeskProPurchase[]);
+      setUsers((payload.users || []) as EgdeskUser[]);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "EGDesk Pro 구매 목록을 불러오지 못했습니다.",
       );
       setRows([]);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -80,6 +86,35 @@ export default function AdminEgdeskProList() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!emailBoxRef.current?.contains(event.target as Node)) {
+        setEmailOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, []);
+
+  const emailMatches = useMemo(() => {
+    const needle = compEmail.trim().toLowerCase();
+    return users
+      .filter((user) => {
+        if (!needle) return true;
+        return (
+          user.email.toLowerCase().includes(needle) ||
+          (user.name || "").toLowerCase().includes(needle)
+        );
+      })
+      .slice(0, 40);
+  }, [compEmail, users]);
+
+  const pickUser = (user: EgdeskUser) => {
+    setCompEmail(user.email);
+    setEmailOpen(false);
+    setCompError(null);
+  };
 
   const compUser = async (event: FormEvent) => {
     event.preventDefault();
@@ -179,16 +214,48 @@ export default function AdminEgdeskProList() {
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="min-w-[240px] flex-1 text-sm">
+          <label ref={emailBoxRef} className="relative min-w-[240px] flex-1 text-sm">
             <span className="mb-1 block text-gray-600">EGDesk 가입 이메일</span>
             <input
-              type="email"
+              type="text"
               value={compEmail}
-              onChange={(event) => setCompEmail(event.target.value)}
-              placeholder="user@example.com"
+              onChange={(event) => {
+                setCompEmail(event.target.value);
+                setEmailOpen(true);
+              }}
+              onFocus={() => setEmailOpen(true)}
+              placeholder={users.length ? "이름 또는 이메일 검색" : "user@example.com"}
+              autoComplete="off"
               className="w-full rounded-lg border px-3 py-2 text-sm"
               required
             />
+            {emailOpen && (
+              <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border bg-white shadow-lg">
+                {emailMatches.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-gray-500">
+                    {users.length === 0
+                      ? "EGDesk 사용자 목록을 불러오지 못했습니다."
+                      : "일치하는 사용자가 없습니다."}
+                  </div>
+                ) : (
+                  emailMatches.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => pickUser(user)}
+                      className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-gray-50"
+                    >
+                      <span className="text-sm font-medium">
+                        {user.name || user.email}
+                      </span>
+                      {user.name ? (
+                        <span className="text-xs text-gray-500">{user.email}</span>
+                      ) : null}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-gray-600">기간 (개월)</span>
@@ -289,7 +356,17 @@ export default function AdminEgdeskProList() {
             </thead>
             <tbody>
               {visible.map((row) => (
-                <tr key={row.userId} className="border-t">
+                <tr
+                  key={row.userId}
+                  className="border-t cursor-pointer hover:bg-gray-50"
+                  onClick={() => {
+                    if (row.email) {
+                      setCompEmail(row.email);
+                      setEmailOpen(false);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                >
                   <td className="px-4 py-3">
                     <div className="font-medium">{row.name || row.email || row.userId}</div>
                     {row.email && row.name ? (

@@ -9,6 +9,12 @@ export const EGDESK_FUNCTIONS_URL =
 export const EGDESK_PRO_LIST_PRICE_KRW = "₩138,000";
 export const EGDESK_PRO_LIST_TERM = "6개월";
 
+export type EgdeskUser = {
+  id: string;
+  email: string;
+  name: string | null;
+};
+
 export type EgdeskProPurchase = {
   userId: string;
   email: string | null;
