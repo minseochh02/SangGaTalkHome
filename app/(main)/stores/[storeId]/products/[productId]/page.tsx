@@ -544,7 +544,7 @@ function ProductDetailsContent({
 					<div className="space-y-3">
 						{isEgdeskProProduct(productId) && (
 							<div className="bg-white rounded-xl shadow-md p-6">
-								<h2 className="text-xl font-bold mb-2">EGDesk Pro 6개월 이용권</h2>
+								<h2 className="text-xl font-bold mb-2">EGDesk Pro 1개월 이용권</h2>
 								<p className="text-sm text-gray-600 mb-4">
 									결제 완료 시 같은 이메일의 EGDesk 계정이 Pro로 활성화됩니다.
 								</p>

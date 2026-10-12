@@ -198,7 +198,7 @@ export default function AdminEgdeskProList() {
         <strong>
           {EGDESK_PRO_LIST_PRICE_KRW} / {EGDESK_PRO_LIST_TERM}
         </strong>
-        <span className="text-gray-500"> (연간 결제 없음 · 6개월 이용권)</span>
+        <span className="text-gray-500"> (연간 결제 없음 · 월 이용권)</span>
       </div>
 
       <form
